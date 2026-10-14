@@ -24,7 +24,11 @@ def _require_authorization(release_dir:Path, privacy:str)->dict:
         if privacy not in ('public','unlisted') or os.environ.get('YOUTUBE_PUBLIC_ALLOWED')!='1':
             raise UploadBlocked('Public/unlisted uploads disabled')
     token=os.environ.get('YOUTUBE_TOKEN_FILE','')
-    if not token or not Path(token).is_file():raise UploadBlocked('OAuth token file not provided')
+    if token:
+        if not Path(token).is_file():raise UploadBlocked('OAuth token file not provided')
+    elif not all(os.environ.get(name, '').strip() for name in
+                 ('YOUTUBE_CLIENT_ID','YOUTUBE_CLIENT_SECRET','YOUTUBE_REFRESH_TOKEN')):
+        raise UploadBlocked('OAuth token file or three cloud secrets required')
     # Approval JSON is an audit artifact, not a cryptographic signature. A
     # second out-of-band environment gate is required to authorize uploads.
     return manifest
@@ -42,19 +46,16 @@ def upload_youtube(release_dir:Path, *,privacy:str='private',
         raise UploadBlocked('Owner must explicitly decide synthetic-media disclosure before packaging')
     try:
         if api_factory is None:
-            from google.oauth2.credentials import Credentials
+            from .oauth import load_upload_credentials, OAuthConfigurationError
             from googleapiclient.discovery import build
             from googleapiclient.http import MediaFileUpload
-            creds=Credentials.from_authorized_user_file(os.environ['YOUTUBE_TOKEN_FILE'],
-                    ['https://www.googleapis.com/auth/youtube.upload'])
-            if not creds.valid:
-                raise UploadBlocked('OAuth access expired; refresh credentials using owner-controlled flow')
+            creds=load_upload_credentials(os.environ.get('YOUTUBE_TOKEN_FILE') or None)
             youtube=build('youtube','v3',credentials=creds,cache_discovery=False)
             make_media=lambda path: MediaFileUpload(str(path),mimetype='video/mp4',resumable=True,chunksize=8*1024*1024)
         else:
             youtube,make_media=api_factory()
     except UploadBlocked:raise
-    except (ImportError,ValueError,KeyError) as e:
+    except (ImportError,ValueError,KeyError,OAuthConfigurationError) as e:
         raise UploadBlocked('YouTube client/OAuth configuration incomplete') from e
     body={'snippet':{'title':metadata.title,'description':metadata.description,
                      'tags':metadata.tags,'categoryId':metadata.category_id,
