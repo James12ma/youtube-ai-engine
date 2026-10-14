@@ -40,8 +40,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-          cache-dependency-path: requirements-narration.txt
       - name: Dependencies
         shell: bash
         run: |
@@ -65,15 +63,6 @@ jobs:
           assert torch.version.cuda is None, 'Expected CPU-only torch'
           PY
           ffmpeg -hide_banner -filters | grep -Eq ' subtitles '
-      - name: Cache voice weights and acoustic aligner weights
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.VOICE_DIR }}
-            ${{ env.HF_HOME }}
-            ${{ env.TORCH_HOME }}
-            ${{ env.NLTK_DATA }}
-          key: narrator-ctc-py312-en-libritts-v2
       - name: Download Piper voice if missing
         shell: bash
         run: |

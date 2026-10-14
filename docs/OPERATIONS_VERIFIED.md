@@ -47,8 +47,14 @@ It does not claim successful live research or model-based fact checking.
 
 ## GitHub and budget
 
-- A local `main` repository is prepared; no external repository was created.
-- No GitHub Actions job was dispatched and no account billing quota was readable.
+- The private repository is https://github.com/James12ma/youtube-ai-engine.
+- Initial complete import: `2af365d820cad54030f645627acb0827ac114587`; its tree
+  matches the tested local source exactly (`189f5ccbc12186facc9300d730a2377fe41e84c2`).
+- GitHub Free billing was inspected: 1,752 / 2,000 included minutes used;
+  0.1 / 0.5 GB included storage used; existing Actions spending budget $0
+  with billable usage blocked. These are a snapshot before remote validation.
+- Neural workflow weights and pip caches are not uploaded; only small output
+  artifacts are retained, to limit storage against the hard zero-dollar budget.
 - All workflows require `ZERO_COST_ACTIONS_CONFIRMED=1` before running. Set it
   only after confirming included minutes/storage and a spending limit that
   prevents paid overages in the account. The variable is an acknowledgement,
