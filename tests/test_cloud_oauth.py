@@ -47,6 +47,17 @@ class CloudOAuthTests(unittest.TestCase):
         self.assertIsNone(result.exception.__cause__)
         self.assertTrue(result.exception.__suppress_context__)
 
+    def test_allowlisted_error_code_only(self):
+        self.creds.refresh.side_effect = RuntimeError('secret provider body',
+            {'error':'invalid_client','error_description':'private client secret'})
+        with self.assertRaises(OAuthConfigurationError) as result: self.load()
+        self.assertEqual(str(result.exception),'OAuth token request failed: invalid_client')
+
+    def test_unknown_error_body_not_logged(self):
+        self.creds.refresh.side_effect = RuntimeError('secret', {'error':'private-token-value'})
+        with self.assertRaises(OAuthConfigurationError) as result: self.load()
+        self.assertNotIn('private-token-value',str(result.exception))
+
     def test_missing_granted_scope_fails(self):
         self.creds.granted_scopes = ['https://www.googleapis.com/auth/userinfo.email']
         with self.assertRaisesRegex(OAuthConfigurationError, 'scope'): self.load()
