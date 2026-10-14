@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install engine base and OAuth SDK
-        run: python -m pip install -r requirements.txt -r requirements-release.txt
+        run: python -m pip install -r requirements.txt -r requirements-production.txt -r requirements-release.txt
       - name: Test OAuth protections offline
         run: python -m unittest discover -s tests -p test_cloud_oauth.py -v
       - name: Refresh real owner token without uploading
