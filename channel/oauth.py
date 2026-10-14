@@ -11,11 +11,15 @@ UPLOAD_SCOPE = 'https://www.googleapis.com/auth/youtube.upload'
 def save_credentials(credentials, path: Path) -> None:
     """Atomic owner-only token file; never echo credentials into logs."""
     path = Path(path)
+    if path.is_symlink() or path.parent.is_symlink():
+        raise ValueError('OAuth token destination must not be a symbolic link')
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temporary = tempfile.mkstemp(dir=path.parent, prefix='.oauth-')
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as stream:
             stream.write(credentials.to_json())
+            stream.flush()
+            os.fsync(stream.fileno())
         os.chmod(temporary, 0o600)
         os.replace(temporary, path)
     finally:

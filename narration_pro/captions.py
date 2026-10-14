@@ -52,7 +52,8 @@ def _wrap(words: list[WordTimestamp], max_chars: int,max_lines: int):
 
 def build_ass_from_words(words:list[WordTimestamp], output_path: Path, *, width:int, height:int,
                          size:int=48, max_chars_per_line:int=32, max_lines:int=2,
-                         max_duration_s:float=4.0, gap_threshold_s:float=0.6):
+                         max_duration_s:float=4.0, gap_threshold_s:float=0.6,
+                         animated:bool=False, bottom_margin:int|None=None):
     if not words: raise ValueError("word alignments are empty")
     blocks=[]; group=[]
     def flush():
@@ -77,8 +78,28 @@ def build_ass_from_words(words:list[WordTimestamp], output_path: Path, *, width:
     flush()
     output_path.parent.mkdir(parents=True,exist_ok=True)
     lines=[ASS_HEADER.format(w=width,h=height,size=size)]
+    if bottom_margin is not None:
+        lines[0]=lines[0].replace(',80,80,60,1',f',80,80,{bottom_margin},1')
+    if animated:
+        lines[0]=lines[0].replace('&H00FFFFFF,&H000000FF','&H00C5E76C,&H00FFFFFF')
+    position=0
     for block in blocks:
         text="\\N".join(_ass_escape(s) for s in block["text"].split("\\N"))
+        if animated:
+            group_words=words[position:position+len(block['words'])]
+            position+=len(group_words)
+            cursor=round(group_words[0].start_s*100)
+            pieces=[];line_chars=0
+            for word in group_words:
+                start=round(word.start_s*100);end=round(word.end_s*100)
+                if line_chars and line_chars+1+len(word.word)>max_chars_per_line:
+                    pieces.append('\\N');line_chars=0
+                elif line_chars:
+                    pieces.append(' ');line_chars+=1
+                if start>cursor:pieces.append('{\\k'+str(start-cursor)+'}')
+                pieces.append('{\\kf'+str(max(1,end-max(cursor,start)))+'}'+_ass_escape(word.word))
+                cursor=max(cursor,end);line_chars+=len(word.word)
+            text='{\\fad(50,70)}'+''.join(pieces)
         lines.append("Dialogue: 0,"+_fmt(block["start_s"])+","+_fmt(block["end_s"])+",Default,,0,0,0,,"+text)
     output_path.write_text("\n".join(lines)+"\n",encoding="utf-8")
     return len(blocks),blocks

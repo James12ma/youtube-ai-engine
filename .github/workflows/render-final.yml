@@ -1,0 +1,107 @@
+name: Final video — animated landscape and portrait
+
+on:
+  workflow_dispatch:
+    inputs:
+      format:
+        description: Output format
+        type: choice
+        options: [both, landscape, portrait]
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: showcase-render-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      VIDEO_FORMAT: ${{ inputs.format }}
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      VOICE_NAME: en_US-libritts-high
+      CUDA_VISIBLE_DEVICES: ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Configure runner-local model directories
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "VOICE_DIR=$RUNNER_TEMP/piper-voices" \
+            "HF_HOME=$RUNNER_TEMP/hf-cache" \
+            "TORCH_HOME=$RUNNER_TEMP/torch-cache" \
+            "NLTK_DATA=$RUNNER_TEMP/nltk-data" >> "$GITHUB_ENV"
+      - name: Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          # Install WhisperX's ENTIRE dependency graph; no --no-deps workaround.
+          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production-pro.txt
+          python -m pip check
+          # WhisperX sentence segmentation requires this non-wheel resource.
+          python - <<'PY'
+          import nltk, os
+          nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'], raise_on_error=True)
+          PY
+          python - <<'PY'
+          import torch, whisperx, piper
+          from narration_pro import PiperNarrator, WhisperXAligner
+          print('torch:', torch.__version__, 'CUDA wheel:', torch.version.cuda)
+          assert torch.version.cuda is None, 'Expected CPU-only torch'
+          PY
+          ffmpeg -hide_banner -filters | grep -Eq ' subtitles '
+      - name: Install Chromium for real responsive recordings
+        run: python -m playwright install --with-deps chromium
+      - name: Download Piper voice if missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$VOICE_DIR"
+          if [[ ! -s "$VOICE_DIR/${VOICE_NAME}.onnx" || ! -s "$VOICE_DIR/${VOICE_NAME}.onnx.json" ]]; then
+            python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
+          fi
+          test -s "$VOICE_DIR/${VOICE_NAME}.onnx"
+          test -s "$VOICE_DIR/${VOICE_NAME}.onnx.json"
+          echo 'Voice model and config present; license and dataset terms must be reviewed separately.'
+      - name: Render actual action-paced videos with neural voice and animated captions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m scripts.render_showcase --voice "$VOICE_DIR/${VOICE_NAME}.onnx" \
+            --format "$VIDEO_FORMAT" --output-dir outputs/showcase
+      - name: Save videos, audio, exact word timestamps, captions and independent QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-videos-${{ github.run_id }}
+          path: |
+            outputs/showcase/REPORT.json
+            outputs/showcase/*/final.mp4
+            outputs/showcase/*/vo_norm.wav
+            outputs/showcase/*/words.json
+            outputs/showcase/*/captions.ass
+            outputs/showcase/*/qc_report.json
+            outputs/showcase/*/independent_gates.json
+            outputs/showcase/*/*.jpg
+          retention-days: 7
+          if-no-files-found: warn

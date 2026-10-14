@@ -24,6 +24,7 @@ def main(argv=None):
     r.add_argument('--draft',type=Path,required=True);r.add_argument('--voice-model',type=Path,required=True)
     r.add_argument('--out',type=Path,required=True);r.add_argument('--asset-map',type=Path)
     r.add_argument('--reviewed',action='store_true')
+    r.add_argument('--format',choices=('landscape','portrait'),default='landscape')
     t=sub.add_parser('thumbnail');t.add_argument('--text',required=True);t.add_argument('--out',type=Path,required=True)
     t.add_argument('--screenshot',type=Path)
     b=sub.add_parser('package');b.add_argument('--draft',type=Path,required=True)
@@ -57,7 +58,9 @@ def main(argv=None):
         result=render_approved_video(_json_model(draft/'script.json',ScriptArtifact),
              _json_model(draft/'storyboard.json',StoryboardOutput),
              _json_model(draft/'verification_gate.json',VerificationGateReport),
-             args.voice_model,args.out,actual_assets=assets,reviewed=args.reviewed)
+             args.voice_model,args.out,actual_assets=assets,reviewed=args.reviewed,
+             width=1080 if args.format=='portrait' else 1920,
+             height=1920 if args.format=='portrait' else 1080)
     elif args.command=='thumbnail':
         path=make_thumbnail(args.text,args.out,genuine_screenshot=args.screenshot)
         result={'thumbnail':str(path)}

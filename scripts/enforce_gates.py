@@ -36,6 +36,8 @@ def parse_ass(path: Path) -> list[dict]:
         parts=line.removeprefix('Dialogue: ').split(',',9)
         if len(parts)!=10: fail('Invalid ASS Dialogue format')
         raw_text = parts[9]
+        # ASS karaoke/appearance tags are metadata, not spoken text.
+        raw_text = re.sub(r'(?<!\\)\{[^{}]*\}', '', raw_text)
         dialogues.append({'start':ass_seconds(parts[1]),'end':ass_seconds(parts[2]),
                          'text':raw_text.replace('\\N',' ').replace('\\{','{').replace('\\}','}'),
                          'lines':[line.replace('\\{','{').replace('\\}','}')
@@ -100,7 +102,7 @@ def measure_loudness(path:Path)->tuple[float,float]:
     return float(obj['input_i']),float(obj['input_tp'])
 
 
-def enforce(out:Path, do_probe:bool=True)->dict:
+def enforce(out:Path, do_probe:bool=True, expected_size:tuple[int,int]=(1920,1080))->dict:
     for name in ('vo.wav','vo_norm.wav','words.json','captions.ass','final.mp4','qc_report.json'):
         f=out/name
         if not f.is_file() or f.stat().st_size==0: fail('Missing '+name)
@@ -120,7 +122,7 @@ def enforce(out:Path, do_probe:bool=True)->dict:
         v=[s for s in info['streams'] if s['codec_type']=='video']
         a=[s for s in info['streams'] if s['codec_type']=='audio']
         if len(v)!=1 or len(a)!=1: fail('MP4 stream count invalid')
-        if (v[0]['width'],v[0]['height']) !=(1920,1080): fail('MP4 wrong resolution')
+        if (v[0]['width'],v[0]['height']) !=expected_size: fail('MP4 wrong resolution')
         if v[0]['codec_name']!='h264' or a[0]['codec_name']!='aac':
             fail('MP4 unexpected codecs')
         video_length=float(info['format']['duration'])

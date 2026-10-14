@@ -63,7 +63,10 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     aligned=WhisperXAligner(language='en',device='cpu',min_token_coverage=.98).align(norm,transcript)
     save_word_timestamps(aligned,work/'words.json')
     captions=work/'captions.ass'
-    caption_count,blocks=build_ass_from_words(aligned.words,captions,width=width,height=height)
+    portrait=height>width
+    caption_count,blocks=build_ass_from_words(aligned.words,captions,width=width,height=height,
+        animated=True,size=66 if portrait else 54,max_chars_per_line=24 if portrait else 32,
+        bottom_margin=300 if portrait else 80,max_duration_s=2.4)
     caption_qc=assess_caption_quality(aligned.words,blocks,aligned.duration_s,min_coverage=.98)
     if not caption_qc.passed:raise VideoBuildError('Forced captions failed QC: '+repr(caption_qc.failures))
 
