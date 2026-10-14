@@ -63,6 +63,7 @@ jobs:
           PY
           python - <<'PY'
           import torch, whisperx, piper
+          from narration_pro import PiperNarrator, WhisperXAligner
           print('torch:', torch.__version__, 'CUDA wheel:', torch.version.cuda)
           assert torch.version.cuda is None, 'Expected CPU-only torch'
           PY
