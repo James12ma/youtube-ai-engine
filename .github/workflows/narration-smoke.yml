@@ -26,10 +26,6 @@ jobs:
       PYTHONUNBUFFERED: '1'
       TRANSCRIPT: ${{ inputs.transcript }}
       VOICE_NAME: en_US-libritts-high
-      VOICE_DIR: ${{ runner.temp }}/piper-voices
-      HF_HOME: ${{ runner.temp }}/hf-cache
-      TORCH_HOME: ${{ runner.temp }}/torch-cache
-      NLTK_DATA: ${{ runner.temp }}/nltk-data
       CUDA_VISIBLE_DEVICES: ''
     steps:
       - name: Checkout
@@ -40,6 +36,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Configure runner-local model directories
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "VOICE_DIR=$RUNNER_TEMP/piper-voices" \
+            "HF_HOME=$RUNNER_TEMP/hf-cache" \
+            "TORCH_HOME=$RUNNER_TEMP/torch-cache" \
+            "NLTK_DATA=$RUNNER_TEMP/nltk-data" >> "$GITHUB_ENV"
       - name: Dependencies
         shell: bash
         run: |
