@@ -1,0 +1,30 @@
+CHATGPT WORK MISSION — DEPLOY THE EXISTING AUTONOMOUS YOUTUBE AI ENGINE
+
+I am uploading a complete bundled SOURCE TREE of my existing development work.
+Treat it as the canonical source of truth. Do not redesign or restart the project.
+Read docs/WORK_HANDOFF_KREYOL.md and all audit reports first.
+
+GOAL:
+Create a new private GitHub repository for the engine, import the source tree,
+install, test, configure and deploy it end-to-end using my $0 budget. Keep the
+creative review and all YouTube public publishing behind my explicit approval.
+
+REQUIRED WORKFLOW:
+1. Inspect all source modules, workflows, CI, dependencies, safety gates, and tests.
+2. Set up repository, least-privilege access, secret handling, main branch protections.
+3. Run all offline tests and resolve environment/deployment bugs (not architecture rewrite).
+4. Check account quotas and billing caps before running GitHub Actions or any LLM API.
+5. Only with owner approval: install CPU Piper LibriTTS and WhisperX; run the manually
+   triggered smoke workflow and inspect actual WAV, word JSON, ASS, MP4, loudness.
+6. Configure free tier Groq/Gemini/OpenRouter safely without exceeding zero-cost constraints.
+7. Configure and test owner-curated topic queue and an end-to-end draft.
+8. Generate one reviewable original video, with real assets, natural English narration,
+   exact forced alignment, SEO description, thumbnail, citations and QC.
+9. Configure YouTube OAuth via my interactive authorization. Do not upload until I approve
+   that exact release digest. Default private, NEVER public by default.
+10. Give me a verified GitHub repository link, commit SHA, actual CI logs, test results,
+    output preview, costs ($0), and exact owner actions still required.
+
+NO PAID APIS. NO CHARGES. NO PUBLISHING WITHOUT EXPLICIT OWNER APPROVAL.
+Never claim success for any code path that wasn't executed. Stop only for owner login,
+2FA, payment, or explicit legal/creative approval; otherwise complete your work.

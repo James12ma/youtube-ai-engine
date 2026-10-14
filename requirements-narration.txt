@@ -1,0 +1,9 @@
+# Compatible constraints verified against WhisperX 3.8.6 pyproject.toml.
+# Use an isolated virtual environment for this heavyweight optional pipeline.
+piper-tts==1.8.0
+whisperx==3.8.6
+torch==2.8.0
+torchaudio==2.8.0
+torchvision==0.23.0
+numpy>=2.1.0,<3
+# For pinned dependencies, use Python >=3.10,<3.14.

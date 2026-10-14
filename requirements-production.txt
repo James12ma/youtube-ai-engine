@@ -1,0 +1,3 @@
+Pillow>=10,<13
+# Optional: edge-tts requires network access, check usage/licensing before deploying.
+# edge-tts>=6.1

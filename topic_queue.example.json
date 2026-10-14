@@ -1,0 +1,9 @@
+{
+  "topics": [
+    {
+      "topic": "Example topic — replace with a verified small business automation topic",
+      "urls": ["https://example.com/source-one", "https://example.org/source-two"],
+      "enabled": false
+    }
+  ]
+}

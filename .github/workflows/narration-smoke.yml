@@ -1,0 +1,116 @@
+name: Task 8 Narration Smoke — real Piper + CTC
+
+on:
+  workflow_dispatch:
+    inputs:
+      transcript:
+        description: Public, non-sensitive English test transcript (no secrets)
+        type: string
+        required: false
+        default: "This is a demonstration of an original expense approval workflow. A manager reviews a travel expense and chooses whether to approve it. Every action shown comes from a functional local application."
+
+permissions:
+  contents: read
+
+concurrency:
+  group: narration-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      TRANSCRIPT: ${{ inputs.transcript }}
+      VOICE_NAME: en_US-libritts-high
+      VOICE_DIR: ${{ runner.temp }}/piper-voices
+      HF_HOME: ${{ runner.temp }}/hf-cache
+      TORCH_HOME: ${{ runner.temp }}/torch-cache
+      NLTK_DATA: ${{ runner.temp }}/nltk-data
+      CUDA_VISIBLE_DEVICES: ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-narration.txt
+      - name: Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          # Install WhisperX's ENTIRE dependency graph; no --no-deps workaround.
+          python -m pip install -r requirements-narration.txt
+          python -m pip check
+          # WhisperX sentence segmentation requires this non-wheel resource.
+          python - <<'PY'
+          import nltk, os
+          nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'], raise_on_error=True)
+          PY
+          python - <<'PY'
+          import torch, whisperx, piper
+          print('torch:', torch.__version__, 'CUDA wheel:', torch.version.cuda)
+          assert torch.version.cuda is None, 'Expected CPU-only torch'
+          PY
+          ffmpeg -hide_banner -filters | grep -Eq ' subtitles '
+      - name: Cache voice weights and acoustic aligner weights
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.VOICE_DIR }}
+            ${{ env.HF_HOME }}
+            ${{ env.TORCH_HOME }}
+            ${{ env.NLTK_DATA }}
+          key: narrator-ctc-py312-en-libritts-v2
+      - name: Download Piper voice if missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$VOICE_DIR"
+          if [[ ! -s "$VOICE_DIR/${VOICE_NAME}.onnx" || ! -s "$VOICE_DIR/${VOICE_NAME}.onnx.json" ]]; then
+            python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
+          fi
+          test -s "$VOICE_DIR/${VOICE_NAME}.onnx"
+          test -s "$VOICE_DIR/${VOICE_NAME}.onnx.json"
+          echo 'Voice model and config present; license and dataset terms must be reviewed separately.'
+      - name: Real neural narration, forced alignment, captions, MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python -m scripts.narration_smoke \
+            --voice "$VOICE_DIR/${VOICE_NAME}.onnx" \
+            --transcript "$TRANSCRIPT" --output-dir out \
+            2>&1 | tee out/smoke.log
+      - name: Independent quality gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m scripts.enforce_gates --out-dir out
+      - name: Upload generated artifacts (including partial diagnostic files on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task8-narration-${{ github.run_id }}
+          path: |
+            out/vo.wav
+            out/vo_norm.wav
+            out/words.json
+            out/captions.ass
+            out/final.mp4
+            out/qc_report.json
+            out/smoke.log
+          retention-days: 7
+          if-no-files-found: warn

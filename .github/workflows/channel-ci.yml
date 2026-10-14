@@ -1,0 +1,30 @@
+name: Channel release code audit (offline)
+on:
+  workflow_dispatch:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: channel-test-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  offline:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install offline test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
+          python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-production.txt -r requirements-production-pro.txt
+      - name: Compile
+        run: python -m compileall -q state_store.py adapters router pipeline verification production production_pro narration_pro channel tests
+      - name: Install real browser for recording tests
+        run: python -m playwright install --with-deps chromium
+      - name: All offline tests
+        run: python -m pytest -q

@@ -1,0 +1,9 @@
+{
+  "topics": [
+    {
+      "topic": "Example topic — disabled until Work adds real approved public source URLs",
+      "urls": ["https://example.com/replace", "https://example.org/replace"],
+      "enabled": false
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+name: Router offline tests
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: router-offline-tests-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  offline:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - run: python -m compileall -q state_store.py adapters router tests
+      - run: python -m pytest -q tests/test_state_store.py tests/test_adapters_offline.py tests/test_router_offline.py tests/test_router_regressions.py tests/test_runtime_remote.py tests/test_integration_remote.py tests/test_smoke_real.py
