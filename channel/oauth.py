@@ -60,8 +60,13 @@ def load_upload_credentials(token_file=None, *, environment=None,
         return credentials
     except OAuthConfigurationError:
         raise
-    except Exception:
-        # Provider/SDK exception bodies can contain credential information.
+    except Exception as exc:
+        # Only a fixed OAuth error-code allowlist may enter logs, never error descriptions.
+        safe_codes = {'invalid_client', 'invalid_grant', 'invalid_scope',
+                      'unauthorized_client', 'access_denied', 'temporarily_unavailable'}
+        for item in exc.args:
+            if isinstance(item, dict) and item.get('error') in safe_codes:
+                raise OAuthConfigurationError('OAuth token request failed: ' + item['error']) from None
         raise OAuthConfigurationError('OAuth validation failed; check credentials and consent') from None
 
 
