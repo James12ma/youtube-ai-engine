@@ -72,3 +72,15 @@ Tested executable commit: `6f939291376b0b9f11a2f78f3fc5f399e8632698`.
 - SRT sidecars (7 landscape cues, 8 portrait cues), a genuine-screenshot thumbnail and schema-validated draft metadata have been prepared for owner review. They do not bypass existing release gates.
 
 Historical successful runs above remain recorded. Current render artifact size is 7.63 MB with seven-day retention; no model caches were uploaded.
+
+## Phone-authorized cloud integration check — latest result
+
+- Tested executable commit: `016362b7bef69dfcf8bd189203d957f9e110eac8`.
+- Full CI succeeded: **189 passed, 3 skipped**. Provider secrets are intentionally not injected into offline CI: https://github.com/James12ma/youtube-ai-engine/actions/runs/38560641287
+- Actual secret names are present for Groq, Gemini, OpenRouter and YouTube client ID/client secret/refresh token. Presence is not proof of valid values or free-account billing settings.
+- Implemented cloud token refresh, fixed Google endpoint, HTTP timeout, atomic mode-0600 local writes and sanitized allowlisted errors. Original publishing gates remain enforced.
+- Latest no-upload OAuth run passed all **11 credential tests**, then contacted Google and failed with **unauthorized_client**: https://github.com/James12ma/youtube-ai-engine/actions/runs/38560602956
+- No upload, YouTube mutation or live LLM call occurred. Owner needs to check that all three YouTube values belong to the same current Web application OAuth client and valid owner consent. Stored secret values cannot be read back through GitHub.
+- Two earlier standalone OAuth attempts stopped before Google requests due to missing Pydantic/Pillow imports. Existing base/production requirements now resolve those errors.
+- Queue remains disabled with placeholder sources. Live provider validation still requires confirmed no-cost account settings and owner-curated source choices. OAuth refresh failure does not prove which individual secret is incorrect.
+- Tokens shown in screenshots should be revoked/replaced before production; rotation is not verified. Testing-status Google OAuth can expire after seven days.
