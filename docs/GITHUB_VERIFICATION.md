@@ -58,3 +58,17 @@ in the current account plan. No paid upgrade or public conversion was performed.
 - No always-on worker is deployed. Manual GitHub CPU workflows are operational.
 - Human listening, commercial terms, source choices and editorial review remain
   owner tasks. No demo has owner release approval; no YouTube upload occurred.
+
+## Latest animated multi-format verification
+
+Tested executable commit: `6f939291376b0b9f11a2f78f3fc5f399e8632698`.
+
+- Full CI: **178 passed, 3 skipped** (live provider keys absent): https://github.com/James12ma/youtube-ai-engine/actions/runs/38514337879
+- Actual dual-format render succeeded: https://github.com/James12ma/youtube-ai-engine/actions/runs/38514259711
+- Native 1920×1080 and 1080×1920; 15.5 seconds per output; 47 WhisperX-aligned words; 100% ordered transcript/caption word coverage.
+- Downloaded MP4 checks: H.264/AAC, −16.49 LUFS, −1.48 dBTP, 0.034-second audio/video duration difference.
+- Artifact SHA-256: `24363a26f26d2a46cc14883d9a1264056ad74b2fb7f628512d015ab07713ad24`. Raw pre-normalization WAV is omitted from this artifact; normalized WAV is present. Full cloud gates passed; independent downloaded checks verified video, normalized audio and captions.
+- Original real expense-rule app, genuine asserted manager-review and auto-approved results. No live LLM call, OAuth consent, owner editorial approval, or YouTube upload is claimed.
+- SRT sidecars (7 landscape cues, 8 portrait cues), a genuine-screenshot thumbnail and schema-validated draft metadata have been prepared for owner review. They do not bypass existing release gates.
+
+Historical successful runs above remain recorded. Current render artifact size is 7.63 MB with seven-day retention; no model caches were uploaded.

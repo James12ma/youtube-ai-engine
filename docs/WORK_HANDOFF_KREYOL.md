@@ -9,7 +9,7 @@
 - `channel/`: assembled CLI to create drafts, render approved narration/script, generate SEO,
   draw original thumbnails, build immutable release checksums, demand owner approval,
   upload to YouTube (private by default), optional queue and opt-in scheduled drafts.
-- `.github/workflows/channel-ci.yml`: manual/PR offline tests.
+- `.github/workflows/ci.yml`: manual/PR offline tests.
 - `.github/workflows/channel-draft.yml`: workflow dispatch or opt-in 3/day source-curated
   script drafts. No automated upload. Setting `ENABLE_AUTOMATION=1` is owner action.
 - `.github/workflows/narration-smoke.yml`: optional manual neural voice validation.
