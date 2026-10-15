@@ -107,7 +107,7 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
         if not models:
             report['blocked'] = 'No verified zero-priced JSON model'; return report
         model = models[0]['id']
-        report.update(model=model, all_prices_verified_zero=True)
+        report.update(model=model, all_prices_verified_zero=True, free_request_quota={k:v for k,v in account.get('free_model_daily_requests',{}).items() if k in ('limit','remaining','used') and type(v) is int})
         cap = min(20, remaining) if isinstance(remaining, int) else 20
         report['generation_requests_max'] = cap
         def before_request(request):
@@ -143,11 +143,30 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
             state = StateStore(repo, push_required=False)
             router = Router(state, {'openrouter': adapter}, RouterConfig(provider_order=('openrouter',),
                 rpd={'openrouter': cap}, rpm={'openrouter': min(cap,20)}))
+            class AuditedRouter:
+                def execute(self, task_type, input_data, request, schema):
+                    known = {'pipeline.research','pipeline.script','pipeline.script_section','pipeline.storyboard','verify.entailment','verify.contradiction'}
+                    if task_type not in known: raise RequestBudgetExceeded('Unexpected pipeline stage')
+                    report['active_task'] = task_type
+                    counts=report.setdefault('task_attempts',{})
+                    counts[task_type]=counts.get(task_type,0)+1
+                    return router.execute(task_type,input_data,request,schema)
+            class CheckpointPipeline(ContentPipeline):
+                def _save_stage(self,name,call,*args):
+                    value=call(*args)
+                    (out/(name+'.json')).write_text(value.model_dump_json(indent=2))
+                    report.setdefault('completed_stages',[]).append(name)
+                    return value
+                def _stage_research(self,*args): return self._save_stage('research',super()._stage_research,*args)
+                def _stage_verify(self,*args): return self._save_stage('verification',super()._stage_verify,*args)
+                def _stage_script(self,*args): return self._save_stage('script',super()._stage_script,*args)
+                def _stage_storyboard(self,*args): return self._save_stage('storyboard',super()._stage_storyboard,*args)
+            audited_router=AuditedRouter()
             class SnapshotFetcher:
                 def fetch(self, url): return snapshots[url]
             report['stage'] = 'research_script_storyboard_and_verification'
-            result = VerifiedContentPipeline(ContentPipeline(state, router, SnapshotFetcher()),
-                                             VerificationGate(router)).run(TOPIC, SOURCES)
+            result = VerifiedContentPipeline(CheckpointPipeline(state, audited_router, SnapshotFetcher()),
+                                             VerificationGate(audited_router)).run(TOPIC, SOURCES)
             for name, value in (('research', result.content.research), ('verification', result.content.verification),
                 ('script', result.content.script), ('storyboard', result.content.storyboard),
                 ('verification_gate', result.verification_gate.report)):
@@ -159,6 +178,8 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
     except Exception as exc:
         # Never expose provider messages, generated claims or credential values on failure.
         report['error_type'] = type(exc).__name__
+        if report['generation_requests'] >= report['generation_requests_max']:
+            report['blocked'] = 'generation_request_budget_exhausted'
         if isinstance(exc, PipelineQualityError):
             report['quality_failure'] = safe_quality_failure(exc)
         known=re.search(r'\b(RateLimitError|AuthError|ClientError|SchemaValidationError|ServerError|BillableModelRejected|ConfigurationError)\b',str(exc))
