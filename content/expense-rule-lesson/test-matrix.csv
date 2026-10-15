@@ -1,0 +1,15 @@
+category,amount,expected
+travel,80,AUTO-APPROVED
+travel,120,SENT FOR MANAGER REVIEW
+travel,100,AUTO-APPROVED
+travel,100.01,SENT FOR MANAGER REVIEW
+software,120,AUTO-APPROVED
+software,200,AUTO-APPROVED
+software,200.01,SENT FOR MANAGER REVIEW
+supplies,50,AUTO-APPROVED
+supplies,50.01,SENT FOR MANAGER REVIEW
+supplies,60,SENT FOR MANAGER REVIEW
+travel,0,Enter an amount and category first.
+travel,-1,Enter an amount and category first.
+travel,,Enter an amount and category first.
+,80,Enter an amount and category first.

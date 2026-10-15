@@ -30,6 +30,6 @@ GEMINI_CONFIG = ProviderConfig(
 OPENROUTER_CONFIG = ProviderConfig(
     name="openrouter", base_url="https://openrouter.ai/api/v1",
     env_var="OPENROUTER_API_KEY", model_env_var="OPENROUTER_MODEL",
-    default_model="meta-llama/llama-3.3-70b-instruct:free", rpm=20, rpd=50,
+    default_model="cohere/north-mini-code:free", rpm=20, rpd=50,
     request_timeout=45.0,
 )
