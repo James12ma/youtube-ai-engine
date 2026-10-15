@@ -34,6 +34,16 @@ def test_research_rejects_paid_catalog_before_generation(tmp_path,monkeypatch):
     assert not called and report['blocked']=='No verified zero-priced JSON model'
 
 
+def test_source_failure_is_actionable_without_echoing_body_or_calling_ai(tmp_path):
+    def fail(url): raise ValueError('Source is too large PRIVATE_BODY')
+    calls=[]
+    with httpx.Client(transport=httpx.MockTransport(lambda r:calls.append(r))) as client:
+        report=run(tmp_path,metadata_client=client,source_fetcher=SimpleNamespace(fetch=fail))
+    assert not calls and report['generation_requests']==0
+    assert all(s['reason']=='Source is too large' for s in report['source_checks'])
+    assert 'PRIVATE_BODY' not in (tmp_path/'report.json').read_text()
+
+
 def test_real_router_rate_limit_stops_source_pipeline_without_paid_failover(tmp_path,monkeypatch):
     monkeypatch.setenv('OPENROUTER_API_KEY','TEST_PRIVATE')
     monkeypatch.delenv('ENABLE_LIVE_LLM',raising=False)

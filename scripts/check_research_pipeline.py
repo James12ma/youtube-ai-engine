@@ -21,7 +21,7 @@ from scripts.check_free_providers import zero_priced_model
 
 TOPIC = 'Protect customer data before automating a small business workflow'
 SOURCES = (
-    'https://www.ftc.gov/business-guidance/privacy-security/data-security',
+    'https://csrc.nist.gov/pubs/ir/7621/r1/final',
     'https://www.nccoe.nist.gov/publication/1800-28/VolA/index.html',
 )
 
@@ -44,10 +44,22 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
         report['stage'] = 'source_retrieval'
         snapshots = {}
         for i, url in enumerate(SOURCES):
-            source = fetcher.fetch(url)
+            try:
+                source = fetcher.fetch(url)
+            except Exception as exc:
+                # Source failures have a fixed safe diagnostic vocabulary; never echo arbitrary bodies.
+                reasons = ('Source is too large', 'Source size limit exceeded',
+                           'Redirects are disabled for research sources', 'Empty source text',
+                           'Unsupported source content type:')
+                reason = next((r for r in reasons if str(exc).startswith(r)), type(exc).__name__)
+                report['source_checks'].append({'url': url, 'retrieved': False, 'reason': reason})
+                continue
             snapshots[url] = source
             (out/f'source_{i}.json').write_text(source.model_dump_json(indent=2))
             report['source_checks'].append({'url': url, 'retrieved': True, 'text_chars': len(source.text)})
+        if len(snapshots) != len(SOURCES):
+            report['blocked'] = 'Required source retrieval failed; source bounds and redirect protections preserved'
+            return report
         report['stage'] = 'free_account_verification'
         key = os.environ.get('OPENROUTER_API_KEY', '')
         if not key:
