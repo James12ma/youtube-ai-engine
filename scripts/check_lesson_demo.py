@@ -27,13 +27,16 @@ def run(out=Path('outputs/lesson-demo-matrix.json')):
         lab.locator('#mutate').click();lab.locator('#run').click()
         assert lab.locator('#summary').inner_text().startswith('11 passed / 0 failed')
         with lab.expect_download() as event:lab.locator('#download').click()
-        path=event.value.path();assert path and Path(path).stat().st_size>1000
-        local=browser.new_page();local.goto(Path(path).as_uri())
+        import tempfile
+        directory=tempfile.TemporaryDirectory()
+        path=Path(directory.name)/event.value.suggested_filename
+        event.value.save_as(path);assert path.stat().st_size>1000
+        local=browser.new_page();local.goto(path.as_uri())
         local.frame_locator('#app').locator('#submit').wait_for()
         local.locator('#matrix-tab').click();local.locator('#run').click()
         assert local.locator('#summary').inner_text().startswith('11 passed / 0 failed')
         evidence.append({'practice_lab':True,'normal_passes':11,'deliberate_failure_detected':True,'restored_passes':11,'download_reopened_from_file':True,'passed':True})
-        browser.close()
+        browser.close();directory.cleanup()
     out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(evidence,indent=2));print(f'{len(evidence)} actual Chromium policy tests passed')
 
 if __name__=='__main__':run()

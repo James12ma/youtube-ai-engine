@@ -161,7 +161,7 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
         report['error_type'] = type(exc).__name__
         if isinstance(exc, PipelineQualityError):
             report['quality_failure'] = safe_quality_failure(exc)
-        known=re.search(r'\b(RateLimitError|AuthError|ClientError|SchemaValidationError|ServerError|BillableModelRejected)\b',str(exc))
+        known=re.search(r'\b(RateLimitError|AuthError|ClientError|SchemaValidationError|ServerError|BillableModelRejected|ConfigurationError)\b',str(exc))
         if known:report['classified_failure']=known.group(1)
     finally:
         if adapter: adapter.close()

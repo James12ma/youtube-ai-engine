@@ -157,12 +157,25 @@ class ContentPipeline:
         claim_lines=['- '+c.id+': '+c.text for c in verification.verified]
         request=LLMRequest(messages=[
             {'role':'system','content':'You write original, fact-bound YouTube narration. Every factual or numeric statement must cite at least one claim_id from the supplied list. Cite by putting those claim_ids in the section\'s claim_ids array; you may not invent claim ids.'},
-            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. Return json with fields: title (<=70 chars), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=8000)
-        feedback=''
+            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. Return json with fields: title (<=70 chars), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
+        feedback='';previous_short=None
         for revision in range(self._t.max_stage_revisions):
             if feedback:
                 request.messages[-1]['content'] += '\nPREVIOUS ATTEMPT FAILED: '+feedback+'\nProduce a corrected script.'
-            output=self._router.execute('pipeline.script',{'topic':topic},request,ScriptOutput)
+            if revision and previous_short is not None:
+                # Expand real model output section by section within the existing
+                # adapter token cap. Never pad text or alter duration thresholds.
+                expanded=[]
+                target=math.ceil(((self._t.min_script_duration_s+self._t.max_script_duration_s)/2)*self._t.target_words_per_second/max(1,len(previous_short.sections)))
+                for index,section in enumerate(previous_short.sections):
+                    expansion=LLMRequest(messages=[
+                        {'role':'system','content':'Write one complete tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
+                        {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(previous_short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in previous_short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id.'}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
+                    part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision},expansion,ScriptSection)
+                    expanded.append(part)
+                output=previous_short.model_copy(update={'sections':expanded})
+            else:
+                output=self._router.execute('pipeline.script',{'topic':topic},request,ScriptOutput)
             assert isinstance(output,ScriptOutput)
             try:
                 self._validate_script(output,verification)
@@ -170,6 +183,8 @@ class ContentPipeline:
             except PipelineQualityError as exc:
                 if revision+1>=self._t.max_stage_revisions:raise
                 feedback=json.dumps(exc.report,ensure_ascii=False)[:1000]
+                if exc.report.get('reason')=='duration outside 8-12 minute target' and exc.report.get('duration_s',0)<self._t.min_script_duration_s and 1<=len(output.sections)<=10:
+                    previous_short=output
         words=_word_count(output.hook,*[s.narration for s in output.sections],output.cta)
         duration=words/self._t.target_words_per_second
         artifact=ScriptArtifact(topic=topic,title=output.title,hook=output.hook,sections=output.sections,cta=output.cta,duration_s=duration,word_count=words,verified_at=_now())

@@ -127,3 +127,21 @@ def test_short_script_gate_reports_explicit_word_deficit(repo):
     assert exc.value.report['reason']=='duration outside 8-12 minute target'
     assert exc.value.report['min_words']==1200 and exc.value.report['max_words']==1800
     assert exc.value.report['word_count']<1200
+
+
+def test_short_real_model_draft_expands_sections_without_padding_or_gate_changes(repo):
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    research, ids, short, _ = _fixtures()
+    verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(id=c,text='Source evidence',source_ids=['s'],supporting_snippets=['Source evidence']) for c in ids],rejected=[],pass_rate=1,verified_at='now')
+    requests=[]
+    parts=[ScriptSection(heading=s.heading,narration=('source grounded explanation '*150).strip(),claim_ids=s.claim_ids) for s in short.sections]
+    class ScriptRouter:
+        def execute(self,task_type,input_data,request,schema):
+            requests.append(request)
+            return short if task_type=='pipeline.script' else parts[input_data['index']]
+    pipe=ContentPipeline(StateStore(repo,push_required=False),ScriptRouter(),FakeFetcher({}))
+    output=pipe._stage_script('test',verification,[])
+    assert 1200<=output.word_count<=1800 and len(requests)==4
+    assert all(r.max_tokens<=4096 for r in requests)
+    assert output.sections==parts
+    assert pipe._t.min_script_duration_s==480 and pipe._t.max_stage_revisions==2
