@@ -87,6 +87,7 @@ def run(voice,out,reuse=None):
               document.querySelector('#lesson-overlay')?.remove();
               const e=document.createElement('div');e.id='lesson-overlay';
               e.style.cssText=demo?'position:fixed;inset:0 0 auto;height:94px;background:#0b1021;z-index:50;padding:25px 62px;color:#73e9c9;font:bold 28px Arial;display:flex;justify-content:space-between':'position:fixed;inset:0;background:radial-gradient(ellipse at 80% 10%,#183d4a,#0b1021 65%);z-index:50;padding:105px 130px;color:#eef5ff;font-family:Arial';
+              document.querySelector('#capture-pointer').style.opacity=demo?'1':'0';
               if(demo){e.textContent=`${String(index+1).padStart(2,'0')} / ${total}   •   ${title}`;}
               else{
                 const brand=document.createElement('div');brand.textContent='LOGICSCRIPT  /  PRACTICAL AUTOMATION';brand.style.cssText='font-size:23px;letter-spacing:4px;color:#72e8c7;margin-bottom:55px';e.append(brand);
@@ -96,8 +97,25 @@ def run(voice,out,reuse=None):
                 const note=document.createElement('div');note.textContent=`${String(index+1).padStart(2,'0')} / ${total}   •   ORIGINAL EDUCATIONAL DEMONSTRATION`;note.style.cssText='position:absolute;bottom:190px;font-size:20px;letter-spacing:3px;color:#7c91b2';e.append(note);
               }
               e.animate([{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'translateY(0px)'}],{duration:250,fill:'both'});document.body.append(e);
-            }""",{'title':c['title'],'key':c['key'],'index':i,'total':len(chapters),'demo':bool(c['demo'])})
-            if c['demo']:
+            }""",{'title':c['title'],'key':c['key'],'index':i,'total':len(chapters),'demo':bool(c['demo']) or i==0})
+            if i==0:
+                # Cold open: demonstrate the actual boundary before the explanation.
+                def hook_move(selector):
+                    box=page.locator(selector).bounding_box();page.mouse.move(box['x']+box['width']/2,box['y']+box['height']/2,steps=10)
+                hook_move('#amount');page.locator('#amount').click();page.locator('#amount').press_sequentially('100',delay=80)
+                hook_move('#category');page.locator('#category').select_option('travel')
+                hook_move('#submit');page.locator('#submit').click()
+                assert 'AUTO-APPROVED' in page.locator('#result').inner_text()
+                first_result=page.locator('#result').inner_text()
+                hook_move('#amount');page.locator('#amount').click();page.locator('#amount').press('ControlOrMeta+A');page.locator('#amount').press_sequentially('100.01',delay=80)
+                target=phrase_time(words,'just one cent',t['start'],t['end'])
+                remaining=target-.4-(time.monotonic()-clock['start'])
+                if remaining>0:page.wait_for_timeout(remaining*1000)
+                hook_move('#submit');page.locator('#submit').click();actual=time.monotonic()-clock['start']
+                observed=page.locator('#result').inner_text();assert 'SENT FOR MANAGER REVIEW' in observed
+                focus_element(page,'#result');hook_move('#result')
+                evidence.append({'chapter':'Cold open — actual boundary pair','amount':'100.01','category':'travel','expected':'SENT FOR MANAGER REVIEW','observed':observed,'prior_observed':first_result,'passed':True,'spoken_click_cue_s':target,'actual_click_s':actual,'sync_error_s':actual-target})
+            elif c['demo']:
                 amount,category,expected=c['demo']
                 cues={3:'Now we run the rule',4:'Run the rule again',5:'so the boundary is approved',6:'Run the rule',7:'so this request is automatically approved',8:'so sixty needs review',9:'Run the rule'}
                 click_at=phrase_time(words,cues[i],t['start'],t['end'])
