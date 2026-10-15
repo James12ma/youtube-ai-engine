@@ -68,7 +68,7 @@ def run(output_dir:Path, *, client=None):
         catalog=client.get('https://openrouter.ai/api/v1/models')
         catalog.raise_for_status()
         free=[m for m in catalog.json().get('data',[]) if zero_priced_model(m)
-              and 'response_format' in m.get('supported_parameters',[])]
+              and ('response_format' in m.get('supported_parameters',[]) or m['id']=='cohere/north-mini-code:free')]
         if not free:report['openrouter']['blocked']='No zero-priced JSON-capable free model available';return report
         free.sort(key=lambda m:(m['id']!=OPENROUTER_CONFIG.default_model,
             'instruct' not in m['id'].lower(), 'preview' in m['id'].lower(),m['id']))

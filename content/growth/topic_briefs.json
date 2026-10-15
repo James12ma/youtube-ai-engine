@@ -22,7 +22,7 @@
     "audience_problem": "Owners need a repeatable evaluation that checks data portability and access controls instead of feature hype.",
     "original_demo": "Export an original sample table, reopen it and compare fields; demonstrate denied access in a local test service.",
     "primary_sources": [
-      "https://developers.google.com/drive/api/guides/ref-export-formats",
+      "https://developers.google.com/workspace/drive/api/guides/ref-export-formats",
       "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"
     ],
     "checked_on": "2026-10-15",

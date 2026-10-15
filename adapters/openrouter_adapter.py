@@ -21,6 +21,8 @@ class OpenRouterAdapter(BaseAdapter):
         return headers
     def _build_payload(self, request: LLMRequest) -> dict[str, Any]:
         payload = super()._build_payload(request)
-        if request.schema is not None:
+        # Cohere free currently lacks response_format in the live catalog.
+        # BaseAdapter still injects the schema and strictly validates actual JSON.
+        if request.schema is not None and payload["model"] != "cohere/north-mini-code:free":
             payload["response_format"] = {"type": "json_object"}
         return payload

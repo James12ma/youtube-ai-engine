@@ -24,3 +24,17 @@ def test_lesson_has_substantive_script_and_real_demo_expectations():
     assert ['100.01','travel','SENT FOR MANAGER REVIEW'] in demos
     assert len(demos)>=7
     assert 'not output' in lesson['provenance']
+
+
+def test_cohere_prompt_json_is_still_schema_validated():
+    from adapters import OpenRouterAdapter,LLMRequest
+    from adapters.errors import SchemaValidationError
+    from scripts.check_free_providers import DemoScript
+    captured=[]
+    def wire(request):
+        captured.append(json.loads(request.content))
+        return httpx.Response(200,json={'choices':[{'message':{'content':'not valid JSON'}}]})
+    with OpenRouterAdapter(api_key='TEST_ONLY',transport=httpx.MockTransport(wire)) as adapter:
+        with pytest.raises(SchemaValidationError):adapter.complete(LLMRequest(model='cohere/north-mini-code:free',schema=DemoScript,messages=[{'role':'user','content':'Return JSON'}]))
+    assert 'response_format' not in captured[0]
+    assert 'JSON Schema' in captured[0]['messages'][0]['content']
