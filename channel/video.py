@@ -13,6 +13,7 @@ from production.assets import card
 from production_pro.models import EditPlan
 from production_pro.editing import compose_scenes,burn_captions
 from production_pro.qc import run_qc
+from channel.chapters import timeline_from_segments,normalize_timeline
 from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,build_ass_from_words,assess_caption_quality,save_word_timestamps,save_srt_from_blocks
 
 class VideoBuildError(RuntimeError): pass
@@ -115,6 +116,11 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
             'alignment':{'token_coverage':aligned.token_coverage,'words':len(aligned.words)},
             'captions':caption_count,'caption_qc':caption_qc.model_dump(),'srt_path':str(srt),
             'video_edit':edit,'technical_qc':qc.model_dump(),
+            # Narration-timed chapters (hook + sections; CTA folded into the last section).
+            # Crossfade overlaps are compensated above, so narration time == video time.
+            'chapters':[c.model_dump() for c in normalize_timeline(
+                timeline_from_segments('Introduction',[sec.heading for sec in script.sections],
+                                       [s.duration_s for s in synthesized]))],
             'ready_for_publication':False,'manual_editorial_approval_still_required':True}
     (work/'render_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     if not qc.passed:

@@ -21,7 +21,8 @@ def _ffprobe(path:Path)->dict[str,Any]:
     except ValueError as e: raise ReleaseError('Invalid ffprobe output') from e
 
 def build_release(out_dir:Path,video:Path,thumbnail:Path,metadata:ReleaseMetadata,
-                  *, editorial_report:Path, caption_file:Path|None=None)->dict[str,Any]:
+                  *, editorial_report:Path, caption_file:Path|None=None,
+                  quality_report:dict|None=None)->dict[str,Any]:
     out_dir=Path(out_dir); video=Path(video); thumbnail=Path(thumbnail)
     if out_dir.exists() and any(out_dir.iterdir()):
         raise ReleaseError('Release folder must be new or empty; do not overwrite approved artifacts')
@@ -49,7 +50,13 @@ def build_release(out_dir:Path,video:Path,thumbnail:Path,metadata:ReleaseMetadat
         assets['captions'+cp.suffix.lower()]=cp
     for filename,src in assets.items():shutil.copy2(src,out_dir/filename)
     (out_dir/'metadata.json').write_text(metadata.model_dump_json(indent=2),encoding='utf-8')
-    digests={name:_sha(out_dir/name) for name in [*assets,'metadata.json']}
+    hashed=[*assets,'metadata.json']
+    if quality_report is not None:
+        # Blocking checks already passed before packaging; advisories travel with the
+        # release so the owner sees them at approval time. Hashed like every artifact.
+        (out_dir/'quality_report.json').write_text(json.dumps(quality_report,indent=2,default=str),encoding='utf-8')
+        hashed.append('quality_report.json')
+    digests={name:_sha(out_dir/name) for name in hashed}
     manifest={'created_at':datetime.now(timezone.utc).isoformat(),'hashes':digests,
               'status':'NEEDS_OWNER_APPROVAL','privacy_default':'private'}
     # Approval digest is of file hashes only, so timestamps cannot change the approval.

@@ -2,7 +2,9 @@
 from __future__ import annotations
 from pathlib import Path
 import re
+import json
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+from .packaging_lint import thumbnail_problems
 
 FONT_CANDIDATES = [
  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
@@ -13,9 +15,24 @@ def _font(size):
         if Path(name).is_file(): return ImageFont.truetype(name,size)
     return ImageFont.load_default()
 
+def thumbnail_text_path(image_path: Path) -> Path:
+    """Sidecar that records the exact text drawn on a thumbnail, for packaging checks."""
+    image_path=Path(image_path)
+    return image_path.with_name(image_path.name+'.text.json')
+
+
+def read_thumbnail_text(image_path: Path) -> str | None:
+    side=thumbnail_text_path(image_path)
+    if not side.is_file(): return None
+    return json.loads(side.read_text(encoding='utf-8')).get('text')
+
+
 def make_thumbnail(headline: str, output_path: Path, *, genuine_screenshot: Path | None = None,
-                   width: int=1280,height: int=720) -> Path:
+                   width: int=1280,height: int=720, title: str | None = None) -> Path:
     headline=' '.join(headline.split())
+    if title is not None:
+        problems=thumbnail_problems(title,headline)
+        if problems: raise ValueError('Thumbnail text rejected: '+'; '.join(p.message for p in problems))
     if not 3<=len(headline)<=90: raise ValueError('headline must contain 3-90 characters')
     # Numeric results must have a separate editorial review, not invented by template.
     if re.search(r'\b\d+(?:[.,]\d+)?\s*%|\$\s*\d+',headline):
@@ -45,4 +62,5 @@ def make_thumbnail(headline: str, output_path: Path, *, genuine_screenshot: Path
     im.save(output_path,quality=89,optimize=True)
     if output_path.stat().st_size > 2*1024*1024:
         raise ValueError('Thumbnail exceeds 2MB; compress or simplify')
+    thumbnail_text_path(output_path).write_text(json.dumps({'text':headline}),encoding='utf-8')
     return output_path

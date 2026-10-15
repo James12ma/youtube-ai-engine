@@ -46,5 +46,8 @@ def generate_draft(repo:Path,topic:str,urls:list[str],out_dir:Path,*,
         ('storyboard',result.content.storyboard),
         ('verification_gate',result.verification_gate.report)):
         (out_dir/f'{name}.json').write_text(value.model_dump_json(indent=2),encoding='utf-8')
+    # ADVISORY only: the score is recorded for editorial review and never gates the draft.
+    from pipeline.hook_score import write_hook_advisory
+    write_hook_advisory(result.content.script.hook,out_dir/'hook_advisory.json')
     (out_dir/'STATUS.txt').write_text('RESEARCH GENERATED — HUMAN EDITORIAL REVIEW REQUIRED; NO PUBLISHING\n')
     return {'files':sorted(p.name for p in out_dir.iterdir()),'ready_for_publication':False}
