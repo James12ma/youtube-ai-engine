@@ -37,4 +37,5 @@ def test_cohere_prompt_json_is_still_schema_validated():
     with OpenRouterAdapter(api_key='TEST_ONLY',transport=httpx.MockTransport(wire)) as adapter:
         with pytest.raises(SchemaValidationError):adapter.complete(LLMRequest(model='cohere/north-mini-code:free',schema=DemoScript,messages=[{'role':'user','content':'Return JSON'}]))
     assert 'response_format' not in captured[0]
+    assert captured[0]['reasoning']=={'enabled':False}
     assert 'JSON Schema' in captured[0]['messages'][0]['content']

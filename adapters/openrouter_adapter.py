@@ -23,6 +23,9 @@ class OpenRouterAdapter(BaseAdapter):
         payload = super()._build_payload(request)
         # Cohere free currently lacks response_format in the live catalog.
         # BaseAdapter still injects the schema and strictly validates actual JSON.
+        if request.schema is not None and payload["model"] == "cohere/north-mini-code:free":
+            # Prevent hidden reasoning from consuming the bounded JSON output budget.
+            payload["reasoning"] = {"enabled": False}
         if request.schema is not None and payload["model"] != "cohere/north-mini-code:free":
             payload["response_format"] = {"type": "json_object"}
         return payload
