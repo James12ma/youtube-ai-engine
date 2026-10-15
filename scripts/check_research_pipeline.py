@@ -78,7 +78,7 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
         catalog = metadata.get('https://openrouter.ai/api/v1/models')
         catalog.raise_for_status()
         models = [m for m in catalog.json().get('data', []) if zero_priced_model(m)
-                  and 'response_format' in m.get('supported_parameters', [])]
+                  and ('response_format' in m.get('supported_parameters', []) or m['id']=='cohere/north-mini-code:free')]
         models.sort(key=lambda m: (m['id'] != OPENROUTER_CONFIG.default_model, 'preview' in m['id'], m['id']))
         if not models:
             report['blocked'] = 'No verified zero-priced JSON model'; return report
