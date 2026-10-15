@@ -79,3 +79,20 @@ the configured hashes locally. These tests do not prove live Telegram delivery;
 that requires the real token, owner binding, and a successful workflow run.
 
 Telegram API reference: https://core.telegram.org/bots/api
+
+## Live GitHub attempt and current blocker (2026-10-15 18:27 UTC)
+
+Commit `17009ac5747f03e1ede2093d74ac4529e65284f5` was committed to existing
+`main`. The actual existing full CI was manually dispatched as run
+`38785675624` (#16). **The job did not start.** GitHub's annotation says recent
+account payments failed or the spending limit must be increased. A read-only
+billing inspection resolved the ambiguity: **2,000 / 2,000 included Actions
+minutes used**, $0 billable Actions usage, reset in 17 days. The $12.03 gross
+metered figure was fully covered by $12.03 included discounts; it is not a bill.
+
+No spending limit was increased, payment added, or paid runner enabled. No
+retry is scheduled. The previous 233-pass CI remains historical; the new bot
+has 20 passing local tests, not a passing live full-CI result. Bot activation
+currently needs both secure Telegram configuration and restored included
+Actions capacity or a separately verified $0 host. Do not instruct the owner
+to pay or make their private repository public to work around this limit.
