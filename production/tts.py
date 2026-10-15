@@ -53,7 +53,7 @@ class EdgeTTSBackend:
         output_path.parent.mkdir(parents=True,exist_ok=True)
         async def run():
             audio=bytearray(); words=[]
-            async for chunk in edge_tts.Communicate(text,chosen).stream():
+            async for chunk in edge_tts.Communicate(text,chosen,connect_timeout=10,receive_timeout=30).stream():
                 if chunk['type']=='audio': audio.extend(chunk['data'])
                 elif chunk['type']=='WordBoundary':
                     start=chunk['offset']/1e7; end=start+chunk['duration']/1e7

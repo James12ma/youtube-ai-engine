@@ -1,0 +1,28 @@
+name: Edge fallback real voice check (no upload)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  voice:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install -r requirements.txt -r requirements-production.txt -r requirements-edge.txt
+      - run: python -m scripts.check_edge_fallback
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: edge-fallback-${{ github.run_id }}
+          path: outputs/edge-check
+          retention-days: 3

@@ -13,7 +13,7 @@ from production.assets import card
 from production_pro.models import EditPlan
 from production_pro.editing import compose_scenes,burn_captions
 from production_pro.qc import run_qc
-from narration_pro import PiperNarrator,WhisperXAligner,normalize_loudness,build_ass_from_words,assess_caption_quality,save_word_timestamps
+from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,build_ass_from_words,assess_caption_quality,save_word_timestamps
 
 class VideoBuildError(RuntimeError): pass
 
@@ -24,7 +24,8 @@ def _run(cmd:list[str])->None:
 def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
                           gate:VerificationGateReport, model_path:Path,output_path:Path,
                           *,actual_assets:Mapping[int,Path]|None=None,
-                          reviewed:bool=False, width:int=1920,height:int=1080,fps:int=24)->dict:
+                          reviewed:bool=False, width:int=1920,height:int=1080,fps:int=24,
+                          allow_edge_fallback:bool=False)->dict:
     if not reviewed:raise VideoBuildError('Human-reviewed script and storyboard required')
     if script.topic!=gate.topic or gate.contradictions.pairs or gate.traceability.unverified_cited_claims:
         raise VideoBuildError('Verification gate failed')
@@ -46,7 +47,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     work=output_path.parent/(output_path.stem+'_work');work.mkdir(parents=True,exist_ok=True)
     segments=[script.hook]+[sec.narration for sec in script.sections]+[script.cta]
     if not all(t.strip() for t in segments):raise VideoBuildError('Every narration segment must be nonempty')
-    narrator=PiperNarrator(model_path)
+    narrator=PiperOrEdgeNarrator(model_path,allow_edge_fallback=allow_edge_fallback)
     synthesized=[]
     for i,text in enumerate(segments):synthesized.append(narrator.synthesize(text,work/f'speech_{i}.wav'))
     concat_list=work/'speech_concat.txt'
@@ -108,7 +109,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     edit=compose_scenes(plans,norm,composed,width=width,height=height,fps=fps,workdir=work/'edits')
     burn_captions(composed,captions,output_path)
     qc=run_qc(output_path,captions,forced_alignment_verified=aligned.method=='whisperx_ctc' and caption_qc.passed)
-    report={'output_path':str(output_path),'narration_backend':'piper',
+    report={'output_path':str(output_path),'narration_backend':'+'.join(sorted(narrator.actual_backends)),
             'alignment_backend':'whisperx_ctc','audio':loud.model_dump(),
             'alignment':{'token_coverage':aligned.token_coverage,'words':len(aligned.words)},
             'captions':caption_count,'caption_qc':caption_qc.model_dump(),

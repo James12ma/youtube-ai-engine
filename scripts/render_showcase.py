@@ -2,13 +2,13 @@
 from __future__ import annotations
 import argparse,json,shutil,time,subprocess
 from pathlib import Path
-from narration_pro import PiperNarrator,WhisperXAligner,normalize_loudness,save_word_timestamps,build_ass_from_words
+from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,save_word_timestamps,build_ass_from_words
 from narration_pro.aligner import _tokens
 from production_pro.recorder import WorkflowRecorder,focus_element
 from production_pro.editing import compose_scenes,burn_captions
 from production_pro.models import EditPlan
 from production_pro.qc import run_qc
-from scripts.enforce_gates import enforce,measure_loudness
+from scripts.enforce_gates import enforce,measure_loudness,parse_ass
 
 SENTENCES=[
     'One rule. Two outcomes. Watch this original expense approval demo.',
@@ -18,6 +18,15 @@ SENTENCES=[
     'Auto approved. Test both outcomes before connecting real business accounts.'
 ]
 FORMATS={'landscape':(1920,1080),'portrait':(1080,1920)}
+
+
+def export_srt(captions:Path,output:Path):
+    def stamp(seconds):
+        millis=round(seconds*1000);hours,millis=divmod(millis,3600000)
+        minutes,millis=divmod(millis,60000);seconds,millis=divmod(millis,1000)
+        return f'{hours:02}:{minutes:02}:{seconds:02},{millis:03}'
+    cues=parse_ass(captions)
+    output.write_text('\n\n'.join(f"{i}\n{stamp(c['start'])} --> {stamp(c['end'])}\n{c['text']}" for i,c in enumerate(cues,1))+'\n',encoding='utf-8')
 
 
 def sentence_boundaries(aligned):
@@ -63,11 +72,12 @@ def paced_steps(boundaries):
     return steps
 
 
-def run(voice:Path,out:Path,formats:list[str]):
+def run(voice:Path,out:Path,formats:list[str],*,allow_edge_fallback=False):
     out.mkdir(parents=True,exist_ok=True)
     shared=out/'narration';shared.mkdir(exist_ok=True)
     transcript=' '.join(SENTENCES)
-    speech=PiperNarrator(voice,length_scale=.96,noise_scale=.55).synthesize(transcript,shared/'vo.wav')
+    narrator=PiperOrEdgeNarrator(voice,length_scale=.96,noise_scale=.55,allow_edge_fallback=allow_edge_fallback)
+    speech=narrator.synthesize(transcript,shared/'vo.wav')
     normalize_loudness(Path(speech.wav_path),shared/'vo_norm.wav')
     aligned=WhisperXAligner(min_token_coverage=1).align(shared/'vo_norm.wav',transcript)
     save_word_timestamps(aligned,shared/'words.json')
@@ -89,6 +99,7 @@ def run(voice:Path,out:Path,formats:list[str]):
         qc=run_qc(folder/'final.mp4',folder/'captions.ass',min_caption_coverage=.70,forced_alignment_verified=True)
         lufs,peak=measure_loudness(folder/'final.mp4')
         report={'transcript':transcript,'aligner_ran':True,'method':aligned.method,
+            'narration_backend':'+'.join(sorted(narrator.actual_backends)),
             'token_coverage':aligned.token_coverage,'aligned_word_count':len(aligned.words),
             'caption_count':count,'caption_animation':'WhisperX-timed ASS karaoke sweep',
             'final_lufs':lufs,'final_tp':peak,'final_duration_s':qc.duration_s,
@@ -99,11 +110,20 @@ def run(voice:Path,out:Path,formats:list[str]):
             'live_llm_calls':0,'ready_for_publication':False,'publishing':'disabled'}
         (folder/'qc_report.json').write_text(json.dumps(report,indent=2))
         gates=enforce(folder,expected_size=(width,height))
+        export_srt(folder/'captions.ass',folder/'captions.srt')
         (folder/'independent_gates.json').write_text(json.dumps(gates,indent=2))
         for second,label in [(1,'hook'),(boundaries[2]+.5,'review'),(boundaries[4]+.5,'approved')]:
             subprocess.run(['ffmpeg','-y','-loglevel','error','-ss',str(second),'-i',str(folder/'final.mp4'),
                 '-frames:v','1',str(folder/(label+'.jpg'))],check=True)
         reports[name]=report
+    from channel.metadata import ReleaseMetadata
+    from channel.thumbnail import make_thumbnail
+    preferred=out/('landscape' if 'landscape' in formats else formats[0])
+    make_thumbnail('Test The Rule',out/'thumbnail.jpg',genuine_screenshot=preferred/'approved.jpg')
+    metadata=ReleaseMetadata(title='One Rule, Two Outcomes | Original Expense Approval Demo',
+        description='Original functioning expense-rule demo: example inputs of 120 dollars require manager review; 80 dollars is automatically approved. Synthesized narration and word-aligned captions. Owner editorial review required; no real business performance claims.',
+        tags=['expense approval','workflow automation','original demonstration'])
+    (out/'metadata_draft.json').write_text(metadata.model_dump_json(indent=2))
     (out/'REPORT.json').write_text(json.dumps(reports,indent=2))
     return reports
 
@@ -113,5 +133,6 @@ if __name__=='__main__':
     p.add_argument('--voice',type=Path,required=True)
     p.add_argument('--output-dir',type=Path,default=Path('outputs/showcase'))
     p.add_argument('--format',choices=['both',*FORMATS],default='both')
+    p.add_argument('--allow-edge-fallback',action='store_true')
     a=p.parse_args()
-    print(json.dumps(run(a.voice,a.output_dir,list(FORMATS) if a.format=='both' else [a.format]),indent=2))
+    print(json.dumps(run(a.voice,a.output_dir,list(FORMATS) if a.format=='both' else [a.format],allow_edge_fallback=a.allow_edge_fallback),indent=2))

@@ -25,6 +25,7 @@ def main(argv=None):
     r.add_argument('--out',type=Path,required=True);r.add_argument('--asset-map',type=Path)
     r.add_argument('--reviewed',action='store_true')
     r.add_argument('--format',choices=('landscape','portrait'),default='landscape')
+    r.add_argument('--allow-edge-fallback',action='store_true')
     t=sub.add_parser('thumbnail');t.add_argument('--text',required=True);t.add_argument('--out',type=Path,required=True)
     t.add_argument('--screenshot',type=Path)
     b=sub.add_parser('package');b.add_argument('--draft',type=Path,required=True)
@@ -60,7 +61,8 @@ def main(argv=None):
              _json_model(draft/'verification_gate.json',VerificationGateReport),
              args.voice_model,args.out,actual_assets=assets,reviewed=args.reviewed,
              width=1080 if args.format=='portrait' else 1920,
-             height=1920 if args.format=='portrait' else 1080)
+             height=1920 if args.format=='portrait' else 1080,
+             allow_edge_fallback=args.allow_edge_fallback)
     elif args.command=='thumbnail':
         path=make_thumbnail(args.text,args.out,genuine_screenshot=args.screenshot)
         result={'thumbnail':str(path)}

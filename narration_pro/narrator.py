@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import wave
+import subprocess
 from pathlib import Path
 from typing import Any
 from pydantic import BaseModel, Field
@@ -73,3 +74,54 @@ class PiperNarrator:
         return SynthesisResult(wav_path=str(output_path), sample_rate=rate, channels=ch,
                                sample_width=width, duration_s=nframes/rate,
                                voice_model=str(self.model_path), text=text)
+
+
+class PiperOrEdgeNarrator:
+    """Preserve Piper as primary; explicit opt-in online fallback, still CTC aligned.
+
+    Edge's unofficial service availability and output rights require owner review.
+    No voice or alignment success is fabricated if either service fails.
+    """
+    def __init__(self, model_path:Path, *, allow_edge_fallback=False,
+                 edge_voice='en-US-JennyNeural', primary_factory=PiperNarrator,
+                 edge_factory=None, **piper_settings):
+        self.model_path=Path(model_path)
+        self.allow_edge_fallback=allow_edge_fallback
+        self.edge_voice=edge_voice
+        self.primary_factory=primary_factory
+        self.edge_factory=edge_factory
+        self.piper_settings=piper_settings
+        self._primary=None
+        self.actual_backends=set()
+
+    def synthesize(self,text:str,output_path:Path)->SynthesisResult:
+        if not text or not text.strip():raise NarrationError('empty transcript')
+        try:
+            if self._primary is None:
+                self._primary=self.primary_factory(self.model_path,**self.piper_settings)
+            result=self._primary.synthesize(text,output_path)
+            self.actual_backends.add('piper')
+            return result
+        except (NarrationError,OSError,RuntimeError,ValueError):
+            if not self.allow_edge_fallback:raise
+        output_path=Path(output_path)
+        mp3=output_path.with_suffix('.edge.mp3')
+        try:
+            if self.edge_factory is None:
+                from production.tts import EdgeTTSBackend
+                backend=EdgeTTSBackend(default_voice=self.edge_voice)
+            else:backend=self.edge_factory()
+            backend.synthesize(text,mp3,voice=self.edge_voice)
+            subprocess.run(['ffmpeg','-y','-hide_banner','-loglevel','error','-i',str(mp3),
+                '-ac','1','-ar','48000','-c:a','pcm_s16le',str(output_path)],
+                check=True,capture_output=True,timeout=60)
+            with wave.open(str(output_path),'rb') as wav:
+                rate,channels,width,frames=wav.getframerate(),wav.getnchannels(),wav.getsampwidth(),wav.getnframes()
+            result=SynthesisResult(wav_path=str(output_path),sample_rate=rate,channels=channels,
+                sample_width=width,duration_s=frames/rate,voice_model='edge:'+self.edge_voice,text=text)
+            self.actual_backends.add('edge-tts')
+            return result
+        except Exception:
+            output_path.unlink(missing_ok=True)
+            raise NarrationError('Piper and opted-in Edge narration unavailable; no substitute audio generated') from None
+        finally:mp3.unlink(missing_ok=True)

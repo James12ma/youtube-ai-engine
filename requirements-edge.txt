@@ -1,0 +1,2 @@
+# Optional unofficial online fallback. No API key or paid account is used.
+edge-tts==7.3.1

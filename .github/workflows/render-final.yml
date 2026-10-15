@@ -56,7 +56,7 @@ jobs:
           python -m pip install --index-url https://download.pytorch.org/whl/cpu \
             'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
           # Install WhisperX's ENTIRE dependency graph; no --no-deps workaround.
-          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production-pro.txt
+          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
           python -m pip check
           # WhisperX sentence segmentation requires this non-wheel resource.
           python - <<'PY'
@@ -96,10 +96,14 @@ jobs:
           name: final-videos-${{ github.run_id }}
           path: |
             outputs/showcase/REPORT.json
+            outputs/showcase/thumbnail.jpg
+            outputs/showcase/metadata_draft.json
             outputs/showcase/*/final.mp4
+            outputs/showcase/*/vo.wav
             outputs/showcase/*/vo_norm.wav
             outputs/showcase/*/words.json
             outputs/showcase/*/captions.ass
+            outputs/showcase/*/captions.srt
             outputs/showcase/*/qc_report.json
             outputs/showcase/*/independent_gates.json
             outputs/showcase/*/*.jpg
