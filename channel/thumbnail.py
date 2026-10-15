@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import json
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from .packaging_lint import thumbnail_problems
+from .packaging_lint import QualityPolicy,thumbnail_findings
 
 FONT_CANDIDATES = [
  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
@@ -28,11 +28,15 @@ def read_thumbnail_text(image_path: Path) -> str | None:
 
 
 def make_thumbnail(headline: str, output_path: Path, *, genuine_screenshot: Path | None = None,
-                   width: int=1280,height: int=720, title: str | None = None) -> Path:
+                   width: int=1280,height: int=720, title: str | None = None,
+                   policy: QualityPolicy | None = None) -> Path:
     headline=' '.join(headline.split())
+    advisories=[]
     if title is not None:
-        problems=thumbnail_problems(title,headline)
-        if problems: raise ValueError('Thumbnail text rejected: '+'; '.join(p.message for p in problems))
+        # Pairing rules are project policy (advisory by default), never YouTube requirements.
+        for severity,finding in thumbnail_findings(title,headline,policy or QualityPolicy()):
+            if severity=='block':raise ValueError('Thumbnail text rejected by project policy: '+finding.message)
+            if severity=='warn':advisories.append(finding.model_dump())
     if not 3<=len(headline)<=90: raise ValueError('headline must contain 3-90 characters')
     # Numeric results must have a separate editorial review, not invented by template.
     if re.search(r'\b\d+(?:[.,]\d+)?\s*%|\$\s*\d+',headline):
@@ -62,5 +66,5 @@ def make_thumbnail(headline: str, output_path: Path, *, genuine_screenshot: Path
     im.save(output_path,quality=89,optimize=True)
     if output_path.stat().st_size > 2*1024*1024:
         raise ValueError('Thumbnail exceeds 2MB; compress or simplify')
-    thumbnail_text_path(output_path).write_text(json.dumps({'text':headline}),encoding='utf-8')
+    thumbnail_text_path(output_path).write_text(json.dumps({'text':headline,'advisories':advisories}),encoding='utf-8')
     return output_path

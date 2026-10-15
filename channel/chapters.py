@@ -36,6 +36,9 @@ class ChapterValidation(BaseModel):
     passed: bool
     errors: list[str] = Field(default_factory=list)
     chapter_count: int
+    # False when no real video duration was available, so the last chapter's length is unverified.
+    final_chapter_checked: bool = False
+    video_duration_s: float | None = None
 
 
 def _clean_title(title: str) -> str:
@@ -67,11 +70,18 @@ def validate_chapters(chapters: Sequence[Chapter], *, video_duration_s: float | 
         length = starts[i + 1] - starts[i]
         if length < MIN_CHAPTER_SECONDS:
             errors.append(f"chapter {i + 1} is {length}s long; minimum is {int(MIN_CHAPTER_SECONDS)}s")
+    final_checked = False
     if chapters and video_duration_s is not None:
+        final_checked = True
+        beyond = [i + 1 for i, st in enumerate(starts) if st >= video_duration_s]
+        if beyond:
+            errors.append(f"chapter(s) {beyond} start after the video ends ({video_duration_s:.1f}s)")
         last = video_duration_s - starts[-1]
         if last < MIN_CHAPTER_SECONDS:
-            errors.append(f"last chapter is {last:.1f}s long; minimum is {int(MIN_CHAPTER_SECONDS)}s")
-    return ChapterValidation(passed=not errors, errors=errors, chapter_count=len(chapters))
+            errors.append(f"last chapter is {last:.1f}s long (to the real video end); "
+                          f"minimum is {int(MIN_CHAPTER_SECONDS)}s")
+    return ChapterValidation(passed=not errors, errors=errors, chapter_count=len(chapters),
+                             final_chapter_checked=final_checked, video_duration_s=video_duration_s)
 
 
 def normalize_timeline(timeline: Iterable[Mapping], *, video_duration_s: float | None = None) -> list[Chapter]:
@@ -94,10 +104,16 @@ def normalize_timeline(timeline: Iterable[Mapping], *, video_duration_s: float |
     items.sort(key=lambda x: x["start"])
     if not items:
         return []
+    if video_duration_s is not None:
+        # The real file is the authority: drop entries that start after it ends and
+        # make the final chapter run to the actual end of the video.
+        items = [it for it in items if it["start"] < video_duration_s] or items[:1]
     items[0]["start"] = 0.0
     for i, item in enumerate(items):
-        if item["end"] is None:
-            item["end"] = items[i + 1]["start"] if i + 1 < len(items) else video_duration_s
+        if i + 1 < len(items):
+            item["end"] = items[i + 1]["start"]
+        elif video_duration_s is not None:
+            item["end"] = float(video_duration_s)
 
     merged: list[dict] = []
     for item in items:

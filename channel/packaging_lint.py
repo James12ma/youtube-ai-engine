@@ -4,32 +4,31 @@ Adapted from ``skills/yt-package/title.py`` in Jakeschincariol/youtube-agent-ski
 (commit a2feb2104981a375ffd4f87ee04f4f5344ac43c6), MIT License,
 Copyright (c) 2026 Jake Schincariol. See THIRD_PARTY_NOTICES.md.
 
-Two outcome classes are kept strictly separate:
+Every finding carries a ``source``:
 
-* ``blocking`` - objective defects that stop packaging: the title is cut off in
-  desktop search (> 60 characters) or exceeds YouTube's 100-character limit,
-  the thumbnail text repeats a title word, or the thumbnail carries more than
-  three words.
-* ``advisories`` - editorial suggestions that are recorded for the owner but
-  never stop anything (mobile preview cut, all-caps, vague words, no concrete
-  anchor, filler at the front).
+* ``youtube``  - a real platform limit (title empty or over 100 characters, or
+  containing ``<``/``>``, which the YouTube Data API rejects). Always blocking.
+* ``project_policy`` - a LogicScript quality preference (60-character desktop
+  title, thumbnail word count, title/thumbnail word repetition). These are NOT
+  YouTube requirements. Their thresholds and whether they block are configured by
+  :class:`QualityPolicy`; by default they are advisory warnings.
+* ``style`` - editorial hints that can never block.
 
-LogicScript changes from the original: plural-insensitive duplicate matching,
-three-word thumbnail ceiling (the original prose rule; its code allowed four),
-and the "add a number" hint reworded because numbers in titles must be backed by
-verified claims under LogicScript policy.
+LogicScript changes from the original: blocking/advisory split, configurable
+policy, plural-insensitive duplicate matching, and the "add a number" hint
+reworded because numbers in titles must come from verified claims.
 """
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-DESKTOP_LIMIT = 60
-MOBILE_LIMIT = 40
-HARD_LIMIT = 100
-MAX_THUMBNAIL_WORDS = 3
-MAX_CAPS_WORDS = 2
+YOUTUBE_TITLE_MAX = 100  # YouTube Data API hard limit
+FORBIDDEN_CHARS = re.compile(r'[<>]')  # rejected by the YouTube Data API in titles/descriptions
 
 VAGUE = {"amazing", "incredible", "insane", "crazy", "huge", "massive", "ultimate", "best",
          "powerful", "secret", "revolutionary", "mindblowing", "epic", "perfect", "complete",
@@ -37,10 +36,35 @@ VAGUE = {"amazing", "incredible", "insane", "crazy", "huge", "massive", "ultimat
 STOP = {"the", "a", "an", "of", "for", "to", "in", "on", "and", "or", "is", "are", "with",
         "your", "you", "my", "i", "this", "that", "it", "how", "what", "why"}
 
+Severity = Literal["block", "warn", "off"]
+
+
+class QualityPolicy(BaseModel):
+    """LogicScript packaging policy. Defaults warn; set a rule to "block" to enforce it."""
+    model_config = ConfigDict(extra='forbid')
+
+    title_desktop_chars: int = Field(default=60, ge=10, le=YOUTUBE_TITLE_MAX)
+    title_desktop_rule: Severity = "warn"
+    title_mobile_chars: int = Field(default=40, ge=10, le=YOUTUBE_TITLE_MAX)
+    thumbnail_max_words: int = Field(default=3, ge=1, le=20)
+    thumbnail_word_rule: Severity = "warn"
+    thumbnail_duplicate_rule: Severity = "warn"
+    thumbnail_text_required: Severity = "warn"
+    # Chapters the owner supplied but YouTube would ignore are a defect we would write
+    # into the description ourselves, so this one blocks by default.
+    invalid_chapters_rule: Literal["block", "warn"] = "block"
+
+    @classmethod
+    def load(cls, path: Path | None) -> "QualityPolicy":
+        if path is None:
+            return cls()
+        return cls.model_validate(json.loads(Path(path).read_text(encoding='utf-8')))
+
 
 class PackagingFinding(BaseModel):
     code: str
     message: str
+    source: Literal["youtube", "project_policy", "style"]
 
 
 class PackagingReport(BaseModel):
@@ -54,11 +78,6 @@ class PackagingReport(BaseModel):
     @property
     def passed(self) -> bool:
         return not self.blocking
-
-    def summary(self) -> dict:
-        data = self.model_dump()
-        data["passed"] = self.passed
-        return data
 
 
 def _words(text: str) -> list[str]:
@@ -78,77 +97,93 @@ def _content_words(text: str) -> set[str]:
     return {_stem(w) for w in _words(text) if w not in STOP}
 
 
-def mobile_preview(title: str) -> str:
+def mobile_preview(title: str, limit: int = 40) -> str:
     title = " ".join(title.split())
-    if len(title) <= MOBILE_LIMIT:
+    if len(title) <= limit:
         return title
-    head = title[:MOBILE_LIMIT].rsplit(" ", 1)[0]
-    return head + "..."
+    return title[:limit].rsplit(" ", 1)[0] + "..."
 
 
-def thumbnail_problems(title: str, thumbnail_text: str) -> list[PackagingFinding]:
-    """Blocking problems of a title/thumbnail pairing (reused by make_thumbnail)."""
-    problems = []
+def thumbnail_findings(title: str, thumbnail_text: str, policy: QualityPolicy) -> list[tuple[Severity, PackagingFinding]]:
+    out: list[tuple[Severity, PackagingFinding]] = []
     n_words = len(_words(thumbnail_text))
-    if n_words > MAX_THUMBNAIL_WORDS:
-        problems.append(PackagingFinding(
-            code="thumbnail-length",
-            message=f"{n_words} words on the thumbnail; {MAX_THUMBNAIL_WORDS} is the ceiling at feed size"))
+    if n_words > policy.thumbnail_max_words:
+        out.append((policy.thumbnail_word_rule, PackagingFinding(
+            code="thumbnail-length", source="project_policy",
+            message=f"{n_words} words on the thumbnail; project policy is {policy.thumbnail_max_words} "
+                    "or fewer for legibility at feed size")))
     shared = _content_words(title) & _content_words(thumbnail_text)
     if shared:
-        problems.append(PackagingFinding(
-            code="duplicate",
+        out.append((policy.thumbnail_duplicate_rule, PackagingFinding(
+            code="duplicate", source="project_policy",
             message="thumbnail repeats the title on: " + ", ".join(sorted(shared))
-                    + "; the thumbnail should say what the title does not"))
-    return problems
+                    + "; project policy prefers the thumbnail to add what the title does not")))
+    return out
 
 
-def lint_packaging(title: str, thumbnail_text: str | None = None) -> PackagingReport:
+def lint_packaging(title: str, thumbnail_text: str | None = None,
+                   policy: QualityPolicy | None = None) -> PackagingReport:
+    policy = policy or QualityPolicy()
     t = " ".join(title.split())
     n = len(t)
     blocking: list[PackagingFinding] = []
     advisories: list[PackagingFinding] = []
 
+    def route(severity: Severity, finding: PackagingFinding):
+        if severity == "block":
+            blocking.append(finding)
+        elif severity == "warn":
+            advisories.append(finding)
+
+    # Real YouTube limits: always blocking.
     if not t:
-        blocking.append(PackagingFinding(code="empty", message="title is empty"))
-    elif n > HARD_LIMIT:
-        blocking.append(PackagingFinding(code="length", message=f"{n} characters; YouTube's hard limit is {HARD_LIMIT}"))
-    elif n > DESKTOP_LIMIT:
-        blocking.append(PackagingFinding(
-            code="length", message=f"{n} characters; desktop search truncates near {DESKTOP_LIMIT}"))
+        blocking.append(PackagingFinding(code="empty", source="youtube", message="title is empty"))
+    elif n > YOUTUBE_TITLE_MAX:
+        blocking.append(PackagingFinding(code="youtube-length", source="youtube",
+                                         message=f"{n} characters; YouTube's limit is {YOUTUBE_TITLE_MAX}"))
+    if FORBIDDEN_CHARS.search(t):
+        blocking.append(PackagingFinding(code="forbidden-chars", source="youtube",
+                                         message="title contains < or >, which YouTube rejects"))
 
-    if n > MOBILE_LIMIT:
+    # Project policies: configurable.
+    if policy.title_desktop_chars < n <= YOUTUBE_TITLE_MAX:
+        route(policy.title_desktop_rule, PackagingFinding(
+            code="length", source="project_policy",
+            message=f"{n} characters; desktop search usually truncates near {policy.title_desktop_chars} "
+                    "(project policy, not a YouTube requirement)"))
+    if n > policy.title_mobile_chars:
         advisories.append(PackagingFinding(
-            code="mobile", message=f'mobile feed shows about "{mobile_preview(t)}"; check the subject survives'))
+            code="mobile", source="style",
+            message=f'mobile feed shows about "{mobile_preview(t, policy.title_mobile_chars)}"; '
+                    "check the subject survives"))
 
+    # Style hints: never block.
     caps = [w for w in t.split() if len(w) > 2 and w.isupper()]
-    if len(caps) > MAX_CAPS_WORDS:
-        advisories.append(PackagingFinding(
-            code="shouting", message=f"{len(caps)} all-caps words; two is the ceiling before it reads as spam"))
-
+    if len(caps) > 2:
+        advisories.append(PackagingFinding(code="shouting", source="style",
+                          message=f"{len(caps)} all-caps words; two is a common ceiling before it reads as spam"))
     vague = sorted({w for w in _words(t) if w in VAGUE})
     if vague:
-        advisories.append(PackagingFinding(
-            code="vague", message=", ".join(vague) + "; replace with a concrete name, tool or step"))
-
+        advisories.append(PackagingFinding(code="vague", source="style",
+                          message=", ".join(vague) + "; replace with a concrete name, tool or step"))
     if t and not re.search(r"\d", t):
-        advisories.append(PackagingFinding(
-            code="no-anchor",
-            message="no concrete name, date or number; a specific anchor usually helps "
-                    "(numbers must come from verified claims)"))
-
+        advisories.append(PackagingFinding(code="no-anchor", source="style",
+                          message="no concrete date or number; a specific anchor often helps "
+                                  "(numbers must come from verified claims)"))
     if t and not [w for w in _words(t)[:3] if w not in STOP]:
-        advisories.append(PackagingFinding(
-            code="front-load", message="the first three words are all filler; move the subject forward"))
+        advisories.append(PackagingFinding(code="front-load", source="style",
+                          message="the first three words are all filler; move the subject forward"))
 
-    if thumbnail_text is not None:
+    thumb = None
+    if thumbnail_text is not None and thumbnail_text.strip():
         thumb = " ".join(thumbnail_text.split())
-        if not thumb:
-            blocking.append(PackagingFinding(code="thumbnail-empty", message="thumbnail text is empty"))
-        else:
-            blocking.extend(thumbnail_problems(t, thumb))
+        for severity, finding in thumbnail_findings(t, thumb, policy):
+            route(severity, finding)
     else:
-        thumb = None
+        route(policy.thumbnail_text_required, PackagingFinding(
+            code="thumbnail-text", source="project_policy",
+            message="thumbnail text unknown; pass it so the title/thumbnail pairing can be reviewed"))
 
-    return PackagingReport(title=t, title_chars=n, thumbnail_text=thumb, mobile_preview=mobile_preview(t),
+    return PackagingReport(title=t, title_chars=n, thumbnail_text=thumb,
+                           mobile_preview=mobile_preview(t, policy.title_mobile_chars),
                            blocking=blocking, advisories=advisories)

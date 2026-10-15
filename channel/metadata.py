@@ -57,9 +57,15 @@ def generate_metadata(script: ScriptArtifact, research: ResearchArtifact, gate: 
             + '\n\nSources referenced in the research:\n'+source_lines
             + '\n\nEducational demonstration. Verify services and results independently.\n'
             + 'Original narration and visuals; human editorial review required.')
-    if len(desc)>5000:
+    desc = _youtube_safe(desc)
+    if len(desc.encode('utf-8'))>5000:  # YouTube's limit is 5000 bytes
         raise ValueError('Citation description too long')
-    return ReleaseMetadata(title=title, description=desc, tags=derive_tags(script))
+    return ReleaseMetadata(title=_youtube_safe(title), description=desc, tags=derive_tags(script))
+
+
+def _youtube_safe(text: str) -> str:
+    """YouTube rejects < and > in titles, descriptions and tags."""
+    return text.replace('<', '').replace('>', '')
 
 
 _TAG_STOP = {'with','your','from','that','this','what','when','where','into','about','these','those',
@@ -114,7 +120,7 @@ def derive_tags(script: ScriptArtifact, limit: int = 15) -> list[str]:
     """Disambiguation tags from this video's own topic, title and headings (max 15)."""
     tags: list[str] = []
     def add(term: str):
-        term = ' '.join(term.split()).strip(' .,:;!?')
+        term = _youtube_safe(' '.join(term.split()).strip(' .,:;!?'))
         key = term.casefold()
         if (len(term) >= 3 and len(term) <= 30 and key not in _TAG_STOP
                 and key not in (t.casefold() for t in tags)):

@@ -5,7 +5,7 @@ from pathlib import Path
 from pipeline.models import ResearchArtifact,ScriptArtifact,StoryboardOutput
 from verification.models import VerificationGateReport
 from .metadata import ReleaseMetadata,generate_metadata
-from .thumbnail import make_thumbnail,read_thumbnail_text
+from .thumbnail import make_thumbnail,read_thumbnail_text,thumbnail_text_path
 from .release import build_release,approve_release,check_approval
 
 def _json_model(path,model):return model.model_validate_json(Path(path).read_text(encoding='utf-8'))
@@ -28,7 +28,8 @@ def main(argv=None):
     r.add_argument('--allow-edge-fallback',action='store_true')
     t=sub.add_parser('thumbnail');t.add_argument('--text',required=True);t.add_argument('--out',type=Path,required=True)
     t.add_argument('--screenshot',type=Path)
-    t.add_argument('--title',help='Video title; rejects thumbnail text that repeats it or exceeds 3 words')
+    t.add_argument('--title',help='Video title; records pairing advisories (blocks only if the policy says so)')
+    t.add_argument('--quality-policy',type=Path,help='JSON QualityPolicy overrides')
     b=sub.add_parser('package');b.add_argument('--draft',type=Path,required=True)
     b.add_argument('--video',type=Path,required=True);b.add_argument('--thumbnail',type=Path,required=True)
     b.add_argument('--editorial-report',type=Path,required=True);b.add_argument('--out',type=Path,required=True)
@@ -38,10 +39,12 @@ def main(argv=None):
     b.add_argument('--title',help='Owner-reviewed title override (default: script title)')
     b.add_argument('--thumbnail-text',help='Exact text on the thumbnail (default: read from the thumbnail sidecar)')
     b.add_argument('--chapters',type=Path,help='Chapter timeline JSON, or a render report with a "chapters" list')
+    b.add_argument('--quality-policy',type=Path,help='JSON QualityPolicy overrides (default: advisory project rules)')
     k=sub.add_parser('quality-check',help='Offline title/thumbnail/chapter gates plus advisory hook score; writes nothing')
     k.add_argument('--draft',type=Path,required=True);k.add_argument('--title')
     k.add_argument('--thumbnail-text');k.add_argument('--thumbnail',type=Path)
     k.add_argument('--chapters',type=Path);k.add_argument('--video',type=Path)
+    k.add_argument('--quality-policy',type=Path)
     a=sub.add_parser('approve');a.add_argument('--release',type=Path,required=True)
     a.add_argument('--digest',required=True);a.add_argument('--human-confirmed',action='store_true')
     u=sub.add_parser('upload');u.add_argument('--release',type=Path,required=True)
@@ -72,18 +75,22 @@ def main(argv=None):
              height=1920 if args.format=='portrait' else 1080,
              allow_edge_fallback=args.allow_edge_fallback)
     elif args.command=='thumbnail':
-        path=make_thumbnail(args.text,args.out,genuine_screenshot=args.screenshot,title=args.title)
-        result={'thumbnail':str(path)}
+        from .packaging_lint import QualityPolicy
+        path=make_thumbnail(args.text,args.out,genuine_screenshot=args.screenshot,title=args.title,
+                            policy=QualityPolicy.load(args.quality_policy))
+        result={'thumbnail':str(path),**json.loads(thumbnail_text_path(path).read_text())}
     elif args.command in ('package','quality-check'):
         from .quality import evaluate_release_quality,require_quality,probe_duration
         from .chapters import load_timeline
+        from .packaging_lint import QualityPolicy
         script=_json_model(args.draft/'script.json',ScriptArtifact)
         thumb_text=args.thumbnail_text
         if thumb_text is None and args.thumbnail is not None:thumb_text=read_thumbnail_text(args.thumbnail)
         duration=probe_duration(args.video) if args.video is not None else None
         timeline=load_timeline(args.chapters) if args.chapters is not None else None
         report,chapters=evaluate_release_quality(script,title=args.title,thumbnail_text=thumb_text,
-                                                 timeline=timeline,video_duration_s=duration)
+                                                 timeline=timeline,video_duration_s=duration,
+                                                 policy=QualityPolicy.load(args.quality_policy))
         if args.command=='quality-check':
             result=report
         elif report['blocking']:

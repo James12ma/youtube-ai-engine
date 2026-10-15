@@ -1,5 +1,6 @@
 """One command for source-backed drafts. Live API calls require explicit authorization."""
 from __future__ import annotations
+import json
 import os
 from pathlib import Path
 from urllib.parse import urlparse
@@ -47,7 +48,11 @@ def generate_draft(repo:Path,topic:str,urls:list[str],out_dir:Path,*,
         ('verification_gate',result.verification_gate.report)):
         (out_dir/f'{name}.json').write_text(value.model_dump_json(indent=2),encoding='utf-8')
     # ADVISORY only: the score is recorded for editorial review and never gates the draft.
-    from pipeline.hook_score import write_hook_advisory
-    write_hook_advisory(result.content.script.hook,out_dir/'hook_advisory.json')
+    # A failure here must never lose or block a generated draft.
+    try:
+        from pipeline.hook_score import write_hook_advisory
+        write_hook_advisory(result.content.script.hook,out_dir/'hook_advisory.json')
+    except Exception as e:  # noqa: BLE001 - advisory must not affect the draft
+        (out_dir/'hook_advisory.json').write_text(json.dumps({'advisory':True,'error':type(e).__name__}),encoding='utf-8')
     (out_dir/'STATUS.txt').write_text('RESEARCH GENERATED — HUMAN EDITORIAL REVIEW REQUIRED; NO PUBLISHING\n')
     return {'files':sorted(p.name for p in out_dir.iterdir()),'ready_for_publication':False}

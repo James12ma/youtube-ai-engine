@@ -11,7 +11,7 @@ import pytest
 from channel.chapters import (Chapter, format_chapters, format_timestamp, load_timeline,
                               normalize_timeline, timeline_from_segments, validate_chapters)
 from channel.metadata import derive_tags, description_intro, generate_metadata
-from channel.packaging_lint import lint_packaging
+from channel.packaging_lint import QualityPolicy, lint_packaging
 from channel.quality import evaluate_release_quality
 from channel.release import build_release, approve_release
 from channel.thumbnail import make_thumbnail, read_thumbnail_text
@@ -34,17 +34,41 @@ def make_script(**overrides) -> ScriptArtifact:
 
 # ---------- 1. title length / truncation ----------
 
-def test_real_prepared_title_is_blocked_for_desktop_truncation():
+def test_real_prepared_title_gets_desktop_warning_not_rejection_by_default():
     report = lint_packaging('Boundary Testing Tutorial: The One-Cent Test (Free Browser Lab)', 'EDGE CASE')
-    assert report.title_chars == 63
-    assert [f.code for f in report.blocking] == ['length']
-    assert not report.passed
+    assert report.title_chars == 63 and report.passed
+    finding = next(f for f in report.advisories if f.code == 'length')
+    assert finding.source == 'project_policy' and 'not a YouTube requirement' in finding.message
 
 
-@pytest.mark.parametrize('n,blocked', [(40, False), (60, False), (61, True), (101, True)])
-def test_title_length_boundaries(n, blocked):
+@pytest.mark.parametrize('n,blocked', [(40, False), (60, False), (61, False), (100, False), (101, True)])
+def test_only_youtubes_100_char_limit_blocks_by_default(n, blocked):
     report = lint_packaging('A' * n, 'Spark')
     assert (not report.passed) is blocked
+    if blocked:
+        assert report.blocking[0].source == 'youtube'
+
+
+def test_desktop_limit_is_configurable_and_can_be_enforced():
+    strict = QualityPolicy(title_desktop_chars=50, title_desktop_rule='block')
+    assert not lint_packaging('A' * 51, 'Spark', strict).passed
+    assert lint_packaging('A' * 50, 'Spark', strict).passed
+    off = QualityPolicy(title_desktop_rule='off')
+    assert 'length' not in {f.code for f in lint_packaging('A' * 80, 'Spark', off).advisories}
+
+
+def test_policy_loads_from_json_and_rejects_unknown_keys(tmp_path):
+    good = tmp_path / 'policy.json'; good.write_text(json.dumps({'thumbnail_max_words': 5}))
+    assert QualityPolicy.load(good).thumbnail_max_words == 5
+    bad = tmp_path / 'bad.json'; bad.write_text(json.dumps({'thumbnail_max_word': 5}))
+    with pytest.raises(Exception):
+        QualityPolicy.load(bad)
+    assert QualityPolicy.load(None) == QualityPolicy()
+
+
+def test_youtube_forbidden_angle_brackets_block():
+    report = lint_packaging('Use <script> safely', 'Spark')
+    assert report.blocking[0].code == 'forbidden-chars' and report.blocking[0].source == 'youtube'
 
 
 def test_mobile_preview_is_advisory_not_blocking():
@@ -62,27 +86,39 @@ def test_style_issues_never_block():
 
 # ---------- 2. title / thumbnail duplication ----------
 
-def test_duplicate_words_block_including_plurals():
+def test_duplicate_words_warn_by_default_including_plurals():
     report = lint_packaging('How to Review AI Automation Workflows', 'Review Your Workflow')
-    codes = {f.code for f in report.blocking}
-    assert 'duplicate' in codes
-    msg = next(f.message for f in report.blocking if f.code == 'duplicate')
-    assert 'review' in msg and 'workflow' in msg
+    assert report.passed
+    finding = next(f for f in report.advisories if f.code == 'duplicate')
+    assert finding.source == 'project_policy'
+    assert 'review' in finding.message and 'workflow' in finding.message
+    enforced = lint_packaging('How to Review AI Automation Workflows', 'Review Your Workflow',
+                              QualityPolicy(thumbnail_duplicate_rule='block'))
+    assert {f.code for f in enforced.blocking} == {'duplicate'}
 
 
-def test_distinct_pairing_passes_and_stopwords_ignored():
-    assert lint_packaging('How to Test an Expense Rule', 'ONE CENT OFF').passed
-    assert lint_packaging('How the Rule Breaks', 'The Missing Cent').passed  # 'the' is a stopword
+def test_distinct_pairing_has_no_pairing_findings_and_stopwords_ignored():
+    for title, thumb in [('How to Test an Expense Rule', 'ONE CENT OFF'), ('How the Rule Breaks', 'The Missing Cent')]:
+        report = lint_packaging(title, thumb)
+        assert not {'duplicate', 'thumbnail-length'} & {f.code for f in report.advisories + report.blocking}
 
 
-def test_thumbnail_word_ceiling():
+def test_thumbnail_word_count_warns_by_default_and_is_configurable():
     report = lint_packaging('Test an Expense Rule', 'one cent above the limit')
-    assert 'thumbnail-length' in {f.code for f in report.blocking}
+    assert report.passed and 'thumbnail-length' in {f.code for f in report.advisories}
+    relaxed = lint_packaging('Test an Expense Rule', 'one cent above the limit', QualityPolicy(thumbnail_max_words=5))
+    assert 'thumbnail-length' not in {f.code for f in relaxed.advisories}
+    strict = lint_packaging('Test an Expense Rule', 'one cent above the limit', QualityPolicy(thumbnail_word_rule='block'))
+    assert not strict.passed
 
 
-def test_make_thumbnail_checks_pairing_and_records_text(tmp_path):
-    with pytest.raises(ValueError, match='repeats the title'):
-        make_thumbnail('Expense Rules', tmp_path / 'bad.jpg', title='Test Your Expense Rule')
+def test_make_thumbnail_records_text_and_advisories_without_rejecting(tmp_path):
+    image = make_thumbnail('Expense Rules', tmp_path / 'dup.jpg', title='Test Your Expense Rule')
+    side = json.loads((tmp_path / 'dup.jpg.text.json').read_text())
+    assert side['text'] == 'Expense Rules' and side['advisories'][0]['code'] == 'duplicate'
+    with pytest.raises(ValueError, match='project policy'):
+        make_thumbnail('Expense Rules', tmp_path / 'strict.jpg', title='Test Your Expense Rule',
+                       policy=QualityPolicy(thumbnail_duplicate_rule='block'))
     image = make_thumbnail('ONE CENT OFF', tmp_path / 'good.jpg', title='Test Your Expense Rule')
     assert read_thumbnail_text(image) == 'ONE CENT OFF'
     # Existing callers without a title keep working unchanged.
@@ -212,17 +248,29 @@ def test_tags_derive_from_this_video_only():
 def test_quality_report_separates_blocking_from_advisory():
     script = make_script(title='Boundary Testing Tutorial: The One-Cent Test (Free Browser Lab)')
     report, _ = evaluate_release_quality(script, thumbnail_text='Boundary Testing',
-                                         timeline=[{'title': 'A', 'start': 0}, {'title': 'B', 'start': 5}])
+                                         timeline=[{'title': 'A', 'start': 0}, {'title': 'B', 'start': 5}],
+                                         video_duration_s=40)
+    # Only the invalid chapters block; title length and duplication are project-policy warnings.
     assert report['passed'] is False
-    joined = ' | '.join(report['blocking'])
-    assert 'length' in joined and 'duplicate' in joined and 'chapters' in joined
-    assert 'hook' not in joined  # the hook score is never a blocking reason
-    assert 'hook' in report['advisory']
+    assert all(b.startswith('[youtube] chapters') for b in report['blocking'])
+    advice = ' | '.join(report['advisory']['packaging'])
+    assert '[project_policy] length' in advice and '[project_policy] duplicate' in advice
+    assert 'hook' not in ' '.join(report['blocking'])  # never a blocking reason
+    assert report['policy'] == QualityPolicy().model_dump()
 
 
-def test_missing_thumbnail_text_blocks():
+def test_invalid_chapters_can_be_downgraded_and_are_then_omitted():
+    report, chapters = evaluate_release_quality(
+        make_script(), thumbnail_text='ONE CENT', timeline=[{'title': 'A', 'start': 0}],
+        video_duration_s=40, policy=QualityPolicy(invalid_chapters_rule='warn'))
+    assert report['passed'] and chapters is None
+    assert any('omitted from the description' in a for a in report['advisory']['packaging'])
+
+
+def test_missing_thumbnail_text_is_advisory_by_default():
     report, _ = evaluate_release_quality(make_script(), thumbnail_text=None)
-    assert any(b.startswith('thumbnail-text') for b in report['blocking'])
+    assert report['passed']
+    assert any('thumbnail-text' in a for a in report['advisory']['packaging'])
 
 
 def _tiny_mp4(path: Path, seconds: int = 1):
@@ -257,31 +305,75 @@ def _write_draft(folder: Path, title: str):
     (folder / 'verification_gate.json').write_text(gate.model_dump_json())
 
 
-def test_cli_package_blocks_bad_pairing_and_packages_good_one(tmp_path, capsys):
+def _package_args(draft, video, thumb, review, out, chapters, *extra):
+    return ['package', '--draft', str(draft), '--video', str(video), '--thumbnail', str(thumb),
+            '--editorial-report', str(review), '--out', str(out), '--chapters', str(chapters), *extra]
+
+
+def _review(tmp_path):
+    review = tmp_path / 'editorial.json'
+    review.write_text(json.dumps({'gate_passed': True, 'human_reviewed': True, 'quality_passed': True}))
+    return review
+
+
+def _chapter_file(tmp_path, entries, name='render_report.json'):
+    path = tmp_path / name
+    path.write_text(json.dumps({'chapters': entries}))
+    return path
+
+
+def test_cli_package_duplicate_thumbnail_warns_but_packages(tmp_path, capsys):
     from channel.cli import main
     draft = tmp_path / 'draft'; _write_draft(draft, 'How to Review AI Automation Workflows')
     video = tmp_path / 'video.mp4'; _tiny_mp4(video, seconds=40)
-    review = tmp_path / 'editorial.json'
-    review.write_text(json.dumps({'gate_passed': True, 'human_reviewed': True, 'quality_passed': True}))
-    chapters = tmp_path / 'render_report.json'
-    chapters.write_text(json.dumps({'chapters': [{'title': 'Start', 'start': 0}, {'title': 'Checklist', 'start': 12},
-                                                 {'title': 'Wrap up', 'start': 25}]}))
-
-    bad_thumb = make_thumbnail('Review Workflows', tmp_path / 'bad.jpg')
-    code = main(['package', '--draft', str(draft), '--video', str(video), '--thumbnail', str(bad_thumb),
-                 '--editorial-report', str(review), '--out', str(tmp_path / 'rel_bad'), '--chapters', str(chapters)])
-    out = json.loads(capsys.readouterr().out)
-    assert code == 2 and out['packaged'] is False and not (tmp_path / 'rel_bad').exists()
-
-    good_thumb = make_thumbnail('ONE CHECKLIST', tmp_path / 'good.jpg')
-    code = main(['package', '--draft', str(draft), '--video', str(video), '--thumbnail', str(good_thumb),
-                 '--editorial-report', str(review), '--out', str(tmp_path / 'rel'), '--chapters', str(chapters)])
+    chapters = _chapter_file(tmp_path, [{'title': 'Start', 'start': 0}, {'title': 'Checklist', 'start': 12},
+                                        {'title': 'Wrap up', 'start': 25}])
+    thumb = make_thumbnail('Review Workflows', tmp_path / 'dup.jpg')
+    assert main(_package_args(draft, video, thumb, _review(tmp_path), tmp_path / 'rel', chapters)) == 0
     capsys.readouterr()
-    assert code == 0
     meta = json.loads((tmp_path / 'rel' / 'metadata.json').read_text())
     assert '00:12 Checklist' in meta['description']
     quality = json.loads((tmp_path / 'rel' / 'quality_report.json').read_text())
-    assert quality['passed'] is True and 'hook' in quality['advisory']
+    assert quality['passed'] is True and quality['blocking'] == []
+    assert any('[project_policy] duplicate' in a for a in quality['advisory']['packaging'])
+    assert quality['chapters']['final_chapter_checked'] is True
+
+
+def test_cli_package_policy_file_can_enforce_pairing(tmp_path, capsys):
+    from channel.cli import main
+    draft = tmp_path / 'draft'; _write_draft(draft, 'How to Review AI Automation Workflows')
+    video = tmp_path / 'video.mp4'; _tiny_mp4(video, seconds=40)
+    chapters = _chapter_file(tmp_path, [{'title': 'Start', 'start': 0}, {'title': 'Checklist', 'start': 12},
+                                        {'title': 'Wrap up', 'start': 25}])
+    policy = tmp_path / 'policy.json'; policy.write_text(json.dumps({'thumbnail_duplicate_rule': 'block'}))
+    thumb = make_thumbnail('Review Workflows', tmp_path / 'dup.jpg')
+    code = main(_package_args(draft, video, thumb, _review(tmp_path), tmp_path / 'rel', chapters,
+                              '--quality-policy', str(policy)))
+    out = json.loads(capsys.readouterr().out)
+    assert code == 2 and out['packaged'] is False and not (tmp_path / 'rel').exists()
+
+
+def test_cli_package_uses_real_video_duration_for_final_chapter(tmp_path, capsys):
+    from channel.cli import main
+    draft = tmp_path / 'draft'; _write_draft(draft, 'Review AI Automation Workflows')
+    thumb = make_thumbnail('ONE CHECKLIST', tmp_path / 'thumb.jpg')
+    # Narration timeline says the last chapter starts at 25 s and lasts 20 s, but the real
+    # MP4 is only 30 s long: the real final chapter is 5 s and YouTube would ignore the list.
+    timeline = [{'title': 'Start', 'start': 0, 'end': 12}, {'title': 'Checklist', 'start': 12, 'end': 25},
+                {'title': 'Wrap up', 'start': 25, 'end': 45}]
+    short = tmp_path / 'short.mp4'; _tiny_mp4(short, seconds=30)
+    code = main(_package_args(draft, short, thumb, _review(tmp_path), tmp_path / 'rel_short',
+                              _chapter_file(tmp_path, timeline)))
+    out = json.loads(capsys.readouterr().out)
+    # Normalisation folds the 5 s tail into "Checklist", leaving only 2 chapters: blocked, not published broken.
+    assert code == 2 and any('at least 3' in b for b in out['blocking'])
+
+    longer = tmp_path / 'long.mp4'; _tiny_mp4(longer, seconds=50)
+    assert main(_package_args(draft, longer, thumb, _review(tmp_path), tmp_path / 'rel_long',
+                              _chapter_file(tmp_path, timeline, 'r2.json'))) == 0
+    capsys.readouterr()
+    quality = json.loads((tmp_path / 'rel_long' / 'quality_report.json').read_text())
+    assert quality['chapters']['passed'] and 49 <= quality['chapters']['video_duration_s'] <= 51
 
 
 def test_cli_quality_check_writes_nothing(tmp_path, capsys):
@@ -290,5 +382,55 @@ def test_cli_quality_check_writes_nothing(tmp_path, capsys):
     before = sorted(p.name for p in draft.iterdir())
     assert main(['quality-check', '--draft', str(draft), '--thumbnail-text', 'ONE CENT?']) == 0
     out = json.loads(capsys.readouterr().out)
-    assert out['passed'] is False and out['blocking'][0].startswith('length')
+    assert out['passed'] is True
+    assert any('[project_policy] length' in a for a in out['advisory']['packaging'])
     assert sorted(p.name for p in draft.iterdir()) == before
+
+
+def test_quality_report_change_after_owner_approval_invalidates_it(tmp_path):
+    from channel.metadata import ReleaseMetadata
+    from channel.release import check_approval
+    thumb = make_thumbnail('ONE CENT OFF', tmp_path / 'thumb.jpg')
+    video = tmp_path / 'video.mp4'; _tiny_mp4(video)
+    manifest = build_release(tmp_path / 'rel', video, thumb,
+                             ReleaseMetadata(title='T', description='D', contains_synthetic_media=False),
+                             editorial_report=_review(tmp_path), quality_report={'passed': True, 'advisory': {}})
+    approve_release(tmp_path / 'rel', manifest['release_digest'], human_confirmed=True)
+    assert check_approval(tmp_path / 'rel')['release_digest'] == manifest['release_digest']
+    (tmp_path / 'rel' / 'quality_report.json').write_text('{"passed": true, "advisory": {"edited": 1}}')
+    with pytest.raises(Exception, match='quality_report.json'):
+        check_approval(tmp_path / 'rel')
+    (tmp_path / 'rel' / 'quality_report.json').unlink()
+    with pytest.raises(Exception, match='quality_report.json'):
+        check_approval(tmp_path / 'rel')
+
+
+@pytest.mark.parametrize('topic,title,hook,headings', [
+    ('podcast audio cleanup', 'Clean Up Podcast Audio Without Paid Plugins',
+     'Your listeners leave when the first minute sounds muddy.', ['Find the noise floor', 'Gate and compress', 'Export checks']),
+    ('spreadsheet date errors', 'Why Spreadsheet Dates Break Imports',
+     'One wrong date format can corrupt every row you import.', ['ISO dates', 'Locale traps', 'A safe import test', 'Fixing old files']),
+    ('API rate limits', 'Handle API Rate Limits Before They Handle You',
+     'Most integrations fail on the second busy day, not the first.', ['Read the headers', 'Back off', 'Queue work']),
+])
+def test_works_for_future_videos_not_just_the_first_lesson(topic, title, hook, headings):
+    script = make_script(topic=topic, title=title, hook=hook,
+                         sections=[ScriptSection(heading=h, narration='x', claim_ids=['c1']) for h in headings])
+    durations = [7.0] + [40.0 + 5 * i for i in range(len(headings))] + [6.0]
+    timeline = timeline_from_segments('Introduction', headings, durations)
+    total = sum(durations)
+    report, chapters = evaluate_release_quality(script, thumbnail_text='FAST FIX', timeline=timeline,
+                                                video_duration_s=total)
+    assert report['passed'], report['blocking']
+    assert [c.title for c in chapters] == headings
+    intro = description_intro(script)
+    assert intro.splitlines()[0] == hook and topic in intro
+    assert derive_tags(script)[0] == topic
+    assert report['advisory']['hook']['hook'] == hook
+
+
+def test_description_strips_youtube_forbidden_characters():
+    script, research, gate = sample_artifacts()
+    script.hook = 'Is <this> safe?'
+    meta = generate_metadata(script, research, gate)
+    assert '<' not in meta.description and '>' not in meta.description

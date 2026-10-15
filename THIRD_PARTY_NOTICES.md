@@ -8,7 +8,7 @@ at commit `a2feb2104981a375ffd4f87ee04f4f5344ac43c6`:
 
 | LogicScript file | Adapted from | Changes |
 |---|---|---|
-| `channel/packaging_lint.py` | `skills/yt-package/title.py` | blocking/advisory split, plural-insensitive duplicate check, 3-word thumbnail ceiling, number hint reworded for citation policy |
+| `channel/packaging_lint.py` | `skills/yt-package/title.py` | configurable policy with blocking/advisory split, plural-insensitive duplicate check, number hint reworded for citation policy |
 | `channel/chapters.py` (validation rules only) | `skills/yt-chapters/chapters.py` | boundaries come from LogicScript's narration timeline, not pause detection |
 | `pipeline/hook_score.py` | `skills/yt-script/hookscore.py` | advisory-only API; specificity suggestion no longer asks for numbers |
 | `pipeline/hook_formulas.json` | `skills/yt-script/hooks.json` | unmodified data plus an attribution field |
