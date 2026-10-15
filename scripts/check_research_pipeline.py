@@ -12,6 +12,7 @@ import httpx
 from adapters import OpenRouterAdapter
 from adapters.config import OPENROUTER_CONFIG
 from pipeline import ContentPipeline, HttpSourceFetcher
+from pipeline.errors import PipelineQualityError
 from router import Router, RouterConfig
 from state_store import StateStore
 from verification import VerificationGate
@@ -29,6 +30,29 @@ SOURCES = (
 class RequestBudgetExceeded(RuntimeError):
     pass
 
+
+def safe_quality_failure(exc):
+    """Export gate-owned vocabulary/counts; never generated text or provider bodies."""
+    import math
+    stages = {'input', 'research', 'verify', 'script', 'storyboard'}
+    reasons = {'empty topic', 'insufficient evidence quality', 'verification pass rate below threshold',
+        'empty title', 'title too long', 'hook too long', 'no sections',
+        'numeric hook or CTA cannot be cited', 'duration outside 8-12 minute target',
+        'unknown claim_id cited', 'numeric claim without citation', 'no scenes',
+        'section_index out of range', 'non-positive scene duration',
+        'nonfinite or negative scene timestamp', 'scene index is not sequential',
+        'overlap or gap between scenes', 'script duration is zero', 'duration drift exceeds tolerance'}
+    result = {'stage': exc.stage if exc.stage in stages else 'unclassified',
+              'reason': exc.report.get('reason') if exc.report.get('reason') in reasons else 'unclassified'}
+    for key in ('verified', 'required', 'pass_rate', 'length', 'max', 'words', 'duration_s',
+                'word_count', 'scene_index', 'index', 'total_s', 'target_s', 'drift', 'tolerance'):
+        value = exc.report.get(key)
+        if type(value) in (int, float) and math.isfinite(value): result[key] = value
+    rejected = exc.report.get('rejected', [])
+    if isinstance(rejected, list):
+        allowed = {'unknown source_id', 'snippet not found verbatim in source', 'numeric claim not supported by source'}
+        result['rejected_counts'] = {r: sum(isinstance(v, dict) and v.get('reason') == r for v in rejected) for r in sorted(allowed)}
+    return result
 
 def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=None):
     out.mkdir(parents=True, exist_ok=True)
@@ -135,6 +159,8 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
     except Exception as exc:
         # Never expose provider messages, generated claims or credential values on failure.
         report['error_type'] = type(exc).__name__
+        if isinstance(exc, PipelineQualityError):
+            report['quality_failure'] = safe_quality_failure(exc)
         known=re.search(r'\b(RateLimitError|AuthError|ClientError|SchemaValidationError|ServerError|BillableModelRejected)\b',str(exc))
         if known:report['classified_failure']=known.group(1)
     finally:

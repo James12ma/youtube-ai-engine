@@ -107,3 +107,15 @@ def test_production_srt_preserves_alignment_milliseconds_and_plain_words(tmp_pat
     with pytest.raises(ValueError):
         save_srt_from_blocks([{'start_s':2,'end_s':1,'words':['Bad']}],tmp_path/'bad.srt')
     assert not (tmp_path/'bad.srt').exists()
+
+
+def test_quality_diagnostic_preserves_exact_gate_but_redacts_generated_fields():
+    from scripts.check_research_pipeline import safe_quality_failure
+    from pipeline.errors import PipelineQualityError
+    failure = PipelineQualityError('script', {'reason':'duration outside 8-12 minute target',
+        'duration_s':310, 'word_count':775, 'section':'PRIVATE_SECRET', 'unknown':['PRIVATE_SECRET']})
+    result = safe_quality_failure(failure)
+    assert result['stage']=='script' and result['word_count']==775
+    assert result['reason']=='duration outside 8-12 minute target'
+    assert 'PRIVATE_SECRET' not in json.dumps(result)
+    assert safe_quality_failure(PipelineQualityError('PRIVATE_SECRET', {'reason':'PRIVATE_SECRET'}))['reason']=='unclassified'
