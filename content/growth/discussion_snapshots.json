@@ -1,0 +1,15 @@
+[
+  {
+    "video_id": "_Q4UCMjpNZg",
+    "channel_name": "Google Workspace Developers",
+    "title": "Apps Script in Google Workspace",
+    "evidence_kind": "search_description",
+    "context": "Apps Script in Google Workspace. A session presented at the Google Workspace Developer Summit 2025.",
+    "observed_at": "2026-10-15T09:24:31.472539+00:00",
+    "evidence_url": "https://www.youtube.com/watch?v=_Q4UCMjpNZg",
+    "established_channel_evidence": "Official Google Workspace Developers publisher, linked from the Apps Script documentation video resources; search identifies this publisher.",
+    "relevance_reason": "Apps Script is directly relevant to small-business automations and their execution limits.",
+    "contribution": "For Apps Script automations, how do you test overlapping trigger runs before using live business data? A duplicate-input test with a stable request ID can reveal whether the same record would be processed twice. I would check both concurrency protection and a processed-record check.",
+    "context_reviewed": true
+  }
+]

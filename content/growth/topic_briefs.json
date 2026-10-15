@@ -1,0 +1,87 @@
+[
+  {
+    "title": "Test an AI invoice extractor before trusting the totals",
+    "category": "AI",
+    "audience_problem": "A small business needs to detect invented invoice fields before records enter its workflow.",
+    "original_demo": "Use three original synthetic invoices with missing fields, compare extracted JSON to a verified answer key, and reject unsupported claims.",
+    "primary_sources": [
+      "https://ai.google.dev/gemini-api/docs/structured-output",
+      "https://airc.nist.gov/airmf-resources/airmf/"
+    ],
+    "checked_on": "2026-10-15",
+    "demand_evidence": [],
+    "utility": 5,
+    "demo_feasibility": 3,
+    "differentiation": 4,
+    "rpm_estimate": null,
+    "analytics": null
+  },
+  {
+    "title": "Before buying workflow software: test export and permissions",
+    "category": "SaaS",
+    "audience_problem": "Owners need a repeatable evaluation that checks data portability and access controls instead of feature hype.",
+    "original_demo": "Export an original sample table, reopen it and compare fields; demonstrate denied access in a local test service.",
+    "primary_sources": [
+      "https://developers.google.com/drive/api/guides/ref-export-formats",
+      "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"
+    ],
+    "checked_on": "2026-10-15",
+    "demand_evidence": [],
+    "utility": 4,
+    "demo_feasibility": 4,
+    "differentiation": 4,
+    "rpm_estimate": null,
+    "analytics": null
+  },
+  {
+    "title": "Stop duplicate processing in a spreadsheet automation",
+    "category": "automation",
+    "audience_problem": "Overlapping scheduled runs can process a business record twice unless concurrency is considered.",
+    "original_demo": "Use a local reproduction with duplicate request IDs, show the failure, then test a lock and an explicit processed-record check.",
+    "primary_sources": [
+      "https://developers.google.com/apps-script/reference/lock/lock-service",
+      "https://developers.google.com/apps-script/guides/services/quotas"
+    ],
+    "checked_on": "2026-10-15",
+    "demand_evidence": [],
+    "utility": 5,
+    "demo_feasibility": 4,
+    "differentiation": 4,
+    "rpm_estimate": null,
+    "analytics": null
+  },
+  {
+    "title": "Check suspicious business messages without clicking their links",
+    "category": "cybersecurity",
+    "audience_problem": "An owner needs a clear verification routine for unexpected messages requesting money or account access.",
+    "original_demo": "Use original fictional message examples, inspect sender and destination text, and verify the request through a separately obtained contact.",
+    "primary_sources": [
+      "https://www.nist.gov/itl/smallbusinesscyber/guidance-topic/phishing",
+      "https://www.cisa.gov/audiences/small-and-medium-businesses/secure-your-business/require-multifactor-authentication"
+    ],
+    "checked_on": "2026-10-15",
+    "demand_evidence": [],
+    "utility": 5,
+    "demo_feasibility": 5,
+    "differentiation": 3,
+    "rpm_estimate": null,
+    "analytics": null
+  },
+  {
+    "title": "Before you automate approvals: test the one-cent boundary",
+    "category": "small_business",
+    "audience_problem": "An expense policy can fail at its exact threshold even when ordinary examples pass.",
+    "original_demo": "Demonstrate the existing local approval app with travel at 100.00 and 100.01, then compare all three categories with an expected-result matrix.",
+    "primary_sources": [
+      "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/number",
+      "https://docs.python.org/3/library/decimal.html"
+    ],
+    "checked_on": "2026-10-15",
+    "demand_evidence": [],
+    "utility": 5,
+    "demo_feasibility": 5,
+    "differentiation": 4,
+    "rpm_estimate": null,
+    "analytics": null
+  }
+]
