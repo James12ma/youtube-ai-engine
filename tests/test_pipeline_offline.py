@@ -145,3 +145,22 @@ def test_short_real_model_draft_expands_sections_without_padding_or_gate_changes
     assert all(r.max_tokens<=4096 for r in requests)
     assert output.sections==parts
     assert pipe._t.min_script_duration_s==480 and pipe._t.max_stage_revisions==2
+
+
+def test_section_word_budget_adapts_to_actual_underwriting(repo):
+    import re
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    ids=['evidence'];verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(id='evidence',text='Evidence',source_ids=['s'],supporting_snippets=['Evidence'])],rejected=[],pass_rate=1,verified_at='now')
+    short=ScriptOutput(title='Source-grounded tutorial',hook='Review the evidence first.',cta='Check your work.',sections=[ScriptSection(heading='Section '+str(i),narration='Short explanation.',claim_ids=ids) for i in range(10)])
+    targets=[]
+    class Underwriter:
+        def execute(self,task_type,input_data,request,schema):
+            if task_type=='pipeline.script':return short
+            target=int(re.search(r'approximately (\d+) narration words',request.messages[-1]['content']).group(1));targets.append(target)
+            # Regression fixture models systematic under-writing observed live.
+            return ScriptSection(heading='Section',narration=' '.join(['evidence']*(target*2//3)),claim_ids=ids)
+    pipe=ContentPipeline(StateStore(repo,push_required=False),Underwriter(),FakeFetcher({}))
+    output=pipe._stage_script('test',verification,[])
+    assert 1200<=output.word_count<=1800
+    assert targets[-1]>targets[0] and len(targets)==10
+    assert pipe._t.min_script_duration_s==480

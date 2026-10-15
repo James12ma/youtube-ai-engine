@@ -166,8 +166,14 @@ class ContentPipeline:
                 # Expand real model output section by section within the existing
                 # adapter token cap. Never pad text or alter duration thresholds.
                 expanded=[]
-                target=math.ceil(((self._t.min_script_duration_s+self._t.max_script_duration_s)/2)*self._t.target_words_per_second/max(1,len(previous_short.sections)))
+                target_total=math.ceil(((self._t.min_script_duration_s+self._t.max_script_duration_s)/2)*self._t.target_words_per_second)
+                base_words=_word_count(previous_short.hook,previous_short.cta)
                 for index,section in enumerate(previous_short.sections):
+                    # Count actual generated words after each section. A fixed
+                    # per-section target let modest shortfalls accumulate to 1045.
+                    remaining=len(previous_short.sections)-index
+                    emitted=_word_count(*[part.narration for part in expanded])
+                    target=max(80,math.ceil((target_total-base_words-emitted)/remaining))
                     expansion=LLMRequest(messages=[
                         {'role':'system','content':'Write one complete tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
                         {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(previous_short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in previous_short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id.'}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))

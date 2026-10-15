@@ -150,7 +150,11 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
                     report['active_task'] = task_type
                     counts=report.setdefault('task_attempts',{})
                     counts[task_type]=counts.get(task_type,0)+1
-                    return router.execute(task_type,input_data,request,schema)
+                    value=router.execute(task_type,input_data,request,schema)
+                    if task_type in ('pipeline.script','pipeline.script_section'):
+                        name=task_type.replace('.','_')+'_'+str(counts[task_type])+'.json'
+                        (out/('unaccepted_'+name)).write_text(json.dumps({'accepted':False,'kind':'raw_parsed_model_draft','data':value.model_dump()},indent=2))
+                    return value
             class CheckpointPipeline(ContentPipeline):
                 def _save_stage(self,name,call,*args):
                     value=call(*args)
