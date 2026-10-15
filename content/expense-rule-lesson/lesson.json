@@ -1,0 +1,124 @@
+{
+  "title": "Before You Automate: Test the One-Cent Boundary",
+  "provenance": "Assistant-authored, source-checked educational script; not output from the rate-limited project AI provider.",
+  "chapters": [
+    {
+      "title": "The one-cent test",
+      "narration": "A rule can pass the obvious tests and still approve the wrong request. Watch what happens when we move a travel expense just one cent above its limit. In this lesson, you will build a small test matrix, run it against a real local application, and learn which checks belong outside the browser. No bank account or paid service is connected.",
+      "key": "100.00 \u2192 approve | 100.01 \u2192 review",
+      "demo": null
+    },
+    {
+      "title": "Write the policy first",
+      "narration": "Start with a policy that someone can read without knowing the code. Our example allows automatic approval for travel up to one hundred dollars, software up to two hundred, and supplies up to fifty. These limits are invented teaching examples. They are not accounting guidance. Larger amounts go to a manager. A missing or nonpositive amount must never become an approval.",
+      "key": "TRAVEL $100   /   SOFTWARE $200   /   SUPPLIES $50",
+      "demo": null
+    },
+    {
+      "title": "Separate three decisions",
+      "narration": "There are three different questions. Is the request valid? What does the spending policy decide? Is the person allowed to perform this action? A valid amount does not prove that the requester has permission. An automatic policy decision does not transfer money. Keeping these questions separate makes both the implementation and the tests easier to reason about.",
+      "key": "VALIDATE \u2192 APPLY POLICY \u2192 AUTHORIZE ACTION",
+      "demo": null
+    },
+    {
+      "title": "First, prove the normal case",
+      "narration": "Here is the actual application running locally. We enter eighty dollars and select travel. Before clicking, predict the outcome. Eighty is below the travel limit, so the expected result is automatic approval. Now we run the rule. The decision displayed here is produced by the application code, rather than a caption pretending that an action happened.",
+      "key": "Expected: AUTO-APPROVED",
+      "demo": [
+        "80",
+        "travel",
+        "AUTO-APPROVED"
+      ]
+    },
+    {
+      "title": "Now prove the other branch",
+      "narration": "Change only the amount to one hundred twenty dollars. Keep travel selected. This time the expected result is manager review. Run the rule again and compare the displayed decision with that expectation. Changing one input at a time helps explain why the result changed. It also prevents a successful test from hiding an unrelated change in category or configuration.",
+      "key": "Expected: MANAGER REVIEW",
+      "demo": [
+        "120",
+        "travel",
+        "SENT FOR MANAGER REVIEW"
+      ]
+    },
+    {
+      "title": "Test the exact boundary",
+      "narration": "The phrase up to includes the limit itself. Set travel to exactly one hundred dollars. Our implementation uses a less than or equal comparison, so the boundary is approved. A strict less than comparison would behave differently. This is why the written policy should say whether the endpoint is included, and the test should check the endpoint directly.",
+      "key": "100.00 <= 100.00 \u2192 APPROVE",
+      "demo": [
+        "100",
+        "travel",
+        "AUTO-APPROVED"
+      ]
+    },
+    {
+      "title": "Cross it by one cent",
+      "narration": "Now enter one hundred dollars and one cent. The travel category stays the same. Run the rule and the request goes to manager review. Together, the previous test and this one exercise the exact decision boundary. Do not test only eighty and one hundred twenty. Those two examples could both pass even if the threshold were accidentally set to ninety or one hundred ten.",
+      "key": "100.01 > 100.00 \u2192 REVIEW",
+      "demo": [
+        "100.01",
+        "travel",
+        "SENT FOR MANAGER REVIEW"
+      ]
+    },
+    {
+      "title": "The category is part of the rule",
+      "narration": "Use the same one hundred twenty dollar amount, but select software. Software has a different limit, so this request is automatically approved. This is a useful cross-check: the engine must read the category rather than apply one global threshold. Your test table needs at least one meaningful case for every supported category, including supplies.",
+      "key": "Same amount. Different policy.",
+      "demo": [
+        "120",
+        "software",
+        "AUTO-APPROVED"
+      ]
+    },
+    {
+      "title": "Check the smaller limit",
+      "narration": "For supplies, try sixty dollars. The limit is fifty, so sixty needs review. A common testing mistake is to cover the first category thoroughly and assume the others work. A category table can contain a typo even when the comparison logic is correct. Test the policy data as well as the code that reads it.",
+      "key": "SUPPLIES: $60 > $50",
+      "demo": [
+        "60",
+        "supplies",
+        "SENT FOR MANAGER REVIEW"
+      ]
+    },
+    {
+      "title": "Reject invalid requests",
+      "narration": "Set the amount to zero and keep a category selected. Run the rule. The application asks for an amount and category instead of approving the request. Also test an empty amount, a negative amount, and an empty category. In a real service, define an explicit response for unknown categories. Do not let missing policy data silently become an approval.",
+      "key": "Zero is invalid; no approval",
+      "demo": [
+        "0",
+        "travel",
+        "Enter an amount and category first."
+      ]
+    },
+    {
+      "title": "Turn examples into a matrix",
+      "narration": "Write each case as inputs, expected result, and observed result. Our boundary pair is travel at one hundred and at one hundred point zero one. Add software at two hundred and two hundred point zero one, and supplies at fifty and fifty point zero one. Keep invalid-input cases in a separate group. A test passes only when the observed result matches the expected result.",
+      "key": "INPUTS   |   EXPECTED   |   OBSERVED",
+      "demo": null
+    },
+    {
+      "title": "Money needs an explicit representation",
+      "narration": "There is another boundary underneath the policy: how you represent money. Binary floating point cannot represent every decimal fraction exactly. Python provides decimal arithmetic for decimal calculations. For a single currency with two decimal places, validated integer minor units are another design option. Choose the currency, accepted precision, and rounding policy explicitly. Reject unsupported precision instead of silently inventing a policy.",
+      "key": "Document currency, precision and rounding",
+      "demo": null
+    },
+    {
+      "title": "The browser is not the security boundary",
+      "narration": "The form is useful for feedback, but it is not an authority. A user can alter client-side code or submit a request without the form. Repeat validation and authorization on the server before a consequential action. OWASP recommends denying access by default and checking permissions on every request. A missing permission check cannot be repaired by making the button harder to find.",
+      "key": "Client feedback \u2260 server authorization",
+      "demo": null
+    },
+    {
+      "title": "What this demo does not prove",
+      "narration": "This local demo does not authenticate users, save decisions to a database, send payments, or implement a server-side approval service. Its purpose is to make the rule visible and testable. Before connecting real accounts, add those controls and test them separately. Keep a record of the request, policy version, decision, and reviewer so a later investigation can explain what happened.",
+      "key": "LOCAL DEMO \u2022 No payments \u2022 No live accounts",
+      "demo": null
+    },
+    {
+      "title": "Your practical checklist",
+      "narration": "Before you connect an automation, answer five questions. Is the policy written clearly? Have you tested both sides of every boundary? Do invalid requests fail safely? Does the server check both inputs and permissions? Can you explain a past decision from a record? Start with a test matrix you can inspect, then automate its checks. That is how a small working demo becomes evidence you can use.",
+      "key": "POLICY / BOUNDARIES / VALIDATION / PERMISSIONS / RECORDS",
+      "demo": null
+    }
+  ]
+}
