@@ -19,7 +19,7 @@ def build_lab():
     site=ROOT/'production_pro/site'
     app=(site/'index.html').read_text().replace('<link rel="stylesheet" href="styles.css">','<style>'+(site/'styles.css').read_text()+'</style>').replace('<script src="app.js"></script>','<script>'+(site/'app.js').read_text()+'</script>')
     html='''<!doctype html><html lang="en"><meta charset="utf-8"><title>LogicScript — Offline Boundary Testing Lab</title>
-<style>*{box-sizing:border-box}body{margin:0;background:#0b1021;color:#eaf3ff;font:24px Arial;padding:110px 65px 130px}h1{font-size:44px;margin:10px 0}h2{font-size:30px;color:#7bf1d0}p,li{line-height:1.5}button,a{font:24px Arial;padding:15px 24px;border-radius:9px;border:1px solid #4e827b;background:#173b43;color:#fff;cursor:pointer;text-decoration:none}nav{display:flex;gap:18px;margin:24px 0}.panel{border:1px solid #375269;border-radius:16px;background:#122237;padding:25px}section[hidden]{display:none}iframe{position:absolute;left:-4000px;width:1920px;height:1080px}table{width:100%;border-collapse:collapse;font-size:21px}td,th{padding:10px 15px;border-bottom:1px solid #365064;text-align:left}.pass{color:#7bf1d0}.fail{color:#ffb177}#summary{font-size:30px;font-weight:bold;margin:18px 0}small{color:#aebed8}</style>
+<style>*{box-sizing:border-box}body{display:block;margin:0;background:#0b1021;color:#eaf3ff;font:24px Arial;padding:110px 65px 130px}h1{font-size:44px;margin:10px 0}h2{font-size:30px;color:#7bf1d0}p,li{line-height:1.5}button,a{font:24px Arial;padding:15px 24px;border-radius:9px;width:auto;margin:0;font-weight:600;border:1px solid #4e827b;background:#173b43;color:#fff;cursor:pointer;text-decoration:none}nav{display:flex;gap:18px;margin:24px 0}.panel{width:100%;min-height:0;box-shadow:none;transform:none;border:1px solid #375269;border-radius:16px;background:#122237;padding:25px}section[hidden]{display:none}iframe{position:absolute;left:-4000px;width:1920px;height:1080px}table{width:100%;border-collapse:collapse;font-size:21px}td,th{padding:6px 15px;border-bottom:1px solid #365064;text-align:left}.pass{color:#7bf1d0}.fail{color:#ffb177}#summary{font-size:30px;font-weight:bold;margin:18px 0}small{color:#aebed8}</style>
 <small>LOGICSCRIPT / ORIGINAL OFFLINE PRACTICE FILE</small><h1>Test the rule. Inspect the evidence.</h1>
 <nav><button id="guide-tab">1. Start here</button><button id="matrix-tab">2. Test matrix</button><button id="download">Save practice file</button></nav>
 <section id="guide" class="panel"><h2>Reproduce this lesson — no account or installation</h2><ol>
@@ -42,6 +42,18 @@ document.getElementById('summary').textContent=`${passed} passed / ${cases.lengt
 document.getElementById('download').onclick=()=>{const blob=new Blob(['<!doctype html>'+document.documentElement.outerHTML],{type:'text/html'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='LogicScript_Practice_Lab.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 </script></html>'''
     return html.replace('__CASES__',json.dumps(CASES)).replace('__APP__',json.dumps(app).replace('</','<\\/'))
+
+
+def mount_lab(page):
+    """Mount the SAME offline app in the recording shell, with no account or network."""
+    html=build_lab();markup,script=html.split('<script>',1)
+    script=script.split('</script>',1)[0]
+    page.evaluate(r"""markup=>{
+      for(const child of [...document.body.children])if(!['lesson-overlay','capture-pointer'].includes(child.id))child.style.display='none';
+      const lab=document.createElement('div');lab.id='practice-lab';lab.style.cssText='position:fixed;inset:94px 0 125px;background:#0b1021;z-index:49;padding:18px 65px;overflow:hidden';
+      lab.innerHTML=markup.replace(/<!doctype html>|<html[^>]*>|<\/html>|<meta[^>]*>|<title>.*?<\/title>/gi,'');document.body.append(lab);
+    }""",markup)
+    page.add_script_tag(content=script)
 
 if __name__=='__main__':
     import argparse

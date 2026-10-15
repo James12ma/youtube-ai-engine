@@ -12,7 +12,7 @@ from production_pro.editing import compose_scenes,burn_captions
 from production_pro.models import EditPlan
 from production_pro.qc import run_qc
 from scripts.render_showcase import export_srt
-from scripts.build_practice_lab import build_lab
+from scripts.build_practice_lab import build_lab,mount_lab
 from scripts.enforce_gates import enforce,measure_loudness
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -118,14 +118,7 @@ def run(voice,out,reuse=None):
                 evidence.append({'chapter':'Cold open — actual boundary pair','amount':'100.01','category':'travel','expected':'SENT FOR MANAGER REVIEW','observed':observed,'prior_observed':first_result,'passed':True,'spoken_click_cue_s':target,'actual_click_s':actual,'sync_error_s':actual-target})
             elif c.get('lab'):
                 if not page.locator('#practice-lab').count():
-                    html=build_lab();markup,script=html.split('<script>',1)
-                    script=script.split('</script>',1)[0]
-                    page.evaluate(r"""markup=>{
-                      for(const child of [...document.body.children])if(!['lesson-overlay','capture-pointer'].includes(child.id))child.style.display='none';
-                      const lab=document.createElement('div');lab.id='practice-lab';lab.style.cssText='position:fixed;inset:94px 0 125px;background:#0b1021;z-index:49;padding:18px 65px;overflow:hidden';
-                      lab.innerHTML=markup.replace(/<!doctype html>|<html[^>]*>|<\/html>|<meta[^>]*>|<title>.*?<\/title>/gi,'');document.body.append(lab);
-                    }""",markup)
-                    page.add_script_tag(content=script)
+                    mount_lab(page)
                 page.locator('#capture-pointer').evaluate("el=>el.style.opacity='1'")
                 def lab_click(selector,phrase):
                     target=phrase_time(words,phrase,t['start'],t['end'])

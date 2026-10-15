@@ -23,7 +23,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: educational-lesson
-          run-id: 38681842884
+          run-id: 38718897129
           github-token: ${{ github.token }}
           path: inputs/verified-lesson
       - name: Install recording and editing tools
@@ -43,6 +43,7 @@ jobs:
             outputs/lesson-polished/thumbnail.jpg
             outputs/lesson-polished/*.json
             outputs/lesson-polished/*.md
+            outputs/lesson-polished/*.html
             outputs/lesson-polished/*.srt
             outputs/lesson-polished/*.ass
             outputs/lesson-polished/*.csv

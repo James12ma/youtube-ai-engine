@@ -16,7 +16,15 @@ def run(out=Path('outputs/lesson-demo-matrix.json')):
             actual=page.locator('#result').inner_text();passed=row['expected'] in actual
             evidence.append({**row,'actual':actual,'passed':passed})
             assert passed, 'Policy matrix mismatch'
-        from scripts.build_practice_lab import build_lab
+        from scripts.build_practice_lab import build_lab,mount_lab
+        # Exercise the renderer shell too: its older CSS formerly shrank the lab.
+        page.set_viewport_size({'width':1920,'height':1080});mount_lab(page)
+        page.frame_locator('#app').locator('#submit').wait_for()
+        page.locator('#matrix-tab').click();page.locator('#run').click()
+        table=page.locator('#rows').bounding_box();last=page.locator('#rows tr').last.bounding_box()
+        assert table['width']>1600, 'Inherited application CSS narrowed the lab'
+        assert last['y']+last['height']<940, 'Invalid-input rows overlap the caption area'
+
         lab=browser.new_page();lab.set_content(build_lab())
         lab.frame_locator('#app').locator('#submit').wait_for()
         lab.locator('#matrix-tab').click();lab.locator('#run').click()
