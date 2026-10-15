@@ -1,6 +1,7 @@
 """Readable two-line ASS captions and independent timing coverage checks."""
 from __future__ import annotations
 import re
+import math
 from pathlib import Path
 from pydantic import BaseModel
 from .aligner import WordTimestamp, _tokens
@@ -124,3 +125,25 @@ def assess_caption_quality(words:list[WordTimestamp], blocks:list[dict],audio_du
     return CaptionQualityReport(total_words=len(words),captions_emitted=len(blocks),
         words_covered=covered,coverage_ratio=coverage,words_outside_audio=outside,
         overlapping_captions=overlap,text_match_ratio=text_match,passed=not failures,failures=failures)
+
+
+def save_srt_from_blocks(blocks:list[dict], output_path:Path) -> Path:
+    """Plain-text sidecar from validated alignment blocks, at millisecond precision."""
+    if not blocks: raise ValueError('Caption blocks are empty')
+    def stamp(ms):
+        hours,ms=divmod(ms,3600000);minutes,ms=divmod(ms,60000);seconds,ms=divmod(ms,1000)
+        return f'{hours:02}:{minutes:02}:{seconds:02},{ms:03}'
+    cues=[];previous=0
+    for index,block in enumerate(blocks,1):
+        start,end=block['start_s'],block['end_s']
+        if not all(math.isfinite(t) for t in (start,end)) or start<0 or end<=start:
+            raise ValueError('Invalid SRT interval')
+        a,b=round(start*1000),round(end*1000)
+        if a<previous or b<=a:raise ValueError('Overlapping or empty SRT interval')
+        previous=b
+        text=' '.join(str(word).replace('\r',' ').replace('\n',' ') for word in block['words'])
+        if not text.strip():raise ValueError('Empty SRT text')
+        cues.append(f'{index}\n{stamp(a)} --> {stamp(b)}\n{text}')
+    output_path=Path(output_path);output_path.parent.mkdir(parents=True,exist_ok=True)
+    output_path.write_text('\n\n'.join(cues)+'\n',encoding='utf-8')
+    return output_path

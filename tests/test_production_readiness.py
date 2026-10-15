@@ -83,7 +83,7 @@ def test_renderer_propagates_qc_failure_and_keeps_diagnostic_report(tmp_path,mon
     aligned=SimpleNamespace(words=[],method='whisperx_ctc',token_coverage=1,duration_s=3)
     monkeypatch.setattr(video,'WhisperXAligner',lambda **k:SimpleNamespace(align=lambda *a:aligned))
     monkeypatch.setattr(video,'save_word_timestamps',lambda *a:None)
-    monkeypatch.setattr(video,'build_ass_from_words',lambda *a,**k:(1,[]))
+    monkeypatch.setattr(video,'build_ass_from_words',lambda *a,**k:(1,[{'start_s':0,'end_s':3,'words':['TEST FIXTURE']}]))
     monkeypatch.setattr(video,'assess_caption_quality',lambda *a,**k:SimpleNamespace(passed=True,model_dump=lambda:{}))
     monkeypatch.setattr(video,'card',lambda *a:None)
     monkeypatch.setattr(video,'compose_scenes',lambda *a,**k:{})
@@ -97,3 +97,13 @@ def test_renderer_propagates_qc_failure_and_keeps_diagnostic_report(tmp_path,mon
             video.render_approved_video(script,storyboard,gate,tmp_path/'voice',tmp_path/'out.mp4',reviewed=True)
     report=json.loads((tmp_path/'out_work/render_report.json').read_text())
     assert report['technical_qc']['passed'] is passed and not report['ready_for_publication']
+    assert (tmp_path/'out.srt').is_file()
+
+
+def test_production_srt_preserves_alignment_milliseconds_and_plain_words(tmp_path):
+    from narration_pro import save_srt_from_blocks
+    path=save_srt_from_blocks([{'start_s':.143,'end_s':1.207,'words':['Review','first.']}],tmp_path/'out.srt')
+    assert '00:00:00,143 --> 00:00:01,207\nReview first.' in path.read_text()
+    with pytest.raises(ValueError):
+        save_srt_from_blocks([{'start_s':2,'end_s':1,'words':['Bad']}],tmp_path/'bad.srt')
+    assert not (tmp_path/'bad.srt').exists()

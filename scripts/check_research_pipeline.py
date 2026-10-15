@@ -4,7 +4,7 @@ Only public reference documents go to a verified zero-priced OpenRouter model.
 Production state/queue and human editorial approval remain untouched.
 """
 from __future__ import annotations
-import json, os, subprocess, tempfile
+import json, os, subprocess, tempfile, re
 from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlparse
@@ -19,10 +19,10 @@ from verification.integrated import VerifiedContentPipeline
 from channel.metadata import generate_metadata
 from scripts.check_free_providers import zero_priced_model
 
-TOPIC = 'Protect customer data before automating a small business workflow'
+TOPIC = 'Choosing a small-business cybersecurity baseline before workflow automation'
 SOURCES = (
     'https://csrc.nist.gov/pubs/ir/7621/r1/final',
-    'https://www.nccoe.nist.gov/publication/1800-28/VolA/index.html',
+    'https://csrc.nist.gov/pubs/sp/1300/final',
 )
 
 
@@ -52,7 +52,10 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
                            'Redirects are disabled for research sources', 'Empty source text',
                            'Unsupported source content type:')
                 reason = next((r for r in reasons if str(exc).startswith(r)), type(exc).__name__)
-                report['source_checks'].append({'url': url, 'retrieved': False, 'reason': reason})
+                failure={'url': url, 'retrieved': False, 'reason': reason}
+                status=re.match(r'Fetch failed ([0-9]{3}) for ',str(exc))
+                if status:failure['http_status']=int(status.group(1))
+                report['source_checks'].append(failure)
                 continue
             snapshots[url] = source
             (out/f'source_{i}.json').write_text(source.model_dump_json(indent=2))

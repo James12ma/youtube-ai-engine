@@ -13,7 +13,7 @@ from production.assets import card
 from production_pro.models import EditPlan
 from production_pro.editing import compose_scenes,burn_captions
 from production_pro.qc import run_qc
-from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,build_ass_from_words,assess_caption_quality,save_word_timestamps
+from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,build_ass_from_words,assess_caption_quality,save_word_timestamps,save_srt_from_blocks
 
 class VideoBuildError(RuntimeError): pass
 
@@ -70,6 +70,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
         bottom_margin=300 if portrait else 80,max_duration_s=2.4)
     caption_qc=assess_caption_quality(aligned.words,blocks,aligned.duration_s,min_coverage=.98)
     if not caption_qc.passed:raise VideoBuildError('Forced captions failed QC: '+repr(caption_qc.failures))
+    srt=save_srt_from_blocks(blocks,output_path.with_suffix('.srt'))
 
     stages=[]
     intro=work/'intro.png';card('text_overlay','THE PROBLEM',script.hook,(width,height),intro)
@@ -112,7 +113,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     report={'output_path':str(output_path),'narration_backend':'+'.join(sorted(narrator.actual_backends)),
             'alignment_backend':'whisperx_ctc','audio':loud.model_dump(),
             'alignment':{'token_coverage':aligned.token_coverage,'words':len(aligned.words)},
-            'captions':caption_count,'caption_qc':caption_qc.model_dump(),
+            'captions':caption_count,'caption_qc':caption_qc.model_dump(),'srt_path':str(srt),
             'video_edit':edit,'technical_qc':qc.model_dump(),
             'ready_for_publication':False,'manual_editorial_approval_still_required':True}
     (work/'render_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
