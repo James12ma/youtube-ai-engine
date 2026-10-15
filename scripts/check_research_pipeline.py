@@ -94,6 +94,15 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
             report['generation_requests'] += 1
         def after_response(response):
             report['last_generation_http_status'] = response.status_code
+            if response.status_code==200:
+                response.read()
+                try:
+                    choice=response.json().get('choices',[{}])[0]
+                    reason=choice.get('finish_reason')
+                    if reason in ('stop','length','content_filter','error'):report['last_finish_reason']=reason
+                    content=choice.get('message',{}).get('content','')
+                    report['last_output_characters']=len(content) if isinstance(content,str) else 0
+                except (ValueError,IndexError,AttributeError,TypeError):pass
         wire = (wire_factory or httpx.Client)(timeout=45, follow_redirects=False,
                     event_hooks={'request': [before_request], 'response': [after_response]})
         os.environ['ENABLE_LIVE_LLM'] = os.environ['ROUTER_ALLOW_LIVE_API'] = '1'
@@ -126,6 +135,8 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
     except Exception as exc:
         # Never expose provider messages, generated claims or credential values on failure.
         report['error_type'] = type(exc).__name__
+        known=re.search(r'\b(RateLimitError|AuthError|ClientError|SchemaValidationError|ServerError|BillableModelRejected)\b',str(exc))
+        if known:report['classified_failure']=known.group(1)
     finally:
         if adapter: adapter.close()
         elif wire: wire.close()
