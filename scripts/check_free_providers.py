@@ -115,6 +115,9 @@ def run(output_dir:Path, *, client=None):
                         else:wire.close()
                         report['openrouter']['attempts'].append(attempt)
                     if attempt['passed']:break
+                    if attempt['http_status']==429:
+                        report['openrouter']['blocked']='Provider rate limit; cooldown respected, remaining candidates not sent'
+                        break
             finally:
                 for name,value in old.items():
                     if value is None:os.environ.pop(name,None)

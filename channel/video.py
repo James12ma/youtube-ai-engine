@@ -116,4 +116,6 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
             'video_edit':edit,'technical_qc':qc.model_dump(),
             'ready_for_publication':False,'manual_editorial_approval_still_required':True}
     (work/'render_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+    if not qc.passed:
+        raise VideoBuildError('Rendered video failed technical QC; inspect render_report.json')
     return report
