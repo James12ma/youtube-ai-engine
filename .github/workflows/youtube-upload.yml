@@ -1,0 +1,103 @@
+name: YouTube upload (owner-approved release, private by default)
+# Manual only. Uploads ONE approved release package stored as a private GitHub Release
+# asset (release.zip). Never public: switch visibility in YouTube Studio after checking
+# the private upload. Each run uses a few GitHub Actions minutes.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub Release tag holding release.zip (e.g. lesson-001-rc1)'
+        required: true
+        type: string
+      approved_digest:
+        description: 'Exact 64-character release_digest you approved'
+        required: true
+        type: string
+      privacy:
+        description: 'YouTube visibility for the upload'
+        required: true
+        default: private
+        type: choice
+        options: [private, unlisted]
+      i_watched_and_approve:
+        description: 'I watched this exact video and approve uploading it'
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: write   # download release.zip and attach the upload receipt to the same Release
+concurrency:
+  group: youtube-upload
+  cancel-in-progress: false
+jobs:
+  upload:
+    if: >-
+      vars.ZERO_COST_ACTIONS_CONFIRMED == '1' &&
+      vars.YOUTUBE_UPLOAD_ALLOWED == '1' &&
+      inputs.i_watched_and_approve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Inputs are passed through env, never interpolated into shell code.
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      APPROVED_DIGEST: ${{ inputs.approved_digest }}
+      PRIVACY: ${{ inputs.privacy }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate inputs
+        run: |
+          [[ "$RELEASE_TAG" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || { echo "Invalid release tag"; exit 1; }
+          [[ "$APPROVED_DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo "Digest must be 64 lowercase hex characters"; exit 1; }
+          [[ "$PRIVACY" == private || "$PRIVACY" == unlisted ]] || { echo "Only private/unlisted uploads"; exit 1; }
+      - name: Refuse duplicate uploads
+        run: |
+          if gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | grep -qx 'youtube_receipt.json'; then
+            echo "This release was already uploaded (receipt attached). Check YouTube Studio."; exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install engine base and YouTube SDK
+        run: python -m pip install -r requirements.txt -r requirements-production.txt -r requirements-release.txt
+      - name: Download and safely extract release package
+        run: |
+          mkdir -p incoming
+          gh release download "$RELEASE_TAG" --pattern release.zip --dir incoming
+          python -c "from channel.lesson_release import safe_extract; safe_extract('incoming/release.zip','release')"
+      - name: Verify hashes and record owner approval of the typed digest
+        run: python -m channel.cli approve --release release --digest "$APPROVED_DIGEST" --human-confirmed
+      - name: Confirm OAuth and the expected channel (read-only)
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_EXPECTED_CHANNEL_ID: ${{ vars.YOUTUBE_EXPECTED_CHANNEL_ID }}
+        run: |
+          [ -n "$YOUTUBE_EXPECTED_CHANNEL_ID" ] || { echo "Set repository variable YOUTUBE_EXPECTED_CHANNEL_ID"; exit 1; }
+          python -m scripts.check_cloud_oauth
+      - name: Upload video (private/unlisted), then thumbnail
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_UPLOAD_ALLOWED: '1'
+          YOUTUBE_PUBLIC_ALLOWED: ${{ inputs.privacy == 'unlisted' && '1' || '0' }}
+          OWNER_APPROVED_RELEASE_DIGEST: ${{ inputs.approved_digest }}
+        run: python -m channel.cli upload --release release --privacy "$PRIVACY"
+      - name: Attach receipt to the Release (prevents duplicate uploads)
+        if: always()
+        run: |
+          if [ -f release/youtube_receipt.json ]; then
+            gh release upload "$RELEASE_TAG" release/youtube_receipt.json --clobber
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          r = json.load(open('release/youtube_receipt.json'))
+          print(f"Uploaded video `{r['youtube_video_id']}` as **{r['requested_privacy']}**.")
+          print(f"Review it: https://studio.youtube.com/video/{r['youtube_video_id']}/edit")
+          print(f"Thumbnail: {r['thumbnail']} | Captions: {r['captions']}")
+          PY
+          fi

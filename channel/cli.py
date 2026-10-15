@@ -49,6 +49,7 @@ def main(argv=None):
     a.add_argument('--digest',required=True);a.add_argument('--human-confirmed',action='store_true')
     u=sub.add_parser('upload');u.add_argument('--release',type=Path,required=True)
     u.add_argument('--privacy',choices=('private','unlisted','public'),default='private')
+    u.add_argument('--upload-captions',action='store_true',help='Also upload captions (needs youtube.force-ssl scope)')
     c=sub.add_parser('check');c.add_argument('--release',type=Path,required=True)
     o=sub.add_parser('oauth-authorize',help='Owner-local Desktop OAuth consent; never uploads')
     o.add_argument('--client-secrets',type=Path,required=True)
@@ -112,7 +113,7 @@ def main(argv=None):
     elif args.command=='check':result=check_approval(args.release)
     elif args.command=='upload':
         from .youtube import upload_youtube
-        result=upload_youtube(args.release,privacy=args.privacy)
+        result=upload_youtube(args.release,privacy=args.privacy,upload_captions=args.upload_captions)
     elif args.command=='oauth-authorize':
         from .oauth import authorize
         result=authorize(args.client_secrets,args.token_file)
