@@ -1,6 +1,6 @@
 # Before You Automate: Test the One-Cent Boundary
 
-Assistant-authored educational draft. Original local demonstrations; synthesized narration.
+Assistant-authored, source-checked educational script; not output from the rate-limited project AI provider.
 
 ## The one-cent test
 
@@ -57,6 +57,18 @@ The form is useful for feedback, but it is not an authority. A user can alter cl
 ## What this demo does not prove
 
 This local demo does not authenticate users, save decisions to a database, send payments, or implement a server-side approval service. Its purpose is to make the rule visible and testable. Before connecting real accounts, add those controls and test them separately. Keep a record of the request, policy version, decision, and reviewer so a later investigation can explain what happened.
+
+## Open your free practice lab
+
+To reproduce this lesson, use the free practice file included with the video. Download LogicScript Practice Lab dot H T M L and save it in a folder you can find. On a desktop computer, double-click that file to open it in your browser. You do not need an account, a paid tool, or a software installation. This start page lists the steps. The file contains our actual example application and a test runner. Keep it local. It does not connect to a business account or send your entries anywhere. If you want a separate copy, click Save practice file here.
+
+## Run the full browser test matrix
+
+Select Test matrix. The cases include both sides of the travel, software, and supplies boundaries, plus invalid inputs. Click Run all cases. The runner enters each amount and category into the actual example application, clicks its approval button, then reads the result. These observed values are not a prewritten answer table. Eleven passes means these eleven expectations matched this version of the application. It does not mean the system is secure or complete. Notice the empty amount, negative amount, and missing category cases. They are just as important as the normal approvals.
+
+## Prove that a failing test is visible
+
+A green test report is useful only if a mismatch can make it fail. Click Introduce wrong expectation. This exercise changes the expected outcome for the one-cent-over travel case to approval. It does not alter the application rule. Click Run all cases again. Now one test fails: the actual application still sends that request for manager review. Compare the expected and observed columns before deciding what to fix. Here the expectation is deliberately wrong, so click Restore correct expectation, then run the cases again. All eleven should pass. This checks that our test runner can detect the disagreement.
 
 ## Your practical checklist
 

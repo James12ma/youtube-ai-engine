@@ -12,6 +12,7 @@ from production_pro.editing import compose_scenes,burn_captions
 from production_pro.models import EditPlan
 from production_pro.qc import run_qc
 from scripts.render_showcase import export_srt
+from scripts.build_practice_lab import build_lab
 from scripts.enforce_gates import enforce,measure_loudness
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -97,7 +98,7 @@ def run(voice,out,reuse=None):
                 const note=document.createElement('div');note.textContent=`${String(index+1).padStart(2,'0')} / ${total}   •   ORIGINAL EDUCATIONAL DEMONSTRATION`;note.style.cssText='position:absolute;bottom:190px;font-size:20px;letter-spacing:3px;color:#7c91b2';e.append(note);
               }
               e.animate([{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'translateY(0px)'}],{duration:250,fill:'both'});document.body.append(e);
-            }""",{'title':c['title'],'key':c['key'],'index':i,'total':len(chapters),'demo':bool(c['demo']) or i==0})
+            }""",{'title':c['title'],'key':c['key'],'index':i,'total':len(chapters),'demo':bool(c['demo']) or bool(c.get('lab')) or i==0})
             if i==0:
                 # Cold open: demonstrate the actual boundary before the explanation.
                 def hook_move(selector):
@@ -115,6 +116,40 @@ def run(voice,out,reuse=None):
                 observed=page.locator('#result').inner_text();assert 'SENT FOR MANAGER REVIEW' in observed
                 focus_element(page,'#result');hook_move('#result')
                 evidence.append({'chapter':'Cold open — actual boundary pair','amount':'100.01','category':'travel','expected':'SENT FOR MANAGER REVIEW','observed':observed,'prior_observed':first_result,'passed':True,'spoken_click_cue_s':target,'actual_click_s':actual,'sync_error_s':actual-target})
+            elif c.get('lab'):
+                if not page.locator('#practice-lab').count():
+                    html=build_lab();markup,script=html.split('<script>',1)
+                    script=script.split('</script>',1)[0]
+                    page.evaluate(r"""markup=>{
+                      for(const child of [...document.body.children])if(!['lesson-overlay','capture-pointer'].includes(child.id))child.style.display='none';
+                      const lab=document.createElement('div');lab.id='practice-lab';lab.style.cssText='position:fixed;inset:94px 0 125px;background:#0b1021;z-index:49;padding:18px 65px;overflow:hidden';
+                      lab.innerHTML=markup.replace(/<!doctype html>|<html[^>]*>|<\/html>|<meta[^>]*>|<title>.*?<\/title>/gi,'');document.body.append(lab);
+                    }""",markup)
+                    page.add_script_tag(content=script)
+                page.locator('#capture-pointer').evaluate("el=>el.style.opacity='1'")
+                def lab_click(selector,phrase):
+                    target=phrase_time(words,phrase,t['start'],t['end'])
+                    remaining=target-.2-(time.monotonic()-clock['start'])
+                    if remaining>0:page.wait_for_timeout(remaining*1000)
+                    box=page.locator(selector).bounding_box();page.mouse.move(box['x']+box['width']/2,box['y']+box['height']/2,steps=10)
+                    page.locator(selector).click();actual=time.monotonic()-clock['start']
+                    evidence.append({'chapter':c['title'],'action':selector,'passed':True,'spoken_click_cue_s':target,'actual_click_s':actual,'sync_error_s':actual-target})
+                if c['lab']=='guide':
+                    lab_click('#download','click Save practice file')
+                elif c['lab']=='matrix':
+                    lab_click('#matrix-tab','Select Test matrix')
+                    lab_click('#run','Click Run all cases')
+                    assert page.locator('#summary').inner_text().startswith('11 passed / 0 failed')
+                    evidence[-1]['observed']=page.locator('#summary').inner_text()
+                else:
+                    lab_click('#mutate','Click Introduce wrong expectation')
+                    lab_click('#run','Click Run all cases again')
+                    assert page.locator('#summary').inner_text().startswith('10 passed / 1 failed')
+                    evidence[-1]['observed']=page.locator('#summary').inner_text()
+                    lab_click('#mutate','click Restore correct expectation')
+                    lab_click('#run','then run the cases again')
+                    assert page.locator('#summary').inner_text().startswith('11 passed / 0 failed')
+                    evidence[-1]['observed']=page.locator('#summary').inner_text()
             elif c['demo']:
                 amount,category,expected=c['demo']
                 cues={3:'Now we run the rule',4:'Run the rule again',5:'so the boundary is approved',6:'Run the rule',7:'so this request is automatically approved',8:'so sixty needs review',9:'Run the rule'}
@@ -147,7 +182,7 @@ def run(voice,out,reuse=None):
             else:
                 # Reveal distinct teaching details during continuous narration.
                 details={0:['Boundary: $100.00 approved','$100.01 needs review'],1:['Travel ≤ $100  |  Software ≤ $200','Supplies ≤ $50  |  Invalid → reject'],2:['Validity is not permission','A policy decision does not move money'],10:['Travel: 100.00 / 100.01','Software: 200.00 / 200.01   •   Supplies: 50.00 / 50.01'],11:['Binary floats approximate decimal fractions','Choose explicit precision and rounding'],12:['Repeat validation on the server','Deny by default • Check every request'],13:['No authentication, database or payments','Test those controls before connecting accounts'],14:['Test both sides of each boundary','Keep the matrix and a decision record']}
-                for n,detail in enumerate(details.get(i,['Inspect the policy','Compare expected and observed results'])):
+                for n,detail in enumerate(details.get(14 if i==len(chapters)-1 else i,['Inspect the policy','Compare expected and observed results'])):
                     target=t['start']+(n+1)*(t['end']-t['start'])/3
                     remaining=target-(time.monotonic()-clock['start'])
                     if remaining>0:page.wait_for_timeout(remaining*1000)
@@ -169,6 +204,7 @@ def run(voice,out,reuse=None):
     (out/'qc_report.json').write_text(json.dumps(report,indent=2))
     gates=enforce(out,expected_size=(1920,1080));(out/'independent_gates.json').write_text(json.dumps(gates,indent=2))
     (out/'demo_evidence.json').write_text(json.dumps(evidence,indent=2))
+    (out/'LogicScript_Practice_Lab.html').write_text(build_lab())
     for file in ('script.md','sources.md','lesson.json','test-matrix.csv'):shutil.copy2(LESSON/file,out/file)
     frames=out/'review_frames';frames.mkdir(exist_ok=True)
     for i,t in enumerate(timeline):

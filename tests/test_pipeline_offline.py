@@ -115,3 +115,15 @@ def test_publishing_disabled():
     assert PUBLISHING_ENABLED is False and not hasattr(ContentPipeline,'publish')
     from pipeline import PublishingDisabledError
     assert issubclass(PublishingDisabledError,Exception)
+
+
+def test_short_script_gate_reports_explicit_word_deficit(repo):
+    research, ids, output, _ = _fixtures()
+    pipe = _pipeline(repo, QueuedAdapter('groq',[]), FakeFetcher({}))
+    pipe._t = QualityThresholds()
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    verification = VerificationArtifact(topic='test', verified=[VerifiedClaim(id=c,text='evidence',source_ids=['s'],supporting_snippets=['evidence']) for c in ids], rejected=[],pass_rate=1,verified_at='now')
+    with pytest.raises(PipelineQualityError) as exc: pipe._validate_script(output, verification)
+    assert exc.value.report['reason']=='duration outside 8-12 minute target'
+    assert exc.value.report['min_words']==1200 and exc.value.report['max_words']==1800
+    assert exc.value.report['word_count']<1200

@@ -98,6 +98,7 @@ jobs:
             outputs/educational/thumbnail.jpg
             outputs/educational/*.json
             outputs/educational/*.md
+            outputs/educational/*.html
             outputs/educational/*.srt
             outputs/educational/*.ass
             outputs/educational/review_frames/

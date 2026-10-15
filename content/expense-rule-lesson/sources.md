@@ -13,3 +13,7 @@ All visuals are original HTML/CSS typography, diagrams and authentic recordings 
 
 ## Editorial limits
 This lesson teaches testing a policy; it does not implement a secure backend or accounting system. Owner review and release approval remain required. No upload or publication is performed.
+
+## Reproducible practice lab
+
+The downloadable HTML embeds the exact original application source and an eleven-case browser runner. The runner fills actual DOM controls, clicks the application button, and reads its result. Its deliberately wrong expectation is an educational exercise, not an application defect. The separate Chromium check reopens the downloaded file and verifies pass → deliberate failure → restored pass. No external calls, user accounts or server are required.

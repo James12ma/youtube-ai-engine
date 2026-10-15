@@ -16,6 +16,23 @@ def run(out=Path('outputs/lesson-demo-matrix.json')):
             actual=page.locator('#result').inner_text();passed=row['expected'] in actual
             evidence.append({**row,'actual':actual,'passed':passed})
             assert passed, 'Policy matrix mismatch'
+        from scripts.build_practice_lab import build_lab
+        lab=browser.new_page();lab.set_content(build_lab())
+        lab.frame_locator('#app').locator('#submit').wait_for()
+        lab.locator('#matrix-tab').click();lab.locator('#run').click()
+        assert lab.locator('#summary').inner_text().startswith('11 passed / 0 failed')
+        lab.locator('#mutate').click();lab.locator('#run').click()
+        assert lab.locator('#summary').inner_text().startswith('10 passed / 1 failed')
+        assert lab.locator('#rows tr').filter(has_text='One cent over').inner_text().endswith('FAIL')
+        lab.locator('#mutate').click();lab.locator('#run').click()
+        assert lab.locator('#summary').inner_text().startswith('11 passed / 0 failed')
+        with lab.expect_download() as event:lab.locator('#download').click()
+        path=event.value.path();assert path and Path(path).stat().st_size>1000
+        local=browser.new_page();local.goto(Path(path).as_uri())
+        local.frame_locator('#app').locator('#submit').wait_for()
+        local.locator('#matrix-tab').click();local.locator('#run').click()
+        assert local.locator('#summary').inner_text().startswith('11 passed / 0 failed')
+        evidence.append({'practice_lab':True,'normal_passes':11,'deliberate_failure_detected':True,'restored_passes':11,'download_reopened_from_file':True,'passed':True})
         browser.close()
     out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(evidence,indent=2));print(f'{len(evidence)} actual Chromium policy tests passed')
 

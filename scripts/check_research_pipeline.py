@@ -45,7 +45,7 @@ def safe_quality_failure(exc):
     result = {'stage': exc.stage if exc.stage in stages else 'unclassified',
               'reason': exc.report.get('reason') if exc.report.get('reason') in reasons else 'unclassified'}
     for key in ('verified', 'required', 'pass_rate', 'length', 'max', 'words', 'duration_s',
-                'word_count', 'scene_index', 'index', 'total_s', 'target_s', 'drift', 'tolerance'):
+                'word_count', 'min_words', 'max_words', 'scene_index', 'index', 'total_s', 'target_s', 'drift', 'tolerance'):
         value = exc.report.get(key)
         if type(value) in (int, float) and math.isfinite(value): result[key] = value
     rejected = exc.report.get('rejected', [])

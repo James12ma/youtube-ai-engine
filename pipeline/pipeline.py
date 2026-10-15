@@ -157,7 +157,7 @@ class ContentPipeline:
         claim_lines=['- '+c.id+': '+c.text for c in verification.verified]
         request=LLMRequest(messages=[
             {'role':'system','content':'You write original, fact-bound YouTube narration. Every factual or numeric statement must cite at least one claim_id from the supplied list. Cite by putting those claim_ids in the section\'s claim_ids array; you may not invent claim ids.'},
-            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a 8-12 minute long-form script as json with fields: title (<=70 chars), hook (<=40 words), sections (array of {heading, narration, on_screen_text, claim_ids}), cta.'}],schema=ScriptOutput,temperature=0.4,max_tokens=4000)
+            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. Return json with fields: title (<=70 chars), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=8000)
         feedback=''
         for revision in range(self._t.max_stage_revisions):
             if feedback:
@@ -189,7 +189,7 @@ class ContentPipeline:
         words=_word_count(output.hook,*[section.narration for section in output.sections],output.cta)
         duration=words/self._t.target_words_per_second
         if not self._t.min_script_duration_s <= duration <= self._t.max_script_duration_s:
-            raise PipelineQualityError('script',{'reason':'duration outside 8-12 minute target','duration_s':duration,'word_count':words})
+            raise PipelineQualityError('script',{'reason':'duration outside 8-12 minute target','duration_s':duration,'word_count':words,'min_words':math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second),'max_words':math.floor(self._t.max_script_duration_s*self._t.target_words_per_second)})
         for section in output.sections:
             unknown=[c for c in section.claim_ids if c not in valid_ids]
             if unknown:raise PipelineQualityError('script',{'reason':'unknown claim_id cited','section':section.heading,'unknown':unknown})
