@@ -1,0 +1,50 @@
+name: Polish verified lesson actions (no upload)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  render:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retrieve verified Piper audio and WhisperX timestamps
+        uses: actions/download-artifact@v4
+        with:
+          name: educational-lesson
+          run-id: 38681842884
+          github-token: ${{ github.token }}
+          path: inputs/verified-lesson
+      - name: Install recording and editing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
+          python -m pip install -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python -m playwright install --with-deps chromium
+      - name: Record narration-synchronized actual actions and render
+        run: python -m scripts.render_educational --reuse-narration inputs/verified-lesson --output-dir outputs/lesson-polished
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lesson-polished
+          path: |
+            outputs/lesson-polished/final.mp4
+            outputs/lesson-polished/thumbnail.jpg
+            outputs/lesson-polished/*.json
+            outputs/lesson-polished/*.md
+            outputs/lesson-polished/*.srt
+            outputs/lesson-polished/*.ass
+            outputs/lesson-polished/*.csv
+            outputs/lesson-polished/review_frames/
+          retention-days: 7

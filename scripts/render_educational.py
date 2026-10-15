@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse, json, shutil, subprocess, time, wave
 from pathlib import Path
 from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,save_word_timestamps,build_ass_from_words
-from narration_pro.aligner import AlignmentResult, WordTimestamp
+from narration_pro.aligner import AlignmentResult, WordTimestamp, _tokens
 from production_pro.recorder import WorkflowRecorder,focus_element
 from production_pro.editing import compose_scenes,burn_captions
 from production_pro.models import EditPlan
@@ -29,27 +29,60 @@ def concat_wavs(paths,out):
                 dest.writeframes(src.readframes(src.getnframes()))
 
 
-def run(voice,out):
+def phrase_time(words, phrase, start, end):
+    flattened=[]
+    for word in words:
+        if word.start_s >= start-.05 and word.start_s < end:
+            flattened.extend((token,word.start_s) for token in _tokens(word.word))
+    expected=_tokens(phrase)
+    for index in range(len(flattened)-len(expected)+1):
+        if [x[0] for x in flattened[index:index+len(expected)]]==expected:return flattened[index][1]
+    raise ValueError('Action cue absent from real aligned transcript: '+phrase)
+
+
+def install_cursor(page):
+    page.evaluate("""()=>{
+      const style=document.createElement('style');style.textContent=`#capture-pointer{position:fixed;left:0;top:0;width:30px;height:38px;background:#fff;clip-path:polygon(0 0,0 90%,24% 68%,47% 100%,64% 91%,43% 60%,81% 57%);filter:drop-shadow(0 0 4px #000);z-index:1000;pointer-events:none;transform:translate(-80px,-80px)}.capture-click{position:fixed;width:56px;height:56px;border:4px solid #7bf1d0;border-radius:50%;z-index:999;pointer-events:none;animation:click-pulse .45s ease-out forwards}@keyframes click-pulse{to{transform:scale(1.8);opacity:0}}`;document.head.append(style);
+      const cursor=document.createElement('div');cursor.id='capture-pointer';document.body.append(cursor);
+      document.addEventListener('mousemove',event=>cursor.style.transform=`translate(${event.clientX}px,${event.clientY}px)`);
+      document.addEventListener('mousedown',event=>{const ring=document.createElement('div');ring.className='capture-click';ring.style.left=(event.clientX-28)+'px';ring.style.top=(event.clientY-28)+'px';document.body.append(ring);setTimeout(()=>ring.remove(),500)});
+    }""")
+
+
+def run(voice,out,reuse=None):
     out.mkdir(parents=True,exist_ok=True)
     lesson=json.loads((LESSON/'lesson.json').read_text());chapters=lesson['chapters']
-    narrator=PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
-    aligner=WhisperXAligner(min_token_coverage=1)
-    words=[];parts=[];timeline=[];offset=0
-    for i,c in enumerate(chapters):
-        path=out/f'voice_{i:02}.wav';narrator.synthesize(c['narration'],path)
-        aligned=aligner.align(path,c['narration'])
-        for word in aligned.words:words.append(WordTimestamp(**{**word.model_dump(),'start_s':word.start_s+offset,'end_s':word.end_s+offset}))
-        timeline.append({'title':c['title'],'start':offset,'end':offset+aligned.duration_s})
-        offset+=aligned.duration_s;parts.append(path)
-        print(f'Chapter {i+1}: real Piper + WhisperX, {aligned.duration_s:.2f}s',flush=True)
-    concat_wavs(parts,out/'vo.wav');normalize_loudness(out/'vo.wav',out/'vo_norm.wav')
     transcript=' '.join(c['narration'] for c in chapters)
-    aligned=AlignmentResult(words=words,audio_path=str(out/'vo_norm.wav'),transcript=transcript,language='en',alignment_model='whisperx per-chapter CTC',duration_s=offset,token_coverage=1)
-    save_word_timestamps(aligned,out/'words.json')
+    if reuse:
+        aligned=AlignmentResult.model_validate_json((reuse/'words.json').read_text())
+        if aligned.transcript!=transcript or aligned.method!='whisperx_ctc':raise ValueError('Reuse transcript/alignment mismatch')
+        old_report=json.loads((reuse/'qc_report.json').read_text())
+        if old_report.get('narration_backend')!='piper':raise ValueError('Expected verified Piper narration')
+        timeline=old_report['chapters'];offset=aligned.duration_s;words=aligned.words
+        subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(reuse/'final.mp4'),'-vn','-acodec','pcm_s16le',str(out/'vo.wav')],check=True)
+        normalize_loudness(out/'vo.wav',out/'vo_norm.wav')
+        save_word_timestamps(aligned,out/'words.json')
+        if (reuse/'PIPER_MODEL_CARD.md').exists():shutil.copy2(reuse/'PIPER_MODEL_CARD.md',out/'PIPER_MODEL_CARD.md')
+    else:
+        narrator=PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
+        aligner=WhisperXAligner(min_token_coverage=1)
+        words=[];parts=[];timeline=[];offset=0
+        for i,c in enumerate(chapters):
+            path=out/f'voice_{i:02}.wav';narrator.synthesize(c['narration'],path)
+            aligned=aligner.align(path,c['narration'])
+            for word in aligned.words:words.append(WordTimestamp(**{**word.model_dump(),'start_s':word.start_s+offset,'end_s':word.end_s+offset}))
+            timeline.append({'title':c['title'],'start':offset,'end':offset+aligned.duration_s})
+            offset+=aligned.duration_s;parts.append(path)
+            print(f'Chapter {i+1}: real Piper + WhisperX, {aligned.duration_s:.2f}s',flush=True)
+        concat_wavs(parts,out/'vo.wav');normalize_loudness(out/'vo.wav',out/'vo_norm.wav')
+        transcript=' '.join(c['narration'] for c in chapters)
+        aligned=AlignmentResult(words=words,audio_path=str(out/'vo_norm.wav'),transcript=transcript,language='en',alignment_model='whisperx per-chapter CTC',duration_s=offset,token_coverage=1)
+        save_word_timestamps(aligned,out/'words.json')
     clock={'start':None};evidence=[];steps=[]
     for i,(chapter,timing) in enumerate(zip(chapters,timeline)):
         def show(page,c=chapter,t=timing,i=i):
-            if clock['start'] is None:clock['start']=time.monotonic()
+            if clock['start'] is None:
+                install_cursor(page);clock['start']=time.monotonic()
             page.evaluate("""({title,key,index,total,demo})=>{
               document.querySelector('#lesson-overlay')?.remove();
               const e=document.createElement('div');e.id='lesson-overlay';
@@ -66,15 +99,39 @@ def run(voice,out):
             }""",{'title':c['title'],'key':c['key'],'index':i,'total':len(chapters),'demo':bool(c['demo'])})
             if c['demo']:
                 amount,category,expected=c['demo']
-                focus_element(page,'#amount');page.locator('#amount').fill(amount)
-                page.locator('#category').select_option(category)
-                page.wait_for_timeout(1800)
-                focus_element(page,'#submit');page.locator('#submit').click()
+                cues={3:'Now we run the rule',4:'Run the rule again',5:'so the boundary is approved',6:'Run the rule',7:'so this request is automatically approved',8:'so sixty needs review',9:'Run the rule'}
+                click_at=phrase_time(words,cues[i],t['start'],t['end'])
+                def wait_until(target):
+                    remaining=target-(time.monotonic()-clock['start'])
+                    if remaining>0:page.wait_for_timeout(remaining*1000)
+                def move_to(selector):
+                    box=page.locator(selector).bounding_box()
+                    if not box:raise ValueError('Missing visible action target')
+                    page.mouse.move(box['x']+box['width']/2,box['y']+box['height']/2,steps=24)
+                    page.wait_for_timeout(160)
+                wait_until(t['start']+(.8 if i!=3 else 2.0))
+                focus_element(page,'#amount');move_to('#amount');page.locator('#amount').click()
+                page.locator('#amount').press('ControlOrMeta+A');page.locator('#amount').press_sequentially(amount,delay=95)
+                move_to('#category');page.locator('#category').click()
+                page.locator('#category').press('Escape')
+                page.locator('#category').evaluate('el=>el.size=4')
+                move_to('#category option[value="'+category+'"]')
+                page.locator('#category').select_option(category);page.wait_for_timeout(450)
+                page.locator('#category').evaluate('el=>el.size=1')
+                # Follow the spoken action cue, never wait for a viewer response.
+                wait_until(click_at-.4);focus_element(page,'#submit');move_to('#submit');page.locator('#submit').click()
+                actual_time=time.monotonic()-clock['start']
                 observed=page.locator('#result').inner_text();assert expected in observed,(expected,observed)
-                focus_element(page,'#result');evidence.append({'chapter':c['title'],'amount':amount,'category':category,'expected':expected,'observed':observed,'passed':True})
+                focus_element(page,'#result');move_to('#result')
+                evidence.append({'chapter':c['title'],'amount':amount,'category':category,'expected':expected,'observed':observed,'passed':True,'spoken_click_cue_s':click_at,'actual_click_s':actual_time,'sync_error_s':actual_time-click_at})
             else:
-                page.wait_for_timeout(5000)
-                page.locator('#lesson-detail').evaluate("el=>el.textContent='One-cent boundary pair: 100.00 → approve   /   100.01 → review'") if i in (0,10,14) else None
+                # Reveal distinct teaching details during continuous narration.
+                details={0:['Boundary: $100.00 approved','$100.01 needs review'],1:['Travel ≤ $100  |  Software ≤ $200','Supplies ≤ $50  |  Invalid → reject'],2:['Validity is not permission','A policy decision does not move money'],10:['Travel: 100.00 / 100.01','Software: 200.00 / 200.01   •   Supplies: 50.00 / 50.01'],11:['Binary floats approximate decimal fractions','Choose explicit precision and rounding'],12:['Repeat validation on the server','Deny by default • Check every request'],13:['No authentication, database or payments','Test those controls before connecting accounts'],14:['Test both sides of each boundary','Keep the matrix and a decision record']}
+                for n,detail in enumerate(details.get(i,['Inspect the policy','Compare expected and observed results'])):
+                    target=t['start']+(n+1)*(t['end']-t['start'])/3
+                    remaining=target-(time.monotonic()-clock['start'])
+                    if remaining>0:page.wait_for_timeout(remaining*1000)
+                    page.locator('#lesson-detail').evaluate("(el,text)=>{el.textContent=text;el.animate([{opacity:0,transform:'translateX(20px)'},{opacity:1,transform:'translateX(0)'}],{duration:220,fill:'both'})}",detail)
             remaining=t['end']-(time.monotonic()-clock['start'])
             if remaining>0:page.wait_for_timeout(remaining*1000)
         steps.append((chapter['title'],show))
@@ -90,7 +147,7 @@ def run(voice,out):
     (out/'qc_report.json').write_text(json.dumps(report,indent=2))
     gates=enforce(out,expected_size=(1920,1080));(out/'independent_gates.json').write_text(json.dumps(gates,indent=2))
     (out/'demo_evidence.json').write_text(json.dumps(evidence,indent=2))
-    for file in ('script.md','sources.md','lesson.json'):shutil.copy2(LESSON/file,out/file)
+    for file in ('script.md','sources.md','lesson.json','test-matrix.csv'):shutil.copy2(LESSON/file,out/file)
     frames=out/'review_frames';frames.mkdir(exist_ok=True)
     for i,t in enumerate(timeline):
         subprocess.run(['ffmpeg','-y','-loglevel','error','-ss',str(t['start']+min(8,(t['end']-t['start'])/2)),'-i',str(out/'final.mp4'),'-frames:v','1',str(frames/f'{i:02}.jpg')],check=True)
@@ -107,5 +164,6 @@ def run(voice,out):
     print(json.dumps({'duration':offset,'qc':qc.model_dump(),'gates':gates},indent=2))
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--voice',type=Path,required=True);parser.add_argument('--output-dir',type=Path,default=Path('outputs/educational'))
-    args=parser.parse_args();run(args.voice,args.output_dir)
+    parser=argparse.ArgumentParser();parser.add_argument('--voice',type=Path);parser.add_argument('--output-dir',type=Path,default=Path('outputs/educational'))
+    parser.add_argument('--reuse-narration',type=Path)
+    args=parser.parse_args();run(args.voice,args.output_dir,args.reuse_narration)
