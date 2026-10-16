@@ -165,3 +165,12 @@ def test_same_host_redirect_chain_is_bounded():
     fetcher=HttpSourceFetcher(client=httpx.Client(transport=httpx.MockTransport(handler)),allowed_hosts={'www.irs.gov'})
     with pytest.raises(ValueError,match='Redirects are disabled'):fetcher.fetch('https://www.irs.gov/start')
     assert len(calls)==4
+
+
+def test_main_content_preferred_over_site_menus():
+    menu=' '.join(['Menu']*500)
+    body=' '.join(['Usted necesita un ITIN si tiene un proposito tributario federal.']*10)
+    html=f'<html><title>T</title><body><div class="menu">{menu}</div><main><div><p>{body}</p><img src=x><br></div></main><div>after</div></body></html>'
+    fetcher=HttpSourceFetcher(client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200,text=html,headers={'Content-Type':'text/html'}))),allowed_hosts={'www.irs.gov'})
+    text=fetcher.fetch('https://www.irs.gov/es/a').text
+    assert text.startswith('Usted necesita') and 'Menu' not in text and 'after' not in text

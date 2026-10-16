@@ -19,32 +19,45 @@ import httpx
 from pipeline.models import Source
 
 MAX_TEXT_CHARS=8_000
-MAX_BYTES=150_000
+MAX_BYTES=600_000  # official pages (e.g. irs.gov) exceed 150 KB of HTML
 _WS_RE=re.compile(r'\s+')
 
 class SourceFetcher(Protocol):
     def fetch(self, url: str) -> Source: ...
 
 class _TextExtractor(HTMLParser):
-    OMIT={'script','style','noscript','svg','nav','footer','form','iframe'}
+    OMIT={'script','style','noscript','svg','nav','footer','form','iframe','header','aside','button'}
+    VOID={'area','base','br','col','embed','hr','img','input','link','meta','source','track','wbr'}
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self._skip=0
+        self._main=0
         self._parts=[]
+        self._main_parts=[]
         self._in_title=False
         self.title=[]
     def handle_starttag(self,tag,attrs):
+        if tag in self.VOID:return
         if tag in self.OMIT: self._skip+=1
+        if tag=='main' or (tag in ('div','article','section') and self._main):self._main+=1
+        elif tag in ('div','article','section') and ('role','main') in attrs:self._main+=1
         if tag=='title':self._in_title=True
     def handle_endtag(self,tag):
         if tag in self.OMIT and self._skip:self._skip-=1
+        if self._main and tag in ('main','div','article','section'):self._main-=1
         if tag=='title':self._in_title=False
     def handle_data(self,data):
         if self._skip:return
         if self._in_title:self.title.append(data)
-        else:self._parts.append(data)
+        else:
+            self._parts.append(data)
+            if self._main:self._main_parts.append(data)
     @property
-    def text(self):return ' '.join(self._parts)
+    def text(self):
+        # Prefer the page's main content (skips site menus that would use up
+        # the bounded text budget); fall back to the whole body.
+        main=' '.join(self._main_parts)
+        return main if len(main.split())>=40 else ' '.join(self._parts)
 
 def _normalize_text(raw:str)->str:
     return _WS_RE.sub(' ',html.unescape(raw)).strip()[:MAX_TEXT_CHARS]
