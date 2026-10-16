@@ -4,6 +4,8 @@
 
 **Verified status (2026-10-15):** Final regression passed **233 tests; 3 live API tests skipped** on commit `8fdc42a`. The corrected **6m47s English tutorial** passed actual cloud rendering, independent MP4 decode/audio/caption checks and a separate visual review; its offline practice lab is reproducible in Chromium. Fresh OAuth refresh and read-only access to **LogicScript** passed with the expected channel ID. **Production remains gated:** exposed credentials still require secure rotation (Google Cloud is inaccessible in the current browser), the final adaptive script-budget correction has not passed a fresh live E2E run (latest live script was correctly rejected at 1,045/1,200 required words), and owner listening/editorial approval is absent. No paid service, YouTube upload or publication was performed. See [the current publication review](docs/FIRST_VIDEO_PUBLICATION_REVIEW_2026-10-15.md) for exact run links, fixes, limitations and MP4 checksum.
 
+**Update (2026-10-16):** the automated research → script → storyboard → verification pipeline passed live for the first time (1,458-word script, 5/5 claims verified, $0). Repository is public so GitHub Actions runs at no cost. See [docs/LIVE_PIPELINE_PASS_2026-10-16.md](docs/LIVE_PIPELINE_PASS_2026-10-16.md).
+
 ## Start here
 
 - **`docs/WORK_HANDOFF_KREYOL.md`** — deployment sequence and safety constraints.
