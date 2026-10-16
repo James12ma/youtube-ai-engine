@@ -164,3 +164,43 @@ def test_section_word_budget_adapts_to_actual_underwriting(repo):
     assert 1200<=output.word_count<=1800
     assert targets[-1]>targets[0] and len(targets)==10
     assert pipe._t.min_script_duration_s==480
+
+
+def test_short_draft_on_final_revision_is_still_expanded(repo):
+    # Live run 2026-10-16: attempt 1 failed a non-length gate, attempt 2 was
+    # 629 words on the last revision and was rejected without expansion.
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    ids=['evidence'];verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(id='evidence',text='Evidence',source_ids=['s'],supporting_snippets=['Evidence'])],rejected=[],pass_rate=1,verified_at='now')
+    bad=ScriptOutput(title='Tutorial',hook='Start here.',cta='Done.',sections=[ScriptSection(heading='A',narration='Text.',claim_ids=['not-a-real-id'])])
+    short=ScriptOutput(title='Tutorial',hook='Start here.',cta='Done.',sections=[ScriptSection(heading='S'+str(i),narration='Short explanation.',claim_ids=ids) for i in range(8)])
+    calls=[]
+    class Router_:
+        def execute(self,task_type,input_data,request,schema):
+            calls.append(task_type)
+            if task_type=='pipeline.script':return bad if calls.count('pipeline.script')==1 else short
+            return ScriptSection(heading='S',narration=' '.join(['evidence']*170),claim_ids=ids)
+    pipe=ContentPipeline(StateStore(repo,push_required=False),Router_(),FakeFetcher({}))
+    output=pipe._stage_script('test',verification,[])
+    assert 1200<=output.word_count<=1800
+    assert calls.count('pipeline.script')==2 and calls.count('pipeline.script_section')==8
+    assert pipe._t.min_script_duration_s==480 and pipe._t.max_stage_revisions==2
+
+
+def test_expansion_runs_once_and_reports_earlier_failures(repo):
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    from scripts.check_research_pipeline import safe_quality_failure
+    ids=['evidence'];verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(id='evidence',text='Evidence',source_ids=['s'],supporting_snippets=['Evidence'])],rejected=[],pass_rate=1,verified_at='now')
+    short=ScriptOutput(title='Tutorial',hook='Start here.',cta='Done.',sections=[ScriptSection(heading='S'+str(i),narration='Short explanation.',claim_ids=ids) for i in range(5)])
+    calls=[]
+    class Underwriter:
+        def execute(self,task_type,input_data,request,schema):
+            calls.append(task_type)
+            if task_type=='pipeline.script':return short
+            return ScriptSection(heading='S',narration='still short',claim_ids=ids)
+    pipe=ContentPipeline(StateStore(repo,push_required=False),Underwriter(),FakeFetcher({}))
+    with pytest.raises(PipelineQualityError) as exc:pipe._stage_script('test',verification,[])
+    # Bounded: two full drafts, one expansion pass of five sections, no more.
+    assert calls.count('pipeline.script')==2 and calls.count('pipeline.script_section')==5
+    safe=safe_quality_failure(exc.value)
+    assert safe['reason']=='duration outside 8-12 minute target'
+    assert safe['earlier_failures']==['duration outside 8-12 minute target']*2

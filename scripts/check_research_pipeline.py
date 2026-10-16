@@ -48,6 +48,9 @@ def safe_quality_failure(exc):
                 'word_count', 'min_words', 'max_words', 'scene_index', 'index', 'total_s', 'target_s', 'drift', 'tolerance'):
         value = exc.report.get(key)
         if type(value) in (int, float) and math.isfinite(value): result[key] = value
+    earlier = exc.report.get('earlier_failures')
+    if isinstance(earlier, list):
+        result['earlier_failures'] = [r if r in reasons else 'unclassified' for r in earlier[:5]]
     rejected = exc.report.get('rejected', [])
     if isinstance(rejected, list):
         allowed = {'unknown source_id', 'snippet not found verbatim in source', 'numeric claim not supported by source'}

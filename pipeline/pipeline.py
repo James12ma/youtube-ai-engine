@@ -158,44 +158,64 @@ class ContentPipeline:
         request=LLMRequest(messages=[
             {'role':'system','content':'You write original, fact-bound YouTube narration. Every factual or numeric statement must cite at least one claim_id from the supplied list. Cite by putting those claim_ids in the section\'s claim_ids array; you may not invent claim ids.'},
             {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
-        feedback='';previous_short=None
+        feedback='';expansion_used=False;earlier_failures:List[str]=[]
         for revision in range(self._t.max_stage_revisions):
             if feedback:
                 request.messages[-1]['content'] += '\nPREVIOUS ATTEMPT FAILED: '+feedback+'\nProduce a corrected script.'
-            if revision and previous_short is not None:
-                # Expand real model output section by section within the existing
-                # adapter token cap. Never pad text or alter duration thresholds.
-                expanded=[]
-                target_total=math.ceil(((self._t.min_script_duration_s+self._t.max_script_duration_s)/2)*self._t.target_words_per_second)
-                base_words=_word_count(previous_short.hook,previous_short.cta)
-                for index,section in enumerate(previous_short.sections):
-                    # Count actual generated words after each section. A fixed
-                    # per-section target let modest shortfalls accumulate to 1045.
-                    remaining=len(previous_short.sections)-index
-                    emitted=_word_count(*[part.narration for part in expanded])
-                    target=max(80,math.ceil((target_total-base_words-emitted)/remaining))
-                    expansion=LLMRequest(messages=[
-                        {'role':'system','content':'Write one complete tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
-                        {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(previous_short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in previous_short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id.'}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
-                    part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision},expansion,ScriptSection)
-                    expanded.append(part)
-                output=previous_short.model_copy(update={'sections':expanded})
-            else:
-                output=self._router.execute('pipeline.script',{'topic':topic},request,ScriptOutput)
+            output=self._router.execute('pipeline.script',{'topic':topic},request,ScriptOutput)
             assert isinstance(output,ScriptOutput)
             try:
                 self._validate_script(output,verification)
                 break
-            except PipelineQualityError as exc:
-                if revision+1>=self._t.max_stage_revisions:raise
+            except PipelineQualityError as first_exc:
+                exc=first_exc
+                # A too-short real draft is expanded right away, in the same
+                # revision, so the final allowed revision is never wasted on
+                # a short draft. Expansion runs at most once per stage to keep
+                # the free request budget bounded. No padding; gates unchanged.
+                if (not expansion_used and self._is_short(exc)
+                        and 1<=len(output.sections)<=self._MAX_EXPANSION_SECTIONS):
+                    expansion_used=True
+                    output=self._expand_short_script(topic,output,claim_lines,revision)
+                    try:
+                        self._validate_script(output,verification)
+                        break
+                    except PipelineQualityError as second_exc:
+                        earlier_failures.append(str(exc.report.get('reason')))
+                        exc=second_exc
+                if revision+1>=self._t.max_stage_revisions:
+                    if earlier_failures:exc.report.setdefault('earlier_failures',list(earlier_failures))
+                    raise exc
+                earlier_failures.append(str(exc.report.get('reason')))
                 feedback=json.dumps(exc.report,ensure_ascii=False)[:1000]
-                if exc.report.get('reason')=='duration outside 8-12 minute target' and exc.report.get('duration_s',0)<self._t.min_script_duration_s and 1<=len(output.sections)<=10:
-                    previous_short=output
         words=_word_count(output.hook,*[s.narration for s in output.sections],output.cta)
         duration=words/self._t.target_words_per_second
         artifact=ScriptArtifact(topic=topic,title=output.title,hook=output.hook,sections=output.sections,cta=output.cta,duration_s=duration,word_count=words,verified_at=_now())
         self._state.record_completion(task_id,'pipeline.script',artifact.model_dump())
         return artifact
+    _MAX_EXPANSION_SECTIONS=12
+    def _is_short(self,exc:PipelineQualityError)->bool:
+        return (exc.report.get('reason')=='duration outside 8-12 minute target'
+                and exc.report.get('duration_s',0)<self._t.min_script_duration_s)
+    def _expand_short_script(self,topic:str,short:ScriptOutput,claim_lines:List[str],revision:int)->ScriptOutput:
+        # Expand real model output section by section within the existing
+        # adapter token cap. Never pad text or alter duration thresholds.
+        expanded:List[ScriptSection]=[]
+        target_total=math.ceil(((self._t.min_script_duration_s+self._t.max_script_duration_s)/2)*self._t.target_words_per_second)
+        base_words=_word_count(short.hook,short.cta)
+        for index,section in enumerate(short.sections):
+            # Count actual generated words after each section. A fixed
+            # per-section target let modest shortfalls accumulate to 1045.
+            remaining=len(short.sections)-index
+            emitted=_word_count(*[part.narration for part in expanded])
+            target=max(80,math.ceil((target_total-base_words-emitted)/remaining))
+            expansion=LLMRequest(messages=[
+                {'role':'system','content':'Write one complete tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
+                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id.'}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
+            part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision},expansion,ScriptSection)
+            assert isinstance(part,ScriptSection)
+            expanded.append(part)
+        return short.model_copy(update={'sections':expanded})
     def _validate_script(self,output:ScriptOutput,verification:VerificationArtifact)->None:
         valid_ids={c.id for c in verification.verified}
         if not output.title.strip():raise PipelineQualityError('script',{'reason':'empty title'})
