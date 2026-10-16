@@ -25,6 +25,18 @@ jobs:
           YOUTUBE_UPLOAD_ALLOWED: '0'
           YOUTUBE_PUBLIC_ALLOWED: '0'
         run: python -m scripts.check_research_pipeline
+      - name: Publish safe report summary as annotation
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          p = pathlib.Path('outputs/research-check/report.json')
+          if p.exists():
+              r = json.loads(p.read_text())
+              print('::notice title=research-report::' + json.dumps(r, separators=(',', ':')).replace('%', '%25').replace('\n', ' ')[:3800])
+          else:
+              print('::warning title=research-report::report.json missing')
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
