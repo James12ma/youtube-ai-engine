@@ -1,0 +1,11 @@
+{
+ "seed": 2026,
+ "width": 1280,
+ "height": 704,
+ "frames": 73,
+ "steps": 40,
+ "guidance": 5.0,
+ "negative_prompt": "leopard, cheetah, slender body, small rosettes without center spots, extra legs, extra tail, missing legs, merged animals, deformed paws, deformed face, morphing, flicker, static frame, slideshow, text, watermark, cartoon, CGI, painting, low quality, blurry",
+ "mode": "b",
+ "prompt": "Cinematic wildlife documentary shot: an adult female jaguar (Panthera onca) with a stocky, heavily muscled build, a broad massive head, short thick legs and large paws, golden-tan coat covered in large black rosettes that each contain small black spots in their centers, followed closely by two young jaguar cubs about three months old with fluffy, darker spotted fur, oversized paws and round ears, walking slowly and naturally across damp leaf litter in a dense Amazon rainforest understory at early morning, soft golden light filtering through the canopy, humid haze, ferns and vines, shallow depth of field, slow smooth eye-level tracking shot, realistic wildlife documentary footage, natural gait, continuous motion."
+}

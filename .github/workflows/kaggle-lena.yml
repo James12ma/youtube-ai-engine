@@ -1,0 +1,86 @@
+name: Kaggle LENA test (ONE generation, owner-approved only)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'a = start from ref_0.png, b = text only with corrected anatomy'
+        required: true
+      confirm:
+        description: Type LANSE to confirm the owner approved this single GPU run
+        required: true
+      delivery_pubkey:
+        description: Base64 RSA public key (PEM)
+        required: true
+permissions:
+  contents: write  # only to push the ENCRYPTED result to qa/<run id>
+concurrency:
+  group: kaggle-lena
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_USERNAME }}   # the access token is stored under this secret name
+      KUSER: goldgoat
+    steps:
+      - name: Owner confirmation
+        env: { CONFIRM: '${{ inputs.confirm }}', MODE: '${{ inputs.mode }}' }
+        run: |
+          [ "$CONFIRM" = "LANSE" ] || { echo "::error::not confirmed"; exit 1; }
+          [[ "$MODE" =~ ^[ab]$ ]] || { echo "::error::mode must be a or b"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q 'kaggle>=1.8'
+      - name: Push the private notebook (GPU, internet)
+        env: { MODE: '${{ inputs.mode }}' }
+        run: |
+          set -euo pipefail
+          d=$RUNNER_TEMP/k; mkdir -p "$d"
+          cp kaggle/lena/generate.py kaggle/lena/ref_0.png "$d/"
+          cp "kaggle/lena/lena_config_$MODE.json" "$d/lena_config.json"
+          cat > "$d/kernel-metadata.json" <<JSON
+          {"id": "$KUSER/alan7-lena-test", "title": "alan7-lena-test", "code_file": "generate.py", "language": "python",
+           "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_internet": true,
+           "dataset_sources": [], "competition_sources": [], "kernel_sources": []}
+          JSON
+          kaggle kernels push -p "$d" 2>&1 | sed 's/[A-Za-z0-9_-]\{30,\}/***/g'
+      - name: Wait (hard limit ~5 h)
+        run: |
+          for i in $(seq 1 300); do
+            s=$(kaggle kernels status "$KUSER/alan7-lena-test" 2>&1 | tail -1)
+            case "$s" in *complete*|*COMPLETE*) echo "::notice title=kaggle::$s"; break;; *error*|*ERROR*|*cancel*) echo "::warning title=kaggle::$s"; break;; esac
+            [ $((i % 15)) -eq 0 ] && echo "$s"
+            sleep 60
+          done
+      - name: Fetch output
+        run: |
+          mkdir -p out; kaggle kernels output "$KUSER/alan7-lena-test" -p out >/dev/null 2>&1 || true
+          ls -la out
+          [ -f out/report.json ] && echo "::notice title=report::$(python -c "import json;r=json.load(open('out/report.json'));r.pop('config',None);print(json.dumps(r)[:3000])")"
+      - name: Encrypted pack to qa/${{ github.run_id }}
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBKEY_B64: ${{ inputs.delivery_pubkey }}
+        run: |
+          set -euo pipefail
+          umask 077
+          ls out/* >/dev/null 2>&1 || { echo "::warning::nothing to deliver"; exit 0; }
+          tar -C out -cf "$RUNNER_TEMP/pack.tar" .
+          echo "$PUBKEY_B64" | base64 -d > "$RUNNER_TEMP/pub.pem"
+          o=$RUNNER_TEMP/enc; mkdir -p "$o"
+          openssl rand -hex 32 > "$RUNNER_TEMP/kk"
+          openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/pub.pem" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -in "$RUNNER_TEMP/kk" -out "$o/key.enc"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/kk" -in "$RUNNER_TEMP/pack.tar" -out "$o/pack.enc.part00"
+          shred -u "$RUNNER_TEMP/kk" "$RUNNER_TEMP/pack.tar"
+          (cd "$o" && sha256sum * > SHA256SUMS)
+          cd "$o"; git init -q -b "qa/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Encrypted LENA test ${{ github.run_id }}"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
+          echo "::notice title=qa-branch::qa/${{ github.run_id }}"
