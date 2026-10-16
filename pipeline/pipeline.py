@@ -349,7 +349,7 @@ class ContentPipeline:
         elif self._t.visual_mode=='photos':
             visual_types=('broll (a real photo of the subject being narrated) or text_overlay; use broll for most scenes and '
                           'never screen_recording, chart or diagram. For every broll scene set search_terms to the common '
-                          'English name of the ONE animal, place or object shown, 1 to 4 words (for example "green anaconda"); '
+                          'name of the ONE animal, place or object shown, 1 to 4 words; for an animal use its scientific name (for example "Eunectes murinus"); '
                           'never people, brands or logos')
         else:
             visual_types='diagram or text_overlay (no real footage, recordings or charts exist for this video; never use screen_recording, chart or broll)'
