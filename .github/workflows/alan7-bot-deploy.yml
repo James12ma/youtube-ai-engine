@@ -1,6 +1,8 @@
 name: Alan7 bot deploy (Cloudflare Worker + D1, free plan)
 # Needs GitHub secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
-# Bot secrets (TELEGRAM_BOT_TOKEN, OWNER_ID, GITHUB_TOKEN) are set in the Cloudflare dashboard, not here.
+# Bot secrets can be set in the Cloudflare dashboard, or (easier on a phone) as GitHub secrets
+# ALAN7_TELEGRAM_BOT_TOKEN / ALAN7_OWNER_ID / ALAN7_GITHUB_TOKEN: this workflow copies them into
+# Cloudflare Secrets through stdin (never echoed) and then registers the Telegram webhook.
 on:
   workflow_dispatch:
 permissions:
@@ -51,7 +53,25 @@ jobs:
           npx wrangler deploy 2>&1 | tee deploy.log
           url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1 || true)
           echo "::notice title=worker-url::${url:-see Cloudflare dashboard}"
+          echo "WORKER_URL=$url" >> "$GITHUB_ENV"
           if [ -n "$url" ]; then
             code=$(curl -s -o /dev/null -w '%{http_code}' "$url/health" || true)
             echo "::notice title=health::$url/health -> HTTP $code"
           fi
+      - name: Copy bot secrets into Cloudflare Secrets (only those provided)
+        env:
+          S_TOKEN: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          S_OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+          S_GH: ${{ secrets.ALAN7_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          put() { if [ -n "$2" ]; then printf '%s' "$2" | npx wrangler secret put "$1" >/dev/null 2>&1 && echo "::notice title=secret::$1 set" || echo "::warning title=secret::$1 could not be set"; else echo "::notice title=secret::$1 not provided (skipped)"; fi; }
+          put TELEGRAM_BOT_TOKEN "$S_TOKEN"
+          put OWNER_ID "$S_OWNER"
+          put GITHUB_TOKEN "$S_GH"
+      - name: Register Telegram webhook
+        if: env.WORKER_URL != ''
+        run: |
+          sleep 5
+          r=$(curl -s -w ' HTTP %{http_code}' "$WORKER_URL/setup" || true)
+          echo "::notice title=webhook::$r"
