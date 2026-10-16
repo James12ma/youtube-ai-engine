@@ -64,9 +64,17 @@ def _spoken_numbers(text:str)->set:
     for word,value in _SPOKEN_NUMBER_WORDS.items():
         simplified=re.sub(r'\b'+word+r'\b',value,simplified)
     return {m.group().replace(',','') for m in _SPOKEN_NUM_RE.finditer(simplified)}
+_DIGIT_TO_WORD={v:k for k,v in _SPOKEN_NUMBER_WORDS.items()}
+def _describe_numbers(found:set)->str:
+    """Name the exact offending tokens so the model can remove them."""
+    parts=[]
+    for token in sorted(found,key=lambda t:(len(t),t)):
+        word=_DIGIT_TO_WORD.get(token)
+        parts.append('"'+word+'" or "'+token+'"' if word else '"'+token+'"')
+    return ', '.join(parts)
 _NO_UNSOURCED_NUMBERS=('Do not write any number, digit or number word (one, two, three, ten, etc.), year, '
     'percentage or price unless that exact number appears in a claim you cite in claim_ids. '
-    'Use ordinals (first, second, next) or phrases like "a few" or "several" instead. '
+    'Use ordinals (first, second, next) or phrases like "a few" or "several" instead. Avoid the word "one" even as a pronoun (write "a", "this", "each", "someone"). '
     'Hypothetical examples must use words, not numbers.')
 def _word_count(*parts:str)->int:return sum(len(p.split()) for p in parts if p)
 def _now()->str:return datetime.now(timezone.utc).isoformat()
@@ -223,6 +231,7 @@ class ContentPipeline:
         return (exc.report.get('reason')=='duration outside 8-12 minute target'
                 and exc.report.get('duration_s',0)<self._t.min_script_duration_s)
     _MAX_NUMERIC_REPAIRS=2
+    _NUMERIC_REPAIR_ROUNDS=2
     @staticmethod
     def _claim_numbers(verification:VerificationArtifact)->dict:
         return {c.id:_spoken_numbers(c.text).union(*[_spoken_numbers(x) for x in c.supporting_snippets]) for c in verification.verified}
@@ -232,15 +241,16 @@ class ContentPipeline:
         return _spoken_numbers(section.narration)-allowed
     def _repair_numeric_sections(self,topic:str,draft:ScriptOutput,claim_lines:List[str],revision:int,claim_numbers:dict)->ScriptOutput:
         sections=list(draft.sections)
-        for index,section in enumerate(sections):
+        for round_ in range(self._NUMERIC_REPAIR_ROUNDS):
+          for index,section in enumerate(sections):
             bad=self._uncited_numbers(section,claim_numbers)
             if not bad:continue
             words=max(80,_word_count(section.narration))
             request=LLMRequest(messages=[
                 {'role':'system','content':'Rewrite one tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
-                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection heading: '+section.heading+'\nCurrent narration: '+section.narration+'\nThis narration was REJECTED because it contains numbers or number words that do not appear in the claims it cites. Rewrite it with approximately '+str(words)+' narration words, same meaning and structure, with every unsupported number removed or replaced by words such as first, next, a few or several. '+_NO_UNSOURCED_NUMBERS+' Return fields heading, narration, on_screen_text, claim_ids.'}],
+                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection heading: '+section.heading+'\nCurrent narration: '+section.narration+'\nThis narration was REJECTED because it uses '+_describe_numbers(bad)+', which do not appear in the claims it cites. Rewrite it with approximately '+str(words)+' narration words, same meaning and structure, with every unsupported number removed or replaced by words such as first, next, a few or several. '+_NO_UNSOURCED_NUMBERS+' Return fields heading, narration, on_screen_text, claim_ids.'}],
                 schema=ScriptSection,temperature=.2,max_tokens=min(4096,max(1200,words*4)))
-            part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':'numeric'},request,ScriptSection)
+            part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':'numeric','round':round_},request,ScriptSection)
             assert isinstance(part,ScriptSection)
             sections[index]=part
         return draft.model_copy(update={'sections':sections})
@@ -264,10 +274,11 @@ class ContentPipeline:
                 {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id. '+_NO_UNSOURCED_NUMBERS+feedback_note}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
             part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision},expansion,ScriptSection)
             assert isinstance(part,ScriptSection)
-            if repairs_left>0 and self._uncited_numbers(part,claim_numbers):
+            found=self._uncited_numbers(part,claim_numbers) if repairs_left>0 else set()
+            if found:
                 # One bounded retry for this section only, with explicit feedback.
                 repairs_left-=1
-                feedback_note=' PREVIOUS VERSION OF THIS SECTION WAS REJECTED: it contained numbers not present in its cited claims. Remove them.'
+                feedback_note=' PREVIOUS VERSION OF THIS SECTION WAS REJECTED: it used '+_describe_numbers(found)+', which do not appear in its cited claims. Do not use those words or digits at all.'
                 retry=LLMRequest(messages=[expansion.messages[0],{'role':'user','content':expansion.messages[1]['content']+feedback_note}],schema=ScriptSection,temperature=.2,max_tokens=expansion.max_tokens)
                 part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':1},retry,ScriptSection)
                 assert isinstance(part,ScriptSection)
