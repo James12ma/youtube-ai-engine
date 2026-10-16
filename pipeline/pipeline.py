@@ -251,6 +251,7 @@ class ContentPipeline:
             output=self._router.execute('pipeline.storyboard',{'title':script.title},request,StoryboardOutput)
             assert isinstance(output,StoryboardOutput)
             try:
+                output=self._retime_storyboard(output,script)
                 self._validate_storyboard(output,script,verification)
                 break
             except PipelineQualityError as exc:
@@ -259,6 +260,38 @@ class ContentPipeline:
 
         self._state.record_completion(task_id,'pipeline.storyboard',output.model_dump())
         return output
+    def _retime_storyboard(self,output:StoryboardOutput,script:ScriptArtifact)->StoryboardOutput:
+        """Derive scene timings from the narration instead of model arithmetic.
+
+        Free models pick sensible visuals but often miscalculate timestamps
+        (live run: a zero-length scene). Each section's spoken time is its
+        word count at the configured words-per-second (hook goes with the first
+        section, CTA with the last); that time is split evenly across the
+        section's scenes in their original order. Every section must have at
+        least one scene. Model-supplied timestamps are ignored, and the
+        continuity/drift checks in _validate_storyboard still run afterwards.
+        """
+        if not output.scenes or not script.sections:return output
+        n=len(script.sections)
+        if any(scene.section_index<0 or scene.section_index>=n for scene in output.scenes):
+            return output  # let the validator report the out-of-range index
+        by_section={i:[] for i in range(n)}
+        for scene in sorted(output.scenes,key=lambda sc:(sc.section_index,sc.index,sc.start_s)):
+            by_section[scene.section_index].append(scene)
+        missing=[i for i,scenes in by_section.items() if not scenes]
+        if missing:
+            raise PipelineQualityError('storyboard',{'reason':'section without scene','index':missing[0]})
+        wps=self._t.target_words_per_second
+        seconds=[_word_count(section.narration)/wps for section in script.sections]
+        seconds[0]+=_word_count(script.hook)/wps
+        seconds[-1]+=_word_count(script.cta)/wps
+        retimed=[];clock=0.0
+        for i in range(n):
+            scenes=by_section[i];share=seconds[i]/len(scenes)
+            for scene in scenes:
+                start=clock;clock+=share
+                retimed.append(scene.model_copy(update={'index':len(retimed),'start_s':round(start,3),'end_s':round(clock,3)}))
+        return StoryboardOutput(scenes=retimed)
     def _validate_storyboard(self,output:StoryboardOutput,script:ScriptArtifact,verification:VerificationArtifact)->None:
         if not output.scenes:raise PipelineQualityError('storyboard',{'reason':'no scenes'})
         valid_claims={c.id for c in verification.verified}

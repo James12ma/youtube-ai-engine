@@ -110,7 +110,24 @@ def test_storyboard_duration_drift_rejected(repo):
     fetcher=FakeFetcher({u:_source(u,SRC_TEXTS[u]) for u in SRC_URLS})
     bad=StoryboardOutput(scenes=[Scene(index=0,section_index=0,start_s=0,end_s=1,visual_type='diagram',instruction='x',claim_ids=[])])
     with pytest.raises(PipelineQualityError) as ex:_pipeline(repo,QueuedAdapter('groq',[research,script,bad]),fetcher).run('topic',SRC_URLS)
-    assert ex.value.stage=='storyboard' and ex.value.report['reason']=='duration drift exceeds tolerance'
+    # Timings are now derived from narration, so a storyboard that skips
+    # sections is rejected for missing coverage rather than drift.
+    assert ex.value.stage=='storyboard' and ex.value.report['reason']=='section without scene'
+def test_storyboard_timings_derived_from_narration_not_model_math(repo):
+    from pipeline.models import ScriptArtifact
+    script=ScriptArtifact(topic='t',title='T',hook='one two',cta='three four five',duration_s=0,word_count=0,verified_at='now',
+        sections=[ScriptSection(heading='A',narration=' '.join(['w']*48),claim_ids=[]),ScriptSection(heading='B',narration=' '.join(['w']*95),claim_ids=[])])
+    words=2+48+95+3;script=script.model_copy(update={'word_count':words,'duration_s':words/2.5})
+    # Model output with a zero-length scene and overlapping times (seen live).
+    bad=StoryboardOutput(scenes=[
+        Scene(index=0,section_index=0,start_s=0,end_s=10,visual_type='diagram',instruction='a'),
+        Scene(index=1,section_index=1,start_s=10,end_s=10,visual_type='chart',instruction='b'),
+        Scene(index=2,section_index=1,start_s=5,end_s=99,visual_type='broll',instruction='c')])
+    p=ContentPipeline(StateStore(repo,push_required=False),None,FakeFetcher({}))
+    out=p._retime_storyboard(bad,script)
+    p._validate_storyboard(out,script,SimpleNamespace(verified=[]))
+    assert [s.instruction for s in out.scenes]==['a','b','c'] and [s.index for s in out.scenes]==[0,1,2]
+    assert out.scenes[0].end_s==20.0 and out.scenes[1].end_s==39.6 and out.scenes[2].end_s==59.2==round(script.duration_s,3)
 def test_publishing_disabled():
     assert PUBLISHING_ENABLED is False and not hasattr(ContentPipeline,'publish')
     from pipeline import PublishingDisabledError

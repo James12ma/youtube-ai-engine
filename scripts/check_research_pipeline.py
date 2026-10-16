@@ -72,7 +72,8 @@ def safe_quality_failure(exc):
         'unknown claim_id cited', 'numeric claim without citation', 'no scenes',
         'section_index out of range', 'non-positive scene duration',
         'nonfinite or negative scene timestamp', 'scene index is not sequential',
-        'overlap or gap between scenes', 'script duration is zero', 'duration drift exceeds tolerance'}
+        'overlap or gap between scenes', 'script duration is zero', 'duration drift exceeds tolerance',
+        'section without scene'}
     result = {'stage': exc.stage if exc.stage in stages else 'unclassified',
               'reason': exc.report.get('reason') if exc.report.get('reason') in reasons else 'unclassified'}
     for key in ('verified', 'required', 'pass_rate', 'length', 'max', 'words', 'duration_s',
