@@ -56,44 +56,46 @@ CATS = 'Settings!$B$11:$B$40'; YEAR = 'Settings!$B$4'; BIG = 'Settings!$B$5'; RC
 ex = wb.create_sheet('Expenses', 0)
 ex['A1'] = 'Expenses'; ex['A1'].font = font(size=18, bold=True)
 ex['A2'] = ('Type in the yellow columns. Each grey "rule" column checks one thing. Status: ERROR = left out of totals until fixed; '
-            'CHECK = counted, but please review; OK = passed every rule.')
+            'CHECK = counted, review it, then set Reviewed? to Yes; OK = passed.')
 ex['A2'].font = font(color=MUTED, italic=True)
 ex['A3'] = 'Rows marked EXAMPLE contain deliberate mistakes so you can see the checks work. Delete them before you start.'
 ex['A3'].font = font(color='B45309', bold=True)
 headers = ['Date', 'Vendor', 'Description', 'Category', 'Amount', 'Payment method', 'Receipt saved?', 'Notes',
-           'Status', 'Issues', 'Rule: date', 'Rule: amount', 'Rule: category', 'Rule: duplicate', 'Rule: receipt', 'Rule: size']
+           'Reviewed?', 'Status', 'Issues', 'Rule: date', 'Rule: amount', 'Rule: category', 'Rule: duplicate', 'Rule: receipt', 'Rule: size']
 for col, h in enumerate(headers, start=1):
     c = ex.cell(5, col, h); c.font = font(bold=True, color='FFFFFF'); c.fill = HEAD_FILL
     c.alignment = Alignment(vertical='center', wrap_text=True); c.border = BOX
 ex.row_dimensions[5].height = 30
-widths = [12, 22, 30, 24, 12, 15, 11, 22, 10, 46, 24, 24, 20, 20, 18, 20]
+widths = [11, 18, 18, 23, 10, 12, 9, 9, 11, 9, 41, 24, 24, 20, 20, 18, 20]
 for col, w in enumerate(widths, start=1):
     ex.column_dimensions[ex.cell(5, col).column_letter].width = w
 
 R = f'${FIRST}:$'  # unused helper
 rng = lambda col: f'${col}${FIRST}:${col}${LAST}'
 for r in range(FIRST, LAST + 1):
-    for col in range(1, 9):
+    for col in range(1, 10):
         c = ex.cell(r, col); c.fill = INPUT_FILL; c.font = font(); c.border = BOX
     ex.cell(r, 1).number_format = 'yyyy-mm-dd'
     ex.cell(r, 5).number_format = '#,##0.00;[Red]-#,##0.00'
-    has = f'COUNTA($A{r}:$H{r})>0'
+    has = f'COUNTA($A{r}:$H{r})>0'   # Reviewed? alone does not make a row
     rules = {
-        11: f'=IF(NOT({has}),"",IF(A{r}="","Missing date. ",IF(NOT(ISNUMBER(A{r})),"Date is not a real date. ",'
+        12: f'=IF(NOT({has}),"",IF(A{r}="","Missing date. ",IF(NOT(ISNUMBER(A{r})),"Date is not a real date. ",'
             f'IF(YEAR(A{r})<>{YEAR},"Date outside tax year. ",IF(A{r}>TODAY(),"Date is in the future. ","")))))',
-        12: f'=IF(NOT({has}),"",IF(E{r}="","Missing amount. ",IF(NOT(ISNUMBER(E{r})),"Amount is not a number. ",'
+        13: f'=IF(NOT({has}),"",IF(E{r}="","Missing amount. ",IF(NOT(ISNUMBER(E{r})),"Amount is not a number. ",'
             f'IF(E{r}<=0,"Amount must be above zero. ",""))))',
-        13: f'=IF(NOT({has}),"",IF(D{r}="","Missing category. ",IF(COUNTIF({CATS},D{r})=0,"Category not in your list. ","")))',
-        14: f'=IF(AND(ISNUMBER(A{r}),ISNUMBER(E{r}),B{r}<>""),IF(COUNTIFS({rng("A")},A{r},{rng("B")},B{r},{rng("E")},E{r})>1,'
+        14: f'=IF(NOT({has}),"",IF(D{r}="","Missing category. ",IF(COUNTIF({CATS},D{r})=0,"Category not in your list. ","")))',
+        15: f'=IF(AND(ISNUMBER(A{r}),ISNUMBER(E{r}),B{r}<>""),IF(COUNTIFS({rng("A")},A{r},{rng("B")},B{r},{rng("E")},E{r})>1,'
             f'"Possible duplicate. ",""),"")',
-        15: f'=IF(AND(ISNUMBER(E{r}),E{r}>={RCPT},G{r}<>"Yes"),"Receipt not marked as saved. ","")',
-        16: f'=IF(AND(ISNUMBER(E{r}),E{r}>={BIG}),"Large amount: review. ","")',
+        16: f'=IF(AND(ISNUMBER(E{r}),E{r}>={RCPT},G{r}<>"Yes"),"Receipt not marked as saved. ","")',
+        17: f'=IF(AND(ISNUMBER(E{r}),E{r}>={BIG}),"Large amount: review. ","")',
     }
     for col, formula in rules.items():
         c = ex.cell(r, col, formula); c.fill = RULE_FILL; c.font = font(color=MUTED, size=9); c.border = BOX
-    s = ex.cell(r, 9, f'=IF(NOT({has}),"",IF(K{r}&L{r}&M{r}<>"","ERROR",IF(N{r}&O{r}&P{r}<>"","CHECK","OK")))')
+    # Errors can never be cleared by review; warnings clear when the owner marks the row reviewed.
+    s = ex.cell(r, 10, f'=IF(NOT({has}),"",IF(L{r}&M{r}&N{r}<>"","ERROR",IF(AND(O{r}&P{r}&Q{r}<>"",I{r}<>"Yes"),"CHECK","OK")))')
     s.font = font(bold=True); s.border = BOX; s.alignment = Alignment(horizontal='center')
-    i = ex.cell(r, 10, f'=TRIM(K{r}&L{r}&M{r}&N{r}&O{r}&P{r})'); i.font = font(size=9); i.border = BOX
+    i = ex.cell(r, 11, f'=TRIM(L{r}&M{r}&N{r}&O{r}&P{r}&Q{r})&IF(AND(I{r}="Yes",O{r}&P{r}&Q{r}<>"",L{r}&M{r}&N{r}=""),"  (reviewed)","")')
+    i.font = font(size=11); i.border = BOX
 
 examples = [
     (date(2026, 1, 5), 'Office supply store', 'Printer paper and toner', 'Office supplies', 48.20, 'Card', 'Yes'),
@@ -120,31 +122,33 @@ dv_cat = DataValidation(type='list', formula1=f'={CATS}', allow_blank=True, show
                         errorTitle='Category', error='Pick a category from the list (edit the list on the Settings tab).')
 dv_pay = DataValidation(type='list', formula1='=Settings!$B$44:$B$48', allow_blank=True, showErrorMessage=True)
 dv_rc = DataValidation(type='list', formula1='"Yes,No"', allow_blank=True, showErrorMessage=True)
-for dv, col in ((dv_date, 'A'), (dv_amt, 'E'), (dv_cat, 'D'), (dv_pay, 'F'), (dv_rc, 'G')):
+dv_rv = DataValidation(type='list', formula1='"Yes,No"', allow_blank=True, showErrorMessage=True)
+for dv, col in ((dv_date, 'A'), (dv_amt, 'E'), (dv_cat, 'D'), (dv_pay, 'F'), (dv_rc, 'G'), (dv_rv, 'I')):
     ex.add_data_validation(dv); dv.add(f'{col}{FIRST}:{col}{LAST}')
-status_rng = f'I{FIRST}:I{LAST}'
+status_rng = f'J{FIRST}:J{LAST}'
 ex.conditional_formatting.add(status_rng, CellIsRule(operator='equal', formula=['"ERROR"'], fill=RED, font=Font(name=F, bold=True, color='B91C1C')))
 ex.conditional_formatting.add(status_rng, CellIsRule(operator='equal', formula=['"CHECK"'], fill=AMBER, font=Font(name=F, bold=True, color='B45309')))
 ex.conditional_formatting.add(status_rng, CellIsRule(operator='equal', formula=['"OK"'], fill=GREEN, font=Font(name=F, bold=True, color='15803D')))
-ex.conditional_formatting.add(f'A{FIRST}:H{LAST}', FormulaRule(formula=[f'$I{FIRST}="ERROR"'], fill=RED))
+ex.conditional_formatting.add(f'A{FIRST}:I{LAST}', FormulaRule(formula=[f'$J{FIRST}="ERROR"'], fill=RED))
 ex.freeze_panes = 'A6'
-ex['I5'].comment = Comment('ERROR rows are excluded from all totals until fixed. CHECK rows are counted.', 'LogicScript')
-ex['K4'] = 'Rule columns: do not type here'; ex['K4'].font = font(color=MUTED, italic=True, size=9)
+ex['J5'].comment = Comment('ERROR rows are excluded from all totals until fixed. CHECK rows are counted; mark Reviewed? = Yes once you have checked them.', 'LogicScript')
+ex['I5'].comment = Comment('Set to Yes after you have checked a CHECK row (e.g. a real large expense). Errors cannot be cleared this way.', 'LogicScript')
+ex['L4'] = 'Rule columns: do not type here'; ex['L4'].font = font(color=MUTED, italic=True, size=9)
 
 # ---------------- Summary ----------------
 sm = wb.create_sheet('Summary', 1)
 sm['A1'] = 'Summary & checks'; sm['A1'].font = font(size=18, bold=True)
 sm['A2'] = '=" Tax year "&Settings!$B$4&"  |  amounts in "&Settings!$B$7'; sm['A2'].font = font(color=MUTED)
 xr = lambda col: 'Expenses!' + rng(col)   # Summary must point at the Expenses tab
-st_r = xr('I'); amt = xr('E')
+st_r = xr('J'); amt = xr('E')
 panel = [
     ('Overall', None),
     ('Rows entered', f'=COUNTIF({st_r},"OK")+COUNTIF({st_r},"CHECK")+COUNTIF({st_r},"ERROR")'),
     ('Rows with ERRORS (left out of totals)', f'=COUNTIF({st_r},"ERROR")'),
-    ('Rows to CHECK (counted, please review)', f'=COUNTIF({st_r},"CHECK")'),
+    ('Rows to CHECK (counted, not yet reviewed)', f'=COUNTIF({st_r},"CHECK")'),
     ('Rows OK', f'=COUNTIF({st_r},"OK")'),
-    ('Possible duplicates', f'=COUNTIF({xr("N")},"Possible*")'),
-    ('Receipts not marked as saved', f'=COUNTIF({xr("O")},"Receipt*")'),
+    ('Possible duplicates', f'=COUNTIF({xr("O")},"Possible*")'),
+    ('Receipts not marked as saved', f'=COUNTIF({xr("P")},"Receipt*")'),
     ('Amount left out of totals (rows with errors)', f'=SUMIFS({amt},{st_r},"ERROR")'),
     ('Total counted (OK + CHECK)', f'=SUMIFS({amt},{st_r},"OK")+SUMIFS({amt},{st_r},"CHECK")'),
     ('Category totals add up to total?', '=IF(ROUND(SUM($B$24:$B$53)-B12,2)=0,"YES","NO")'),
@@ -193,6 +197,7 @@ lines = [
     ('1. Settings tab: set your tax year, your two review rules, and your categories (yellow cells).', None),
     ('2. Expenses tab: delete the rows marked EXAMPLE, then type one expense per row in the yellow columns.', None),
     ('3. Watch the Status column: ERROR = fix it (left out of totals), CHECK = counted but review it, OK = passed.', None),
+    ('   After reviewing a CHECK row (for example a real large expense), set Reviewed? to Yes. Errors cannot be cleared that way.', None),
     ('4. Summary tab: you are done when it says ALL CHECKS PASSED.', None),
     ('', None),
     ('What the rules check', 'h'),

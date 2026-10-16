@@ -1,5 +1,5 @@
 {
-  "title": "Before You Automate: Test the One-Cent Boundary",
+  "renderer": "browser-app", "title": "Before You Automate: Test the One-Cent Boundary",
   "provenance": "Assistant-authored, source-checked educational script; not output from the rate-limited project AI provider.",
   "chapters": [
     {

@@ -30,8 +30,8 @@ def main(argv=None) -> int:
     c.add_argument('--artifact', type=Path, required=True)
     c.add_argument('--lesson', type=Path, required=True)
     c.add_argument('--out', type=Path, required=True)
-    c.add_argument('--topic', required=True)
-    c.add_argument('--thumbnail-text', required=True)
+    c.add_argument('--topic', help='Default: lesson.json "topic"')
+    c.add_argument('--thumbnail-text', help='Default: lesson.json "thumbnail_text"')
     c.add_argument('--title')
     c.add_argument('--practice-url')
     c.add_argument('--quality-policy', type=Path)
@@ -44,8 +44,12 @@ def main(argv=None) -> int:
     f.add_argument('--zip', type=Path)
     args = p.parse_args(argv)
     if args.command == 'candidate':
-        result = build_candidate(args.artifact, args.lesson, args.out, title=args.title, topic=args.topic,
-                                 thumbnail_text=args.thumbnail_text, practice_url=args.practice_url,
+        meta = json.loads((args.lesson / 'lesson.json').read_text(encoding='utf-8'))
+        topic = args.topic or meta.get('topic'); thumb = args.thumbnail_text or meta.get('thumbnail_text')
+        if not topic or not thumb:
+            raise SystemExit('Provide --topic and --thumbnail-text (or set them in lesson.json)')
+        result = build_candidate(args.artifact, args.lesson, args.out, title=args.title, topic=topic,
+                                 thumbnail_text=thumb, practice_url=args.practice_url,
                                  policy=QualityPolicy.load(args.quality_policy))
     else:
         manifest = finalize_release(args.candidate, args.out, owner_approval_statement=args.approval,

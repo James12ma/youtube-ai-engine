@@ -1,0 +1,117 @@
+name: Lesson render (any lesson, no upload)
+# Manual only. Renders one lesson by its lesson.json "renderer" field
+# (browser-app = One-Cent style, spreadsheet = live LibreOffice recording).
+# Uses GitHub Actions minutes (a full spreadsheet render is estimated at ~20-30 min).
+on:
+  workflow_dispatch:
+    inputs:
+      lesson:
+        description: 'Lesson folder'
+        required: true
+        default: content/expense-tracker-lesson
+        type: choice
+        options: [content/expense-tracker-lesson, content/expense-rule-lesson]
+      draft:
+        description: 'Draft preview only (no voice, estimated timing; spreadsheet lessons)'
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: lesson-render-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  render:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      VOICE_NAME: en_US-libritts-high
+      CUDA_VISIBLE_DEVICES: ''
+      LESSON: ${{ inputs.lesson }}
+      DRAFT: ${{ inputs.draft }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'   # must match Ubuntu 24.04's python3-uno ABI
+      - name: Runner-local directories
+        run: |
+          printf '%s\n' "VOICE_DIR=$RUNNER_TEMP/piper-voices" "HF_HOME=$RUNNER_TEMP/hf-cache" \
+            "TORCH_HOME=$RUNNER_TEMP/torch-cache" "NLTK_DATA=$RUNNER_TEMP/nltk-data" \
+            "UNO_PATH_DIR=$RUNNER_TEMP/uno" >> "$GITHUB_ENV"
+      - name: System packages (FFmpeg, LibreOffice, UNO, Xvfb, fonts)
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 xvfb \
+            libreoffice-calc python3-uno fonts-dejavu-core fonts-inter
+      - name: Expose only the UNO bridge to this Python (no system site-packages)
+        run: |
+          set -euo pipefail
+          mkdir -p "$UNO_PATH_DIR"
+          ln -sf /usr/lib/python3/dist-packages/uno.py "$UNO_PATH_DIR/uno.py"
+          ln -sf /usr/lib/python3/dist-packages/unohelper.py "$UNO_PATH_DIR/unohelper.py"
+          echo "PYTHONPATH=$UNO_PATH_DIR:/usr/lib/libreoffice/program" >> "$GITHUB_ENV"
+          echo "URE_BOOTSTRAP=vnd.sun.star.pathname:/usr/lib/libreoffice/program/fundamentalrc" >> "$GITHUB_ENV"
+      - name: Python packages
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python -c "import uno; print('UNO bridge OK')"
+      - name: Narration stack (Piper + WhisperX, CPU only)
+        if: inputs.draft == false
+        run: |
+          set -euo pipefail
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          python -m pip install -r requirements-narration.txt
+          python -m pip check
+          python - <<'PY'
+          import nltk, os
+          nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'], raise_on_error=True)
+          PY
+          mkdir -p "$VOICE_DIR"
+          python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
+          test -s "$VOICE_DIR/${VOICE_NAME}.onnx"
+      - name: Chromium (browser-app lessons only)
+        if: inputs.lesson == 'content/expense-rule-lesson'
+        run: python -m playwright install --with-deps chromium
+      - name: Offline tests for the lesson renderers
+        run: python -m pytest -q tests/test_lesson_rendering.py
+      - name: Render
+        run: |
+          set -euo pipefail
+          ARGS=(--lesson "$LESSON" --output-dir outputs/lesson)
+          if [ "$DRAFT" = "true" ]; then ARGS+=(--draft); else ARGS+=(--voice "$VOICE_DIR/${VOICE_NAME}.onnx"); fi
+          xvfb-run -a -s "-screen 0 1920x1080x24" python -m scripts.render_lesson "${ARGS[@]}"
+      - name: Attach Piper model card (licence attribution)
+        if: inputs.draft == false
+        run: |
+          python - <<'PY'
+          import urllib.request
+          urllib.request.urlretrieve('https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts/high/MODEL_CARD',
+                                     'outputs/lesson/PIPER_MODEL_CARD.md')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lesson-render
+          path: |
+            outputs/lesson/final.mp4
+            outputs/lesson/thumbnail.jpg
+            outputs/lesson/*.json
+            outputs/lesson/*.md
+            outputs/lesson/*.srt
+            outputs/lesson/*.ass
+            outputs/lesson/*.xlsx
+            outputs/lesson/review_frames/
+          retention-days: 30

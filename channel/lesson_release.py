@@ -98,6 +98,11 @@ def build_candidate(artifact_dir: Path, lesson_dir: Path, out_dir: Path, *, titl
     missing = [f for f in REQUIRED_ARTIFACT_FILES if not (artifact_dir / f).is_file()]
     if missing:
         raise LessonReleaseError('Artifact folder is missing: ' + ', '.join(missing))
+    render_report = json.loads((artifact_dir / 'qc_report.json').read_text(encoding='utf-8'))
+    if render_report.get('draft') or render_report.get('method') == 'estimated_draft':
+        raise LessonReleaseError('This is a DRAFT render (no real narration); it can never be packaged for release')
+    if render_report.get('evidence_passed') is False:
+        raise LessonReleaseError('Live spreadsheet evidence failed; the video does not match the narration')
     if out_dir.exists() and any(out_dir.iterdir()):
         raise LessonReleaseError('Candidate folder must be new or empty')
     if practice_url is not None and not re.fullmatch(r'https://[^\s<>]+', practice_url):
@@ -128,6 +133,9 @@ def build_candidate(artifact_dir: Path, lesson_dir: Path, out_dir: Path, *, titl
     lab = artifact_dir / 'LogicScript_Practice_Lab.html'
     if lab.is_file():
         copies['LogicScript_Practice_Lab.html'] = lab
+    template = lesson.get('template')          # spreadsheet lessons ship their free template
+    if template and (artifact_dir / template).is_file():
+        copies[template] = artifact_dir / template
     for name, src in copies.items():
         shutil.copy2(src, out_dir / name)
     (out_dir / 'metadata.json').write_text(meta.model_dump_json(indent=2), encoding='utf-8')
