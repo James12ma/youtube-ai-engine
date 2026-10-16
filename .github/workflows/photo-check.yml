@@ -1,0 +1,51 @@
+name: Photo scene check (Commons + Ken Burns, no upload)
+on:
+  workflow_dispatch:
+    inputs:
+      terms:
+        description: Comma-separated English subjects
+        default: 'green anaconda,poison dart frog,jaguar'
+permissions:
+  contents: read
+jobs:
+  check:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install -r requirements.txt -r requirements-production.txt
+      - name: Fetch photos and render 6 s Ken Burns clips
+        env:
+          TERMS: ${{ inputs.terms }}
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          from channel.commons import fetch_for_storyboard
+          from production_pro.editing import _source_clip
+          from production_pro.models import EditPlan
+          terms=[t.strip() for t in os.environ['TERMS'].split(',') if t.strip()][:5]
+          out=pathlib.Path('outputs/photo-check'); out.mkdir(parents=True, exist_ok=True)
+          sb=out/'storyboard.json'
+          sb.write_text(json.dumps({'scenes':[{'index':i,'visual_type':'broll','search_terms':t} for i,t in enumerate(terms)]}))
+          summary=fetch_for_storyboard(sb,out/'photos')
+          amap=json.loads((out/'photos'/'asset_map.json').read_text())
+          for k,v in amap.items():
+              d=_source_clip(EditPlan(scene_index=int(k),source_path=v,duration_s=6,photo_motion=True),out/f'clip_{k}.mp4',1920,1080,24)
+              summary[f'clip_{k}_s']=round(d,2)
+          summary['credits']=[f"{c['search_terms']}: {c['title']} | {c['license']} | {c['author'][:40]}" for c in json.loads((out/'photos'/'credits.json').read_text())]
+          print('::notice title=photo-check::'+json.dumps(summary,ensure_ascii=False)[:3500])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: photo-check-${{ github.run_id }}
+          path: outputs/photo-check
+          retention-days: 3
