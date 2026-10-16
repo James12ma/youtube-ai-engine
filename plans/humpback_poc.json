@@ -1,0 +1,45 @@
+{
+  "series": "Historias Salvajes",
+  "title": "Ballenas jorobadas: el gran viaje (muestra)",
+  "subtitle": "Ballenas jorobadas",
+  "language": "es",
+  "clips": {
+    "solander": {"title": "File:Aerial view of three humpback whales (Megaptera novaeangliae) near Cape Solander, New South Wales, Australia.webm", "location": "Cape Solander, NSW, Australia"},
+    "gordons": {"title": "File:Aerial view of a humpback whale near Gordon's Bay, Sydney, Australia at 24 August 2020.webm", "location": "Gordon's Bay, Sydney, Australia"},
+    "gerringong": {"title": "File:Humpback whale mother and calf south of Gerringong Boat Harbour, NSW, Australia.webm", "location": "Gerringong, NSW, Australia"},
+    "tailsail": {"title": "File:Humpback whale Tail Sailing behaviour.webm", "location": "Hawaiian Islands Humpback Whale National Marine Sanctuary, USA"},
+    "shellharbour": {"title": "File:Humpback whales off The Shallows and Bass Point Quarry, Shellharbour, NSW, Australia.webm", "location": "Shellharbour, NSW, Australia"}
+  },
+  "beats": [
+    {"narration": "Cada año, las ballenas jorobadas emprenden una de las migraciones más largas de cualquier mamífero.",
+     "sources": ["https://www.fisheries.noaa.gov/species/humpback-whale"],
+     "shots": [
+       {"clip": "gordons", "in_s": 31.0, "out_s": 38.5, "label": "Bahía Gordon, Sídney (Australia)", "note": "ballena sale a la superficie con salpicadura"},
+       {"clip": "gordons", "in_s": 52.5, "out_s": 60.0, "label": "Bahía Gordon, Sídney (Australia)", "note": "gran salpicadura en superficie"}]},
+    {"narration": "Viajan miles de kilómetros entre las aguas frías donde se alimentan y las aguas cálidas donde nacen sus crías.",
+     "sources": ["https://www.fisheries.noaa.gov/species/humpback-whale"],
+     "shots": [
+       {"clip": "solander", "in_s": 2.0, "out_s": 12.5, "label": "Cabo Solander (Australia)", "note": "tres ballenas nadando juntas"},
+       {"clip": "shellharbour", "in_s": 2.0, "out_s": 9.5, "label": "Shellharbour (Australia)", "note": "ballena en superficie cerca de la costa"}]},
+    {"narration": "En Australia, una madre nada junto a su cría. La cría seguirá cerca de ella hasta un año.",
+     "sources": ["https://www.fisheries.noaa.gov/species/humpback-whale", "Commons file title: mother and calf"],
+     "shots": [
+       {"clip": "gerringong", "in_s": 51.5, "out_s": 62.0, "label": "Gerringong (Australia)", "note": "madre y cría según el título del archivo"},
+       {"clip": "gerringong", "in_s": 66.0, "out_s": 76.0, "label": "Gerringong (Australia)", "note": "madre y cría según el título del archivo"}]},
+    {"narration": "En Hawái, otra ballena mantiene la cola fuera del agua, como una vela al viento.",
+     "sources": ["Commons/NOAA description of the clip"],
+     "shots": [
+       {"clip": "tailsail", "in_s": 3.0, "out_s": 21.0, "label": "Hawái (EE. UU.) · NOAA", "note": "cola fuera del agua (tail sailing)"}]},
+    {"narration": "Las jorobadas del Atlántico Norte viajan a finales del otoño hacia el sur, hasta las aguas cálidas de República Dominicana, para aparearse y dar a luz.",
+     "overlay": "Imágenes de Australia · no filmadas en Rep. Dominicana",
+     "sources": ["https://www.fisheries.noaa.gov/species/humpback-whale"],
+     "shots": [
+       {"clip": "shellharbour", "in_s": 84.0, "out_s": 98.0, "label": "Shellharbour (Australia)", "note": "varias ballenas activas en superficie"},
+       {"clip": "gerringong", "in_s": 116.0, "out_s": 126.0, "label": "Gerringong (Australia)", "note": "ballena nadando"}]},
+    {"narration": "Estas imágenes vienen de otros océanos, pero la historia es la misma: viajar, nacer y sobrevivir.",
+     "shots": [
+       {"clip": "gordons", "in_s": 70.0, "out_s": 84.0, "label": "Bahía Gordon, Sídney (Australia)", "note": "ballena bajo la superficie y salpicadura"}]}
+  ],
+  "ambience": ["ocean waves", "sea waves", "waves beach"],
+  "credits_note": "Narración: voz sintética Piper (es_MX, texto a voz). Datos: NOAA Fisheries (fisheries.noaa.gov/species/humpback-whale). Muestra de revisión de Alan7 — no publicada."
+}

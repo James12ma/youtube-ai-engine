@@ -1,0 +1,127 @@
+name: Footage-mode documentary sample (real licensed clips, encrypted delivery, no upload)
+on:
+  workflow_dispatch:
+    inputs:
+      plan:
+        description: Plan JSON in the repo
+        required: true
+        default: plans/humpback_poc.json
+      delivery_pubkey:
+        description: Base64 RSA public key (PEM); the MP4 leaves the runner only encrypted
+        required: true
+permissions:
+  contents: write  # only to push an ENCRYPTED pack to qa/<run id>
+concurrency:
+  group: footage-render
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      CUDA_VISIBLE_DEVICES: ''
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+      YOUTUBE_PUBLIC_ALLOWED: '0'
+      VOICE_NAME: es_MX-claude-high
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Runner-local model directories
+        run: |
+          printf '%s\n' "VOICE_DIR=$RUNNER_TEMP/piper-voices" "HF_HOME=$RUNNER_TEMP/hf-cache" \
+            "TORCH_HOME=$RUNNER_TEMP/torch-cache" "NLTK_DATA=$RUNNER_TEMP/nltk-data" >> "$GITHUB_ENV"
+      - name: Dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 fonts-dejavu-core
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python - <<'PY'
+          import nltk, os
+          nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'], raise_on_error=True)
+          PY
+          mkdir -p "$VOICE_DIR"
+          python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
+      - name: Render sample
+        env:
+          PLAN: ${{ inputs.plan }}
+        run: |
+          set -euo pipefail
+          python -m channel.documentary --plan "$PLAN" --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
+            --out outputs/doc/sample.mp4
+      - name: QA (frames, loudness, speech round-trip, frozen picture, clip audio check)
+        env:
+          PLAN: ${{ inputs.plan }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          p = json.load(open(os.environ['PLAN']))
+          n = [b['narration'] for b in p['beats']]
+          json.dump({'hook': n[0], 'sections': [{'narration': x} for x in n[1:]], 'cta': '', 'language': p.get('language', 'es')},
+                    open('outputs/doc/script_for_qa.json', 'w'), ensure_ascii=False)
+          PY
+          python -m scripts.qa_pack --video outputs/doc/sample.mp4 --script outputs/doc/script_for_qa.json --out outputs/qa > /dev/null
+          ffmpeg -hide_banner -nostats -i outputs/doc/sample.mp4 -vf freezedetect=n=0.001:d=1.5 -an -f null - 2> outputs/qa/freeze.txt || true
+          grep -E 'freeze_(start|duration)' outputs/qa/freeze.txt > outputs/qa/freeze_events.txt || true
+          # Clips that carry their own audio: what is on it? (spectrogram + loudness), not used in the mix
+          for f in outputs/doc/footage/*; do
+            if ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$f" | grep -q .; then
+              b=$(basename "$f"); b=${b%.*}
+              ffmpeg -y -hide_banner -loglevel error -i "$f" -lavfi showspectrumpic=s=1200x500:legend=1 "outputs/qa/audio_${b}_spectrum.png"
+              ffmpeg -hide_banner -nostats -i "$f" -af ebur128 -f null - 2>&1 | grep -E '^\s+I:' | tail -1 > "outputs/qa/audio_${b}_lufs.txt" || true
+            fi
+          done
+          if ls outputs/doc/footage/ambience.* >/dev/null 2>&1; then
+            ffmpeg -y -hide_banner -loglevel error -i outputs/doc/footage/ambience.* -t 60 -lavfi showspectrumpic=s=1200x500:legend=1 outputs/qa/ambience_spectrum.png
+          fi
+          python - <<'PY'
+          import json
+          r = json.load(open('outputs/doc/sample_work/render_report.json'))
+          q = json.load(open('outputs/qa/qa_report.json'))['video']
+          keep = {k: r[k] for k in ('duration_s', 'captions', 'alignment', 'ai_generated_shots')}
+          keep['qa'] = {k: q.get(k) for k in ('integrated_lufs', 'true_peak_dbfs', 'silences_over_1_5s', 'black_segments', 'asr')}
+          keep['ambience'] = (r.get('ambience') or {}).get('title')
+          keep['freezes'] = open('outputs/qa/freeze_events.txt').read().count('freeze_start')
+          print('::notice title=sample::' + json.dumps(keep, ensure_ascii=False)[:3800])
+          for c in r['clips'].values():
+              print('::notice title=clip::' + json.dumps({k: c.get(k) for k in ('title', 'license', 'author', 'has_audio')}, ensure_ascii=False))
+          PY
+      - name: Encrypted pack to qa/${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBKEY_B64: ${{ inputs.delivery_pubkey }}
+        run: |
+          set -euo pipefail
+          umask 077
+          pack=$RUNNER_TEMP/pack; mkdir -p "$pack"
+          cp outputs/doc/sample.mp4 outputs/doc/sample.srt outputs/doc/sample_work/render_report.json "$pack/"
+          cp outputs/doc/sample_work/credits.png outputs/doc/sample_work/words.json "$pack/"
+          cp outputs/qa/*.jpg outputs/qa/*.png outputs/qa/*.txt outputs/qa/qa_report.json "$pack/" 2>/dev/null || true
+          tar -C "$pack" -cf "$RUNNER_TEMP/pack.tar" .
+          rm -rf "$pack"
+          echo "$PUBKEY_B64" | base64 -d > "$RUNNER_TEMP/pub.pem"
+          out=$RUNNER_TEMP/enc; mkdir -p "$out"
+          openssl rand -hex 32 > "$RUNNER_TEMP/k"
+          openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/pub.pem" -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$RUNNER_TEMP/k" -out "$out/key.enc"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/k" \
+            -in "$RUNNER_TEMP/pack.tar" -out "$RUNNER_TEMP/pack.enc"
+          shred -u "$RUNNER_TEMP/k" "$RUNNER_TEMP/pack.tar"
+          split -b 90m -d -a 2 "$RUNNER_TEMP/pack.enc" "$out/pack.enc.part"
+          rm -f "$RUNNER_TEMP/pack.enc"
+          (cd "$out" && sha256sum * > SHA256SUMS)
+          cd "$out"
+          git init -q -b "qa/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Encrypted footage sample ${{ github.run_id }}"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
+          echo "::notice title=qa-branch::qa/${{ github.run_id }} (encrypted only)"
