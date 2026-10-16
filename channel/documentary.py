@@ -60,12 +60,23 @@ class Shot(BaseModel):
     out_s: float
     label: str = ''            # usually the filming location
     note: str = ''             # what the shot shows (for the QA report)
+    key_s: float | None = None  # moment of the key action; the used segment is placed around it
 
     @model_validator(mode='after')
     def _order(self):
         if self.out_s - self.in_s < 1.5:
             raise ValueError('shot window must be at least 1.5 s')
+        if self.key_s is not None and not self.in_s <= self.key_s <= self.out_s:
+            raise ValueError('key_s must lie inside the shot window')
         return self
+
+
+def segment_start(shot: 'Shot', length: float, slack: float = 0.6) -> float:
+    """Where to start a ``length``-second cut inside the window, placing key_s 40 % in."""
+    if shot.key_s is None:
+        return shot.in_s
+    start = shot.key_s - 0.4 * length
+    return max(shot.in_s, min(start, shot.out_s + slack - length))
 
 
 class Beat(BaseModel):
@@ -345,6 +356,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
         shot, d = item['shot'], item['seconds']
         src = plan.clips[shot.clip]
         render_len = d + (fade if i < len(shots) - 1 or plan.credits_s else 0)
+        shot = shot.model_copy(update={'in_s': segment_start(shot, render_len)})
         if shot.in_s + render_len > shot.out_s + 0.6:   # dissolve tail may borrow up to 0.6 s past the window
             raise DocumentaryError(f'shot {i} ({shot.clip}) window too short for {render_len:.2f}s')
         p = work / f'shot_{i:02d}.mp4'

@@ -38,7 +38,9 @@ def clip_info(client: httpx.Client, title: str) -> dict:
             'description': desc[:600], 'page': info.get('descriptionurl') or '',
             'duration_s': float(info.get('duration') or 0), 'download': deriv['src'],
             'download_height': deriv.get('height'),
-            'categories': [c['title'].removeprefix('Category:') for c in page.get('categories', [])]}
+            'categories': [c['title'].removeprefix('Category:') for c in page.get('categories', [])],
+            # Commons has not yet confirmed the YouTube source licence for imported videos with this flag.
+            'license_review_pending': any('License review needed' in c['title'] for c in page.get('categories', []))}
 
 
 def resolve_title(client: httpx.Client, terms: str, prefix: str) -> str:

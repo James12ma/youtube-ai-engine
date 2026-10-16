@@ -71,3 +71,13 @@ def test_spoken_text_only_swaps_whole_words():
     p = {'frías': 'fɾˈias', 'crías': 'kɾˈias', 'cría': 'kɾˈia'}
     assert spoken_text('aguas frías, sus crías y su cría; criadero', p) == \
         'aguas [[ fɾˈias ]], sus [[ kɾˈias ]] y su [[ kɾˈia ]]; criadero'
+
+
+def test_segment_start_places_key_action_inside_cut():
+    from channel.documentary import segment_start
+    s = Shot(clip='a', in_s=100, out_s=120, key_s=115)
+    start = segment_start(s, 5)
+    assert start <= 115 <= start + 5 and start + 5 <= 120.6
+    assert segment_start(Shot(clip='a', in_s=0, out_s=10), 4) == 0
+    with pytest.raises(ValidationError):
+        Shot(clip='a', in_s=0, out_s=10, key_s=12)
