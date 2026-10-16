@@ -53,15 +53,22 @@ def search_photo(client: httpx.Client, terms: str, exclude: set[str], *, allow_p
     pages = sorted(body.get('query', {}).get('pages', []), key=lambda p: p.get('index', 999))
     LAST_SEARCH.update({'pages': len(pages), 'error': (body.get('error') or {}).get('code'),
                         'with_imageinfo': sum(1 for p in pages if p.get('imageinfo'))})
+    rejects: dict[str, int] = {}
     for page in pages:
         info = (page.get('imageinfo') or [{}])[0]
         meta = info.get('extmetadata') or {}
         lic = _clean((meta.get('LicenseShortName') or {}).get('value'))
         url = info.get('thumburl') or info.get('url') or ''
-        if (page.get('title') in exclude or info.get('mime') not in ('image/jpeg', 'image/png')
-                or not license_allowed(lic) or int(info.get('width') or 0) < MIN_WIDTH
-                or (not allow_portrait and int(info.get('width') or 0) < int(info.get('height') or 1))
-                or urlparse(url).hostname not in ALLOWED_DOWNLOAD_HOSTS or urlparse(url).scheme != 'https'):
+        width, height = int(info.get('width') or 0), int(info.get('height') or 1)
+        why = ('reused' if page.get('title') in exclude else
+               'mime' if info.get('mime') not in ('image/jpeg', 'image/png') else
+               'license' if not license_allowed(lic) else
+               'small' if width < MIN_WIDTH else
+               'portrait' if (not allow_portrait and width < height) else
+               'host' if (urlparse(url).hostname not in ALLOWED_DOWNLOAD_HOSTS or urlparse(url).scheme != 'https') else '')
+        if why:
+            rejects[why] = rejects.get(why, 0) + 1
+            LAST_SEARCH['rejects'] = rejects
             continue
         return {'title': page['title'], 'url': url, 'license': lic,
                 'author': _clean((meta.get('Artist') or {}).get('value')) or 'Unknown author',
@@ -107,7 +114,7 @@ def fetch_for_storyboard(storyboard_path: Path, out_dir: Path, *,
             if not found:
                 diag = LAST_SEARCH
                 reasons.setdefault(str(scene['index']), 'no_qualifying_photo'
-                                   + (f" (pages={diag.get('pages')}, imageinfo={diag.get('with_imageinfo')}, error={diag.get('error')})" if diag else ''))
+                                   + (f" (pages={diag.get('pages')}, imageinfo={diag.get('with_imageinfo')}, error={diag.get('error')}, rejects={diag.get('rejects')})" if diag else ''))
                 missing.append(scene['index'])
                 continue
             suffix = '.png' if found['url'].lower().endswith('.png') else '.jpg'
