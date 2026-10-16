@@ -26,8 +26,13 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
                           gate:VerificationGateReport, model_path:Path,output_path:Path,
                           *,actual_assets:Mapping[int,Path]|None=None,
                           reviewed:bool=False, width:int=1920,height:int=1080,fps:int=24,
-                          allow_edge_fallback:bool=False)->dict:
-    if not reviewed:raise VideoBuildError('Human-reviewed script and storyboard required')
+                          allow_edge_fallback:bool=False,
+                          unreviewed_preview:bool=False)->dict:
+    # A preview lets the owner WATCH an automated draft before deciding on
+    # editorial approval. It never counts as review: the report says so, and
+    # scenes that need real footage become clearly labelled placeholder cards.
+    if reviewed and unreviewed_preview:raise VideoBuildError('Choose either reviewed or unreviewed_preview, not both')
+    if not reviewed and not unreviewed_preview:raise VideoBuildError('Human-reviewed script and storyboard required')
     if script.topic!=gate.topic or gate.contradictions.pairs or gate.traceability.unverified_cited_claims:
         raise VideoBuildError('Verification gate failed')
     accepted={v.claim_id for v in gate.verdicts if v.accepted}
@@ -73,7 +78,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     if not caption_qc.passed:raise VideoBuildError('Forced captions failed QC: '+repr(caption_qc.failures))
     srt=save_srt_from_blocks(blocks,output_path.with_suffix('.srt'))
 
-    stages=[]
+    stages=[];placeholders:list[int]=[]
     intro=work/'intro.png';card('text_overlay','THE PROBLEM',script.hook,(width,height),intro)
     stages.append((intro,synthesized[0].duration_s,0.0))
     # Divide actual narrated section time across that section's storyboard scenes.
@@ -82,7 +87,12 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
         sum_original=sum(s.end_s-s.start_s for s in scenes)
         for s in scenes:
             seconds=synthesized[sec_idx+1].duration_s * (s.end_s-s.start_s)/sum_original
-            if s.visual_type in ('screen_recording','chart','broll'):
+            if s.visual_type in ('screen_recording','chart','broll') and unreviewed_preview and s.index not in actual_assets:
+                src=work/f'section_{sec_idx}_scene_{s.index}_placeholder.png'
+                card('text_overlay','PLACEHOLDER: '+s.visual_type.replace('_',' ').upper(),
+                     'Real footage needed: '+s.instruction,(width,height),src)
+                placeholders.append(s.index)
+            elif s.visual_type in ('screen_recording','chart','broll'):
                 source=actual_assets.get(s.index)
                 if source is None or not Path(source).is_file():
                     raise VideoBuildError('Real reviewed asset required for '+s.visual_type+' scene '+str(s.index))
@@ -121,7 +131,9 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
             'chapters':[c.model_dump() for c in normalize_timeline(
                 timeline_from_segments('Introduction',[sec.heading for sec in script.sections],
                                        [s.duration_s for s in synthesized]))],
-            'ready_for_publication':False,'manual_editorial_approval_still_required':True}
+            'ready_for_publication':False,'manual_editorial_approval_still_required':True,
+            'editorial_review':'not_performed_unreviewed_preview' if unreviewed_preview else 'owner_confirmed',
+            'placeholder_scenes':placeholders}
     (work/'render_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     if not qc.passed:
         raise VideoBuildError('Rendered video failed technical QC; inspect render_report.json')

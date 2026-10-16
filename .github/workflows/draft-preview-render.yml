@@ -1,0 +1,161 @@
+name: Preview render of an automated draft (unreviewed, no upload)
+
+# Renders the script/storyboard produced by a successful "Source-backed
+# research and script dry run" so the owner can WATCH it before deciding on
+# editorial approval. Output is labelled unreviewed; scenes that need real
+# footage are visible placeholder cards. Nothing is uploaded or published.
+
+on:
+  workflow_dispatch:
+    inputs:
+      research_run_id:
+        description: Run ID of a passed research dry run (its artifact must still exist)
+        required: true
+      format:
+        description: Output format
+        type: choice
+        options: [landscape, portrait]
+        default: landscape
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: draft-preview-render
+  cancel-in-progress: false
+
+jobs:
+  render:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      VOICE_NAME: en_US-libritts-high
+      CUDA_VISIBLE_DEVICES: ''
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+      YOUTUBE_PUBLIC_ALLOWED: '0'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch draft from the research run
+        uses: actions/download-artifact@v4
+        with:
+          name: source-script-dry-run-${{ inputs.research_run_id }}
+          path: outputs/draft
+          run-id: ${{ inputs.research_run_id }}
+          github-token: ${{ github.token }}
+      - name: Confirm the draft passed every automated gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib
+          d = pathlib.Path('outputs/draft')
+          r = json.loads((d / 'report.json').read_text())
+          assert r.get('pipeline_passed') is True, 'research run did not pass'
+          for name in ('script.json', 'storyboard.json', 'verification_gate.json'):
+              assert (d / name).is_file(), name + ' missing'
+          s = json.loads((d / 'script.json').read_text())
+          print(f"::notice title=draft::{s['title']} | {s['word_count']} words | {len(s['sections'])} sections")
+          PY
+      - name: Configure runner-local model directories
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "VOICE_DIR=$RUNNER_TEMP/piper-voices" \
+            "HF_HOME=$RUNNER_TEMP/hf-cache" \
+            "TORCH_HOME=$RUNNER_TEMP/torch-cache" \
+            "NLTK_DATA=$RUNNER_TEMP/nltk-data" >> "$GITHUB_ENV"
+      - name: Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 fonts-dejavu-core
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python -m pip check
+          python - <<'PY'
+          import nltk, os
+          nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'], raise_on_error=True)
+          PY
+          ffmpeg -hide_banner -filters | grep -Eq ' subtitles '
+      - name: Download Piper voice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$VOICE_DIR"
+          python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
+          test -s "$VOICE_DIR/${VOICE_NAME}.onnx"
+      - name: Render unreviewed preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m channel.cli render --draft outputs/draft \
+            --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
+            --out outputs/preview/preview.mp4 --format "${{ inputs.format }}" \
+            --unreviewed-preview
+      - name: Thumbnail draft from title
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib, subprocess, sys
+          s = json.loads(pathlib.Path('outputs/draft/script.json').read_text())
+          words = [w for w in s['title'].replace(':', ' ').split() if w.isalpha()][:3]
+          subprocess.run([sys.executable, '-m', 'channel.cli', 'thumbnail', '--text', ' '.join(words).upper(),
+                          '--title', s['title'], '--out', 'outputs/preview/thumbnail.jpg'], check=True)
+          PY
+      - name: Publish safe render summary
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          p = pathlib.Path('outputs/preview/preview_work/render_report.json')
+          if not p.exists():
+              print('::warning title=render-report::render_report.json missing'); raise SystemExit
+          r = json.loads(p.read_text())
+          keep = {k: r.get(k) for k in ('narration_backend', 'alignment', 'captions', 'editorial_review',
+                                        'placeholder_scenes', 'ready_for_publication')}
+          keep['technical_qc_passed'] = (r.get('technical_qc') or {}).get('passed')
+          keep['technical_qc_failures'] = (r.get('technical_qc') or {}).get('failures')
+          keep['chapters'] = len(r.get('chapters') or [])
+          keep['audio'] = {k: (r.get('audio') or {}).get(k) for k in ('integrated_lufs', 'true_peak_dbtp')}
+          print('::notice title=render-report::' + json.dumps(keep, separators=(',', ':')).replace('%', '%25')[:3800])
+          PY
+          if [ -f outputs/preview/preview.mp4 ]; then
+            d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 outputs/preview/preview.mp4)
+            h=$(sha256sum outputs/preview/preview.mp4 | cut -d' ' -f1)
+            echo "::notice title=mp4::duration_s=$d sha256=$h"
+          fi
+      - name: Save preview for owner review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreviewed-preview-${{ github.run_id }}
+          path: |
+            outputs/preview/preview.mp4
+            outputs/preview/preview.srt
+            outputs/preview/thumbnail.jpg
+            outputs/preview/preview_work/render_report.json
+            outputs/preview/preview_work/words.json
+            outputs/draft/script.json
+            outputs/draft/storyboard.json
+            outputs/draft/metadata_draft.json
+          retention-days: 14
+          if-no-files-found: warn

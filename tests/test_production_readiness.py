@@ -119,3 +119,36 @@ def test_quality_diagnostic_preserves_exact_gate_but_redacts_generated_fields():
     assert result['reason']=='duration outside 8-12 minute target'
     assert 'PRIVATE_SECRET' not in json.dumps(result)
     assert safe_quality_failure(PipelineQualityError('PRIVATE_SECRET', {'reason':'PRIVATE_SECRET'}))['reason']=='unclassified'
+
+
+def test_unreviewed_preview_uses_labelled_placeholders_and_never_counts_as_review(tmp_path,monkeypatch):
+    import channel.video as video
+    script,_,gate=sample_artifacts()
+    storyboard=StoryboardOutput(scenes=[Scene(index=0,section_index=0,start_s=0,end_s=3,
+        visual_type='broll',instruction='Office footage')])
+    class Narrator:
+        actual_backends={'TEST_FIXTURE'}
+        def synthesize(self,text,path):return SimpleNamespace(wav_path=str(path),duration_s=1)
+    cards=[]
+    monkeypatch.setattr(video,'PiperOrEdgeNarrator',lambda *a,**k:Narrator())
+    monkeypatch.setattr(video,'_run',lambda *a:None)
+    monkeypatch.setattr(video,'normalize_loudness',lambda *a:SimpleNamespace(model_dump=lambda:{}))
+    aligned=SimpleNamespace(words=[],method='whisperx_ctc',token_coverage=1,duration_s=3)
+    monkeypatch.setattr(video,'WhisperXAligner',lambda **k:SimpleNamespace(align=lambda *a:aligned))
+    monkeypatch.setattr(video,'save_word_timestamps',lambda *a:None)
+    monkeypatch.setattr(video,'build_ass_from_words',lambda *a,**k:(1,[{'start_s':0,'end_s':3,'words':['TEST FIXTURE']}]))
+    monkeypatch.setattr(video,'assess_caption_quality',lambda *a,**k:SimpleNamespace(passed=True,model_dump=lambda:{}))
+    monkeypatch.setattr(video,'card',lambda *a:cards.append(a))
+    monkeypatch.setattr(video,'compose_scenes',lambda *a,**k:{})
+    monkeypatch.setattr(video,'burn_captions',lambda *a:None)
+    monkeypatch.setattr(video,'run_qc',lambda *a,**k:SimpleNamespace(passed=True,model_dump=lambda:{'passed':True}))
+    with pytest.raises(video.VideoBuildError,match='Human-reviewed'):
+        video.render_approved_video(script,storyboard,gate,tmp_path/'voice',tmp_path/'a.mp4')
+    with pytest.raises(video.VideoBuildError,match='Real reviewed asset'):
+        video.render_approved_video(script,storyboard,gate,tmp_path/'voice',tmp_path/'b.mp4',reviewed=True)
+    report=video.render_approved_video(script,storyboard,gate,tmp_path/'voice',tmp_path/'c.mp4',unreviewed_preview=True)
+    assert report['editorial_review']=='not_performed_unreviewed_preview' and report['placeholder_scenes']==[0]
+    assert not report['ready_for_publication'] and report['manual_editorial_approval_still_required']
+    assert any(str(c[1]).startswith('PLACEHOLDER') for c in cards)
+    with pytest.raises(video.VideoBuildError,match='either'):
+        video.render_approved_video(script,storyboard,gate,tmp_path/'voice',tmp_path/'d.mp4',reviewed=True,unreviewed_preview=True)
