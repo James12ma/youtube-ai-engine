@@ -121,11 +121,15 @@ test('GitHub down: job stays queued, bot still answers, cron retries, then recov
   assert.equal(job.state, 'running');
 });
 
-test('/cancel and /create lena (no GPU launched)', async () => {
-  const r = await say('/create lena');
-  assert.match(r.json.text, /tann apwobasyon/);
+test('/cancel and /create lena (dispatches the daily-shot workflow)', async () => {
+  github.mode = 'up';
+  const r = await say('/create lena 2');
+  assert.match(r.json.text, /voye bay GitHub Actions/);
   const lena = (await jobs()).find((j) => j.kind === 'lena');
-  assert.equal(lena.state, 'awaiting_approval');
+  assert.equal(lena.state, 'running');
+  const d = calls.filter((c) => c.path.endsWith('/dispatches')).pop();
+  assert.match(d.path, /alan7-daily\.yml/);
+  assert.deepEqual(JSON.parse(d.body).inputs, { job_id: lena.id, shot: '2' });
   const c = await say(`/cancel ${lena.id}`);
   assert.match(c.json.text, /anile/);
   assert.equal((await jobs()).find((j) => j.id === lena.id).state, 'cancelled');

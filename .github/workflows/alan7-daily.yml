@@ -1,4 +1,5 @@
 name: Alan7 daily AI shot (Kaggle free GPU -> private Telegram delivery)
+run-name: alan7 ${{ inputs.job_id || 'daily' }}
 # One 3-second native 1280x704 shot per day from the LENA storyboard, generated on the owner's free
 # Kaggle T4 (~1 GPU-hour) from private start frames, AI-labelled and sent ONLY to the owner on Telegram.
 # Nothing is published. No automatic retries.
@@ -9,6 +10,10 @@ on:
     inputs:
       shot:
         description: 'Shot index (empty = rotate by day)'
+        required: false
+        default: ''
+      job_id:
+        description: Bot job id (when started from Telegram)
         required: false
         default: ''
 permissions:

@@ -19,14 +19,14 @@ const MAX_ATTEMPTS = 12;
 // Job kinds the bot can run today. Anything else is refused with an honest message.
 const KINDS = {
   test: { label: 'Tès sistèm (GitHub Actions, san GPU)', dispatch: true },
-  lena: { label: 'LENA 3–5 s (Kaggle) — bezwen apwobasyon', dispatch: false, state: 'awaiting_approval' },
+  lena: { label: 'Plan IA LENA 3 s (Kaggle GPU gratis, ~1 è)', dispatch: true, workflow: 'alan7-daily.yml' },
 };
 
 const HELP = [
   '<b>Alan7 — kòmand</b>',
   '/status — eta bot la, GitHub ak file atant lan',
   '/create test — lanse yon tès sistèm (san GPU)',
-  '/create lena — anrejistre demann LENA (tann apwobasyon)',
+  '/create lena [0-4] — jenere yon plan IA LENA 3 s sou Kaggle (~1 è); videyo a rive isit la',
   '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
   '/queue — 10 dènye travay yo',
   '/cancel &lt;id&gt; — anile yon travay',
@@ -101,10 +101,13 @@ function ghHeaders(env) {
 export async function dispatchJob(env, job) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 0, detail: 'GITHUB_TOKEN pa konfigire' };
   try {
-    const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${JOB_WORKFLOW}/dispatches`, {
+    const wf = workflowFor(job.kind);
+    const inputs = wf === JOB_WORKFLOW ? { job_id: job.id, kind: job.kind, arg: job.arg || '' }
+      : { job_id: job.id, shot: /^[0-4]$/.test((job.arg || '').trim()) ? job.arg.trim() : '' };
+    const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${wf}/dispatches`, {
       method: 'POST',
       headers: { ...ghHeaders(env), 'content-type': 'application/json' },
-      body: JSON.stringify({ ref: 'main', inputs: { job_id: job.id, kind: job.kind, arg: job.arg || '' } }),
+      body: JSON.stringify({ ref: 'main', inputs }),
     });
     if (r.status === 204 || r.status === 200) return { ok: true, status: r.status, detail: 'dispatched' };
     return { ok: false, status: r.status, detail: `GitHub HTTP ${r.status}` };
@@ -113,11 +116,13 @@ export async function dispatchJob(env, job) {
   }
 }
 
+const workflowFor = (kind) => (KINDS[kind] && KINDS[kind].workflow) || JOB_WORKFLOW;
+
 // Find the run started for a job (run-name "alan7 <job_id>") and return its state.
 export async function findRun(env, job) {
   if (!env.GITHUB_TOKEN) return null;
   try {
-    const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${JOB_WORKFLOW}/runs?event=workflow_dispatch&per_page=30`,
+    const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${workflowFor(job.kind)}/runs?event=workflow_dispatch&per_page=30`,
       { headers: ghHeaders(env) });
     if (!r.ok) return { error: `GitHub HTTP ${r.status}` };
     const data = await r.json();
@@ -154,7 +159,7 @@ async function cmdStatus(env) {
     `Dènye verifikasyon otomatik (cron): ${fmt(cron)}`,
     `File atant: ${c.queued || 0} · ap travay: ${c.running || 0} · tann apwobasyon: ${c.awaiting_approval || 0}`,
     `Fini: ${c.done || 0} · echwe: ${c.failed || 0} · anile: ${c.cancelled || 0}`,
-    'GPU/Kaggle: poko konekte (Faz 2)',
+    'GPU: Kaggle T4 gratis (~1 è pou chak plan 3 s)',
   ].join('\n');
 }
 
