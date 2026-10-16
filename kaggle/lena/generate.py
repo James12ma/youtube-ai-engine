@@ -7,7 +7,8 @@
 import glob, json, os, shutil, subprocess, sys, threading, time, urllib.request
 T0 = time.time()
 HERE = os.path.dirname(os.path.abspath(__file__))
-CFG = json.load(open(os.path.join(HERE, 'lena_config.json')))
+# Kaggle script kernels upload only the code file, so the workflow prepends CFG_JSON to this script.
+CFG = json.loads(CFG_JSON) if 'CFG_JSON' in globals() else json.load(open(os.path.join(HERE, 'lena_config.json')))
 OUT = '/kaggle/working'
 report = {'config': {k: v for k, v in CFG.items() if k != 'ref_branch'}, 'started': T0}
 

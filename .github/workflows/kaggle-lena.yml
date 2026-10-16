@@ -54,10 +54,12 @@ jobs:
               assert re.fullmatch(r'qa/ref-[0-9]+', branch), 'mode a needs ref_branch qa/ref-<n>'
               c['ref_branch'] = branch
           json.dump(c, open(out, 'w'))
+          code = open('kaggle/lena/generate.py').read()
+          open(out.replace('lena_config.json', 'script.py'), 'w').write('CFG_JSON = ' + repr(json.dumps(c)) + '\n' + code)
           PY
           ds='[]'; [ "$MODE" = a ] && ds="[\"$KUSER/alan7-transfer-key\"]"
           cat > "$d/kernel-metadata.json" <<JSON
-          {"id": "$KUSER/alan7-lena-test", "title": "alan7-lena-test", "code_file": "generate.py", "language": "python",
+          {"id": "$KUSER/alan7-lena-test", "title": "alan7-lena-test", "code_file": "script.py", "language": "python",
            "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_internet": true,
            "dataset_sources": $ds, "competition_sources": [], "kernel_sources": []}
           JSON
