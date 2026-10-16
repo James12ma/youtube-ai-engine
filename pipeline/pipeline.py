@@ -243,7 +243,7 @@ class ContentPipeline:
             hits.append('storyboard');return StoryboardOutput.model_validate(cached)
         section_blob='\n'.join('- #'+str(i)+' '+s.heading+': '+s.narration for i,s in enumerate(script.sections))
         request=LLMRequest(messages=[{'role':'system','content':'You convert a script into a scene-by-scene storyboard. Every scene references a valid section_index and uses one of: screen_recording, diagram, text_overlay, chart, broll.'},
-            {'role':'user','content':'Total target duration: '+str(round(script.duration_s,1))+' seconds.\n\nSections:\n'+section_blob+'\n\nReturn json with a \'scenes\' array; each scene has index, section_index, start_s, end_s, visual_type, instruction, claim_ids.'}],schema=StoryboardOutput,temperature=0.3,max_tokens=2000)
+            {'role':'user','content':'Total target duration: '+str(round(script.duration_s,1))+' seconds.\n\nSections:\n'+section_blob+'\n\nReturn json with a \'scenes\' array of 10 to 24 scenes (at least one per section); each scene has index, section_index, start_s, end_s, visual_type, instruction (one short sentence, at most 20 words), claim_ids. Scenes must be contiguous with no gaps, starting at 0.'}],schema=StoryboardOutput,temperature=0.3,max_tokens=4096)
         feedback=''
         for revision in range(self._t.max_stage_revisions):
             if feedback:
