@@ -41,7 +41,8 @@ jobs:
         run: |
           set -euo pipefail
           d=$RUNNER_TEMP/k; mkdir -p "$d"
-          cp kaggle/lena/generate.py kaggle/lena/ref_0.png "$d/"
+          cp kaggle/lena/generate.py "$d/"
+          [ "$MODE" = b ] || { echo "::error::mode a needs the reference image, which must not be stored in this public repo; not supported yet"; exit 1; }
           cp "kaggle/lena/lena_config_$MODE.json" "$d/lena_config.json"
           cat > "$d/kernel-metadata.json" <<JSON
           {"id": "$KUSER/alan7-lena-test", "title": "alan7-lena-test", "code_file": "generate.py", "language": "python",
