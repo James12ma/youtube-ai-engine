@@ -22,6 +22,9 @@ _ALLOWED_LICENSE = re.compile(r'^(public domain|pd\b.*|cc0.*|cc[ -]by(-sa)?[ -]\
 _BLOCKED_TERMS = re.compile(r'\b(logo|brand|trademark|person|people|man|woman|child|face|portrait)\b', re.I)
 
 
+LAST_SEARCH: dict = {}
+
+
 class CommonsError(RuntimeError):
     pass
 
@@ -37,6 +40,7 @@ def license_allowed(short_name: str) -> bool:
 
 def search_photo(client: httpx.Client, terms: str, exclude: set[str], *, allow_portrait: bool = False) -> dict | None:
     """Best free-licensed, landscape-ish, large bitmap for ``terms``; None if nothing qualifies."""
+    LAST_SEARCH.clear()
     terms = ' '.join(terms.split())[:60]
     if not terms or _BLOCKED_TERMS.search(terms):
         return None
@@ -45,7 +49,10 @@ def search_photo(client: httpx.Client, terms: str, exclude: set[str], *, allow_p
               'prop': 'imageinfo', 'iiprop': 'url|size|mime|extmetadata', 'iiurlwidth': '1920'}
     response = client.get(API, params=params, headers={'User-Agent': USER_AGENT}, timeout=20)
     response.raise_for_status()
-    pages = sorted(response.json().get('query', {}).get('pages', []), key=lambda p: p.get('index', 999))
+    body = response.json()
+    pages = sorted(body.get('query', {}).get('pages', []), key=lambda p: p.get('index', 999))
+    LAST_SEARCH.update({'pages': len(pages), 'error': (body.get('error') or {}).get('code'),
+                        'with_imageinfo': sum(1 for p in pages if p.get('imageinfo'))})
     for page in pages:
         info = (page.get('imageinfo') or [{}])[0]
         meta = info.get('extmetadata') or {}
@@ -98,7 +105,9 @@ def fetch_for_storyboard(storyboard_path: Path, out_dir: Path, *,
             except (httpx.HTTPError, ValueError) as exc:
                 found = None; reasons[str(scene['index'])] = 'search_' + type(exc).__name__
             if not found:
-                reasons.setdefault(str(scene['index']), 'no_qualifying_photo')
+                diag = LAST_SEARCH
+                reasons.setdefault(str(scene['index']), 'no_qualifying_photo'
+                                   + (f" (pages={diag.get('pages')}, imageinfo={diag.get('with_imageinfo')}, error={diag.get('error')})" if diag else ''))
                 missing.append(scene['index'])
                 continue
             suffix = '.png' if found['url'].lower().endswith('.png') else '.jpg'

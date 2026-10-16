@@ -52,7 +52,7 @@ def test_same_photo_not_reused_and_foreign_hosts_refused(tmp_path):
                                         {'index':1,'visual_type':'broll','search_terms':'jaguar'}]}))
     calls=[]
     summary=commons.fetch_for_storyboard(sb,tmp_path/'p',client_factory=lambda:_client(pages,calls))
-    assert summary=={'photos':1,'missing_scenes':[1],'missing_reasons':{'1':'no_qualifying_photo'}}
+    assert summary=={'photos':1,'missing_scenes':[1],'missing_reasons':{'1':'no_qualifying_photo (pages=2, imageinfo=2, error=None)'}}
     assert not any('evil.example' in c for c in calls)
 
 
