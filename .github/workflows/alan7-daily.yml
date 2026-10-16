@@ -64,7 +64,7 @@ jobs:
            "dataset_sources": ["$KUSER/alan7-lena-refs"], "competition_sources": [], "kernel_sources": []}
           JSON
           kaggle kernels push -p "$d" 2>&1 | sed 's/[A-Za-z0-9_-]\{30,\}/***/g'
-          echo "::notice title=shot::$SHOT_ID"
+          echo "::notice title=shot::pushed"
       - name: Wait (hard limit; the notebook also has its own 4.5 h watchdog)
         run: |
           for i in $(seq 1 280); do
