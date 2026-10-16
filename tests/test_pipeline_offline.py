@@ -171,7 +171,7 @@ def test_short_draft_on_final_revision_is_still_expanded(repo):
     # 629 words on the last revision and was rejected without expansion.
     from pipeline.models import VerificationArtifact, VerifiedClaim
     ids=['evidence'];verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(id='evidence',text='Evidence',source_ids=['s'],supporting_snippets=['Evidence'])],rejected=[],pass_rate=1,verified_at='now')
-    bad=ScriptOutput(title='Tutorial',hook='Start here.',cta='Done.',sections=[ScriptSection(heading='A',narration='Text.',claim_ids=['not-a-real-id'])])
+    bad=ScriptOutput(title='Tutorial',hook=' '.join(['word']*50),cta='Done.',sections=[ScriptSection(heading='A',narration='Text.',claim_ids=ids)])  # fails the hook-length gate
     short=ScriptOutput(title='Tutorial',hook='Start here.',cta='Done.',sections=[ScriptSection(heading='S'+str(i),narration='Short explanation.',claim_ids=ids) for i in range(8)])
     calls=[]
     class Router_:
