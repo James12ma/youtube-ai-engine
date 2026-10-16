@@ -20,9 +20,13 @@ on:
         type: choice
         options: [landscape, portrait]
         default: landscape
+      delivery_pubkey:
+        description: Base64 RSA public key (PEM). Videos leave the runner ONLY encrypted to this key; empty = no video leaves the runner.
+        required: false
+        default: ''
 
 permissions:
-  contents: write  # only to push the review pack (frames, QA numbers) to a qa/<run id> branch
+  contents: write  # only to push an ENCRYPTED review pack to a qa/<run id> branch (no readable video ever)
   actions: read
 
 concurrency:
@@ -186,32 +190,48 @@ jobs:
           keep['shorts']=[{k:s.get(k) for k in ('file','duration_s','integrated_lufs','silences_over_1_5s','black_segments')} for s in r['shorts']]
           print('::notice title=qa::'+json.dumps(keep,ensure_ascii=False)[:3800])
           PY
-      - name: Publish review pack to branch qa/${{ github.run_id }}
-        if: success()
+      - name: Encrypted review pack (videos, thumbnail, frames, QA) to qa/${{ github.run_id }}
+        if: success() && inputs.delivery_pubkey != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          PUBKEY_B64: ${{ inputs.delivery_pubkey }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/qa && cp outputs/qa/*.jpg outputs/qa/qa_report.json /tmp/qa/
-          cp outputs/qa/asr_transcript.txt /tmp/qa/ 2>/dev/null || true
-          cp outputs/draft/script.json outputs/draft/storyboard.json /tmp/qa/
-          cp outputs/preview/photos/credits.txt /tmp/qa/ 2>/dev/null || true
-          cp outputs/preview/preview_work/render_report.json /tmp/qa/ 2>/dev/null || true
-          # The MP4s themselves, so the owner can watch them on a phone (each well under GitHub's 100 MB file limit).
-          cp outputs/preview/preview.mp4 /tmp/qa/long_video.mp4
-          cp outputs/preview/preview.srt /tmp/qa/long_video.srt 2>/dev/null || true
-          for f in outputs/preview/shorts/short_*.mp4; do cp "$f" /tmp/qa/; done
-          cp outputs/preview/thumbnail.jpg /tmp/qa/ 2>/dev/null || true
-          ls -la /tmp/qa
-          find /tmp/qa -size +95M -print -exec false {} + || { echo "file too large for git"; exit 1; }
-          cd /tmp/qa
+          umask 077
+          pack=$RUNNER_TEMP/pack; mkdir -p "$pack"
+          cp outputs/qa/*.jpg outputs/qa/qa_report.json "$pack/"
+          cp outputs/qa/asr_transcript.txt "$pack/" 2>/dev/null || true
+          cp outputs/draft/script.json outputs/draft/storyboard.json "$pack/"
+          cp outputs/draft/metadata_draft.json "$pack/" 2>/dev/null || true
+          cp outputs/preview/photos/credits.txt "$pack/" 2>/dev/null || true
+          cp outputs/preview/preview_work/render_report.json "$pack/" 2>/dev/null || true
+          cp outputs/preview/preview.mp4 "$pack/long_video.mp4"
+          cp outputs/preview/preview.srt "$pack/long_video.srt" 2>/dev/null || true
+          for f in outputs/preview/shorts/short_*.mp4; do cp "$f" "$pack/"; done
+          cp outputs/preview/thumbnail.jpg "$pack/" 2>/dev/null || true
+          tar -C "$pack" -cf "$RUNNER_TEMP/pack.tar" .
+          rm -rf "$pack"
+          echo "$PUBKEY_B64" | base64 -d > "$RUNNER_TEMP/pub.pem"
+          openssl pkey -pubin -in "$RUNNER_TEMP/pub.pem" -noout -text | head -1
+          out=$RUNNER_TEMP/enc; mkdir -p "$out"
+          openssl rand -hex 32 > "$RUNNER_TEMP/k"
+          openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/pub.pem" -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$RUNNER_TEMP/k" -out "$out/key.enc"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/k" \
+            -in "$RUNNER_TEMP/pack.tar" -out "$RUNNER_TEMP/pack.enc"
+          shred -u "$RUNNER_TEMP/k" "$RUNNER_TEMP/pack.tar"
+          split -b 90m -d -a 2 "$RUNNER_TEMP/pack.enc" "$out/pack.enc.part"
+          rm -f "$RUNNER_TEMP/pack.enc"
+          sha256sum "$out"/* | sed "s#$out/##" > "$out/SHA256SUMS"
+          ls -la "$out"
+          cd "$out"
           git init -q -b "qa/${{ github.run_id }}"
           git config user.name 'youtube-ai-engine'
           git config user.email 'youtube-ai-engine@users.noreply.github.com'
-          git add -A && git commit -q -m "Review pack for preview run ${{ github.run_id }} (no upload)"
+          git add -A && git commit -q -m "Encrypted review pack for preview run ${{ github.run_id }} (unreadable without the owner-session key)"
           git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
-          echo "::notice title=qa-branch::qa/${{ github.run_id }}"
+          echo "::notice title=qa-branch::qa/${{ github.run_id }} (encrypted only)"
       - name: Publish safe render summary
         if: always()
         shell: bash
@@ -235,23 +255,15 @@ jobs:
             h=$(sha256sum outputs/preview/preview.mp4 | cut -d' ' -f1)
             echo "::notice title=mp4::duration_s=$d sha256=$h"
           fi
-      - name: Save preview for owner review
+      - name: Save non-video reports (no MP4, thumbnail or frames in public artifacts)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unreviewed-preview-${{ github.run_id }}
+          name: preview-reports-${{ github.run_id }}
           path: |
-            outputs/preview/preview.mp4
-            outputs/preview/preview.srt
-            outputs/preview/thumbnail.jpg
-            outputs/preview/shorts/short_*.mp4
-            outputs/preview/shorts/shorts_report.json
+            outputs/qa/qa_report.json
             outputs/preview/preview_work/render_report.json
-            outputs/preview/preview_work/words.json
-            outputs/preview/photos/credits.txt
+            outputs/preview/shorts/shorts_report.json
             outputs/preview/photos/credits.json
-            outputs/draft/script.json
-            outputs/draft/storyboard.json
-            outputs/draft/metadata_draft.json
           retention-days: 14
           if-no-files-found: warn

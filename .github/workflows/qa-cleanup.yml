@@ -1,0 +1,29 @@
+name: Delete review branches (qa/*)
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: One qa/<run id> branch, or "all" for every qa/* branch
+        required: true
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Delete
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ inputs.branch }}
+        run: |
+          set -euo pipefail
+          repo="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if [ "$TARGET" = "all" ]; then
+            refs=$(git ls-remote --heads "$repo" 'qa/*' | awk '{print $2}' | sed 's#refs/heads/##')
+          else
+            [[ "$TARGET" =~ ^qa/[0-9]+$ ]] || { echo "only qa/<run id> branches"; exit 1; }
+            refs="$TARGET"
+          fi
+          for r in $refs; do git push -q "$repo" --delete "$r" && echo "deleted $r"; done
+          echo "::notice title=qa-cleanup::remaining=$(git ls-remote --heads "$repo" 'qa/*' | wc -l)"
