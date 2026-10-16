@@ -36,6 +36,9 @@ class PipelineResult:
     script:ScriptArtifact
     storyboard:StoryboardOutput
     stage_cache_hits:List[str]=field(default_factory=list)
+class _HookCta(BaseModel):
+    hook:str
+    cta:str
 class RouterLike(Protocol):
     def execute(self, task_type:str, input_data:Any, request:LLMRequest, schema:Type[BaseModel])->BaseModel:...
 _WS_RE=re.compile(r'\s+')
@@ -214,7 +217,7 @@ class ContentPipeline:
                     except PipelineQualityError as second_exc:
                         earlier_failures.append(str(exc.report.get('reason')))
                         exc=second_exc
-                        if exc.report.get('reason')=='numeric claim without citation':
+                        if exc.report.get('reason') in ('numeric claim without citation','numeric hook or CTA cannot be cited'):
                             expanded_draft=output
                 if revision+1>=self._t.max_stage_revisions:
                     if earlier_failures:exc.report.setdefault('earlier_failures',list(earlier_failures))
@@ -240,6 +243,15 @@ class ContentPipeline:
         allowed=set().union(*[claim_numbers.get(cid,set()) for cid in section.claim_ids]) if section.claim_ids else set()
         return _spoken_numbers(section.narration)-allowed
     def _repair_numeric_sections(self,topic:str,draft:ScriptOutput,claim_lines:List[str],revision:int,claim_numbers:dict)->ScriptOutput:
+        hook,cta=draft.hook,draft.cta
+        found=_spoken_numbers(hook)|_spoken_numbers(cta)
+        if found:
+            request=LLMRequest(messages=[
+                {'role':'system','content':'Rewrite a YouTube tutorial hook and call to action as JSON. Never invent facts.'},
+                {'role':'user','content':'Topic: '+topic+'\nHook: '+hook+'\nCTA: '+cta+'\nThese were REJECTED because they use '+_describe_numbers(found)+'. The hook and CTA cannot cite sources, so they must contain no numbers or number words at all. Keep the same meaning; hook at most 40 words. '+_NO_UNSOURCED_NUMBERS+' Return fields hook, cta.'}],
+                schema=_HookCta,temperature=.2,max_tokens=600)
+            fixed=self._router.execute('pipeline.script_section',{'topic':topic,'revision':revision,'repair':'hook_cta'},request,_HookCta)
+            hook,cta=fixed.hook,fixed.cta
         sections=list(draft.sections)
         for round_ in range(self._NUMERIC_REPAIR_ROUNDS):
           for index,section in enumerate(sections):
@@ -253,7 +265,7 @@ class ContentPipeline:
             part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':'numeric','round':round_},request,ScriptSection)
             assert isinstance(part,ScriptSection)
             sections[index]=part
-        return draft.model_copy(update={'sections':sections})
+        return draft.model_copy(update={'sections':sections,'hook':hook,'cta':cta})
     def _expand_short_script(self,topic:str,short:ScriptOutput,claim_lines:List[str],revision:int,claim_numbers:Optional[dict]=None)->ScriptOutput:
         # Expand real model output section by section within the existing
         # adapter token cap. Never pad text or alter duration thresholds.
