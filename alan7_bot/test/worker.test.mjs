@@ -148,3 +148,31 @@ test('no reply or stored row ever contains the bot token', async () => {
   const meta = (await db.prepare('SELECT value FROM meta').all()).results.map((r) => r.value).join(' ');
   assert.ok(!ev.includes(TOKEN) && !meta.includes(TOKEN) && !ev.includes('ghs_fake'));
 });
+
+test('a video with a Spanish caption becomes a clip job that is dispatched', async () => {
+  github.mode = 'up';
+  const res = await mf.dispatchFetch('https://alan7.example.workers.dev/telegram', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': await secretFor(TOKEN) },
+    body: JSON.stringify({ update_id: 9, message: { message_id: 9, from: { id: Number(OWNER) }, chat: { id: Number(OWNER), type: 'private' },
+      video: { file_id: 'FILE123', file_size: 4000000, duration: 10, mime_type: 'video/mp4' },
+      caption: 'Una madre jaguar guía a sus crías por la selva.' } }),
+  });
+  const json = await res.json();
+  assert.match(json.text, /Klip resevwa/);
+  const job = (await jobs()).find((j) => j.kind === 'clip');
+  assert.equal(job.state, 'running');
+  assert.equal(JSON.parse(job.arg).file_id, 'FILE123');
+  const d = calls.filter((c) => c.path.endsWith('/dispatches')).pop();
+  assert.equal(JSON.parse(d.body).inputs.kind, 'clip');
+});
+
+test('a video without a caption asks for the narration', async () => {
+  const res = await mf.dispatchFetch('https://alan7.example.workers.dev/telegram', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': await secretFor(TOKEN) },
+    body: JSON.stringify({ update_id: 10, message: { message_id: 10, from: { id: Number(OWNER) }, chat: { id: Number(OWNER), type: 'private' },
+      video: { file_id: 'F2', file_size: 1000, duration: 5 } } }),
+  });
+  assert.match((await res.json()).text, /caption/);
+});

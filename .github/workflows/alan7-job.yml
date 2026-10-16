@@ -18,7 +18,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Validate request
         env:
@@ -26,13 +26,70 @@ jobs:
           KIND: ${{ inputs.kind }}
         run: |
           [[ "$JOB_ID" =~ ^[0-9a-f]{8}$ ]] || { echo "::error::bad job id"; exit 1; }
-          case "$KIND" in test) ;; *) echo "::error::kind '$KIND' is not runnable here"; exit 1 ;; esac
+          case "$KIND" in test|clip) ;; *) echo "::error::kind '$KIND' is not runnable here"; exit 1 ;; esac
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: System test (no GPU, nothing published)
+        if: inputs.kind == 'test'
         run: |
           set -euo pipefail
           python3 --version; ffmpeg -version 2>/dev/null | head -1 || true
           test -f channel/documentary.py && test -f alan7_bot/src/index.js
           echo "::notice title=alan7-job::job ${{ inputs.job_id }} kind=${{ inputs.kind }} OK"
+      # ---- kind=clip: a video the owner sent to the bot -> narrated, subtitled, AI-labelled MP4 back to the owner
+      - uses: actions/setup-python@v5
+        if: inputs.kind == 'clip'
+        with:
+          python-version: '3.12'
+      - name: Clip dependencies
+        if: inputs.kind == 'clip'
+        run: |
+          set -euo pipefail
+          printf '%s\n' "VOICE_DIR=$RUNNER_TEMP/voices" "HF_HOME=$RUNNER_TEMP/hf" "TORCH_HOME=$RUNNER_TEMP/torch" "NLTK_DATA=$RUNNER_TEMP/nltk" >> "$GITHUB_ENV"
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg libsndfile1 libgomp1 fonts-dejavu-core
+          python -m pip install -q --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          python -m pip install -q -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python -c "import nltk,os;nltk.download('punkt_tab',download_dir=os.environ['NLTK_DATA'],raise_on_error=True)"
+          mkdir -p "$RUNNER_TEMP/voices"; python -m piper.download_voices --data-dir "$RUNNER_TEMP/voices" es_MX-claude-high
+      - name: Download the clip from Telegram (private)
+        if: inputs.kind == 'clip'
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          ARG: ${{ inputs.arg }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request, urllib.parse
+          a = json.loads(os.environ['ARG']); tok = os.environ['TG']
+          q = urllib.parse.urlencode({'file_id': a['file_id']})
+          info = json.load(urllib.request.urlopen(f'https://api.telegram.org/bot{tok}/getFile?{q}', timeout=30))
+          path = info['result']['file_path']
+          urllib.request.urlretrieve(f'https://api.telegram.org/file/bot{tok}/{path}', 'clip_in.mp4')
+          open('caption.txt', 'w', encoding='utf-8').write(a['caption'])
+          print('downloaded', os.path.getsize('clip_in.mp4'), 'bytes')
+          PY
+      - name: Render the short (native size, no upscaling)
+        if: inputs.kind == 'clip'
+        run: |
+          set -o pipefail
+          python -m scripts.clip_short --clip clip_in.mp4 --caption "$(cat caption.txt)" \
+            --voice-model "$VOICE_DIR/es_MX-claude-high.onnx" --out out/short.mp4 2>&1 | tail -5 | tee render.log
+      - name: Send the result to the owner (private chat)
+        if: always() && inputs.kind == 'clip'
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+          JOB: ${{ inputs.job_id }}
+        run: |
+          if [ -f out/short.mp4 ]; then
+            size=$(stat -c %s out/short.mp4)
+            if [ "$size" -gt 49000000 ]; then ffmpeg -y -loglevel error -i out/short.mp4 -c:v libx264 -crf 26 -preset veryfast -c:a copy out/short_tg.mp4; else cp out/short.mp4 out/short_tg.mp4; fi
+            curl -s -o /dev/null -w '%{http_code}' -F chat_id="$OWNER" -F supports_streaming=true \
+              -F caption="🎬 Travay $JOB — Recreación generada con IA · muestra privada (no publicada)" \
+              -F video=@out/short_tg.mp4 "https://api.telegram.org/bot$TG/sendVideo" | grep -q 200 && echo "::notice title=sent::video sent" || { echo "::error::sendVideo failed"; exit 1; }
+          else
+            msg="❌ Travay $JOB: $(grep -o 'ERROR:.*' render.log | head -1 | cut -c1-300)"
+            curl -s -o /dev/null --data-urlencode chat_id="$OWNER" --data-urlencode text="${msg:-❌ Travay $JOB echwe}" "https://api.telegram.org/bot$TG/sendMessage"
+            exit 1
+          fi

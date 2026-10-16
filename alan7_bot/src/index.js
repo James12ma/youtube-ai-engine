@@ -27,6 +27,7 @@ const HELP = [
   '/status — eta bot la, GitHub ak file atant lan',
   '/create test — lanse yon tès sistèm (san GPU)',
   '/create lena — anrejistre demann LENA (tann apwobasyon)',
+  '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
   '/queue — 10 dènye travay yo',
   '/cancel &lt;id&gt; — anile yon travay',
   '/help — lis sa a',
@@ -234,6 +235,31 @@ export async function handleCommand(env, text) {
   }
 }
 
+// A video sent to the bot becomes a "clip" job: GitHub renders it with Spanish narration (the caption),
+// subtitles and the AI label, then sends the finished MP4 back to the owner privately.
+export async function handleClip(env, msg) {
+  const v = msg.video || (msg.document && /^video\//.test(msg.document.mime_type || '') ? msg.document : null);
+  if (!v) return null;
+  if ((v.file_size || 0) > 20 * 1024 * 1024) return '⚠️ Klip la depase 20 MB (limit Telegram pou bot yo). Voye yon vèsyon pi piti.';
+  const caption = (msg.caption || '').trim();
+  if (caption.split(/\s+/).filter(Boolean).length < 3) {
+    return '✍️ Voye klip la ankò ak yon <b>caption</b> an panyòl (narasyon an), pa egzanp: <i>Una madre jaguar guía a sus crías por la selva.</i>';
+  }
+  const id = newId();
+  const arg = JSON.stringify({ file_id: v.file_id, caption: caption.slice(0, 600), duration: v.duration || null });
+  await env.DB.prepare("INSERT INTO jobs(id, kind, arg, state, attempts, created_at, updated_at) VALUES (?1, 'clip', ?2, 'queued', 0, ?3, ?3)")
+    .bind(id, arg, now()).run();
+  await logEvent(env, id, 'created', 'clip');
+  const d = await dispatchJob(env, { id, kind: 'clip', arg });
+  await setMeta(env, 'github_last', d.ok ? 'OK' : d.detail);
+  if (d.ok) {
+    await env.DB.prepare("UPDATE jobs SET state = 'running', attempts = 1, updated_at = ?2 WHERE id = ?1").bind(id, now()).run();
+    return `🎬 Klip resevwa (travay <code>${id}</code>). M ap ajoute narasyon, soutit ak etikèt IA; MP4 la ap rive isit la nan ~15–25 minit.`;
+  }
+  await env.DB.prepare('UPDATE jobs SET attempts = 1, last_error = ?2, next_try_at = ?3, updated_at = ?3 WHERE id = ?1').bind(id, d.detail, now() + 300).run();
+  return `🕒 Klip anrejistre (<code>${id}</code>), men GitHub pa disponib (${esc(d.detail)}). M ap eseye ankò otomatikman.`;
+}
+
 // ---------------------------------------------------------------- cron
 
 export async function tick(env) {
@@ -310,7 +336,7 @@ export default {
       }
       const update = await request.json().catch(() => null);
       const msg = update && update.message;
-      if (!msg || !msg.text) return new Response('ok');
+      if (!msg || !(msg.text || msg.video || msg.document)) return new Response('ok');
       const owner = String(env.OWNER_ID || '');
       if (!owner || String(msg.from && msg.from.id) !== owner || msg.chat.type !== 'private') {
         return new Response('ok'); // silently ignore everyone but the owner
@@ -318,7 +344,8 @@ export default {
       await setMeta(env, 'webhook_last', 'OK');
       let reply;
       try {
-        reply = await handleCommand(env, msg.text);
+        reply = msg.text ? await handleCommand(env, msg.text)
+          : (await handleClip(env, msg)) || 'Mwen aksepte sèlman kòmand oswa klip videyo.';
       } catch (e) {
         reply = '⚠️ Erè entèn — mesaj ou a resevwa, men mwen pa t ka trete l. Eseye ankò.';
       }

@@ -113,6 +113,7 @@ class DocumentaryPlan(BaseModel):
     ambience: list[str] = Field(default_factory=list)  # Commons audio search terms (optional)
     credits_note: str = ''
     title_start_s: float = Field(default=0.4, ge=0, le=20)
+    show_title: bool = True
     # Spoken-only phonetic fixes (Piper [[ IPA ]] syntax); subtitles keep the normal spelling.
     pronunciations: dict[str, str] = Field(default_factory=dict)     # voice / fact sources line for the credits card
 
@@ -181,7 +182,7 @@ def credit_lines(clips: dict[str, dict], ambience: dict | None, voice_note: str)
     lines = []
     for info in clips.values():
         if info.get('ai_generated'):
-            lines.append(f"{info['title']} — {AI_LABEL}")
+            lines.append(f"Imágenes: {AI_LABEL}.")
             continue
         if info.get('source') == 'pixabay':
             lines.append(f"Pixabay #{info['id']} — {info['author']} — {info['license']} — pixabay.com. "
@@ -411,15 +412,16 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
     # 5. titles and beat overlays on top of the cut
     vf = []
     ta, tb = plan.title_start_s, plan.title_start_s + 3.8
-    tf = _textfile(work, 'series.txt', plan.series.upper())
-    vf.append(f"drawtext=fontfile={FONT_BOLD}:textfile='{tf}':x=(w-tw)/2:y=h/2-90:fontsize=88:fontcolor=white:"
-              f"shadowcolor=black@0.6:shadowx=3:shadowy=3:enable='between(t,{ta:.2f},{tb:.2f})':"
-              f"alpha='min(1,(t-{ta:.2f})/0.6)*min(1,({tb:.2f}-t)/0.6)'")
-    if plan.subtitle:
-        tf = _textfile(work, 'subtitle.txt', plan.subtitle)
-        vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=(w-tw)/2:y=h/2+20:fontsize=42:fontcolor=white:"
-                  f"shadowcolor=black@0.6:shadowx=2:shadowy=2:enable='between(t,{ta + 0.5:.2f},{tb:.2f})':"
-                  f"alpha='min(1,(t-{ta + 0.5:.2f})/0.6)*min(1,({tb:.2f}-t)/0.6)'")
+    if plan.show_title:
+        tf = _textfile(work, 'series.txt', plan.series.upper())
+        vf.append(f"drawtext=fontfile={FONT_BOLD}:textfile='{tf}':x=(w-tw)/2:y=h/2-90:fontsize=88:fontcolor=white:"
+                  f"shadowcolor=black@0.6:shadowx=3:shadowy=3:enable='between(t,{ta:.2f},{tb:.2f})':"
+                  f"alpha='min(1,(t-{ta:.2f})/0.6)*min(1,({tb:.2f}-t)/0.6)'")
+        if plan.subtitle:
+            tf = _textfile(work, 'subtitle.txt', plan.subtitle)
+            vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=(w-tw)/2:y=h/2+20:fontsize=42:fontcolor=white:"
+                      f"shadowcolor=black@0.6:shadowx=2:shadowy=2:enable='between(t,{ta + 0.5:.2f},{tb:.2f})':"
+                      f"alpha='min(1,(t-{ta + 0.5:.2f})/0.6)*min(1,({tb:.2f}-t)/0.6)'")
     t = 0.0
     beat_windows = []
     for i, beat in enumerate(plan.beats):
@@ -430,6 +432,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
             vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=w-tw-56:y=48:fontsize=38:fontcolor=white:"
                       f"box=1:boxcolor=black@0.5:boxborderw=10:enable='between(t,{t + 0.3:.2f},{t + span - 0.3:.2f})'")
         t += span
+    vf = vf or ['null']
     titled = work / 'titled.mp4'
     _run(['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', str(picture), '-vf', ','.join(vf),
           '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', str(titled)])

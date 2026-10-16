@@ -62,7 +62,7 @@ def test_credit_lines_state_licence_changes_and_ambience_origin():
                           'b': {'title': 'gen.mp4', 'ai_generated': True}},
                          {'title': 'File:Waves.ogg', 'author': 'Bob', 'license': 'CC0'}, 'Voz: Piper')
     assert 'Ann' in lines[0] and 'CC BY 3.0' in lines[0] and 'recortado' in lines[0]
-    assert AI_LABEL in lines[1]
+    assert AI_LABEL in lines[1] and 'gen.mp4' not in lines[1]
     assert 'No fue grabado' in lines[2]
     assert lines[-1] == 'Voz: Piper'
 
