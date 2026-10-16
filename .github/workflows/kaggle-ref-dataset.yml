@@ -1,0 +1,46 @@
+name: Kaggle private reference dataset (decrypt on runner, upload PRIVATE dataset, delete transport)
+on:
+  workflow_dispatch:
+    inputs:
+      ref_branch:
+        description: Branch with the ENCRYPTED tar of start frames (qa/ref-<n>)
+        required: true
+permissions:
+  contents: write  # only to delete the transport branch
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_USERNAME }}
+      KUSER: goldgoat
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q 'kaggle>=1.8'
+      - name: Decrypt and upload privately (nothing printed)
+        env: { B: '${{ inputs.ref_branch }}' }
+        run: |
+          set -euo pipefail
+          [[ "$B" =~ ^qa/ref-[0-9]+$ ]] || { echo "::error::bad branch"; exit 1; }
+          umask 077; w=$RUNNER_TEMP/w; mkdir -p "$w/key" "$w/ds"
+          kaggle datasets download "$KUSER/alan7-transfer-key" -p "$w/key" --unzip >/dev/null
+          for f in key.enc ref.enc; do curl -sfL "https://raw.githubusercontent.com/${{ github.repository }}/$B/$f" -o "$w/$f"; done
+          openssl pkeyutl -decrypt -inkey "$w/key/private.pem" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -in "$w/key.enc" -out "$w/k"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass "file:$w/k" -in "$w/ref.enc" | tar -C "$w/ds" -xf -
+          shred -u "$w/k" "$w/key/private.pem"
+          echo "::notice title=frames::$(ls "$w/ds" | wc -l) files"
+          cat > "$w/ds/dataset-metadata.json" <<JSON
+          {"title": "alan7-lena-refs", "id": "$KUSER/alan7-lena-refs", "licenses": [{"name": "CC0-1.0"}]}
+          JSON
+          kaggle datasets delete "$KUSER/alan7-lena-refs" -y >/dev/null 2>&1 || true
+          kaggle datasets create -p "$w/ds" >/dev/null 2>&1 && echo "::notice title=dataset::alan7-lena-refs created (private)" || { echo "::error::dataset create failed"; exit 1; }
+          rm -rf "$w"
+      - name: Delete the transport key and branch
+        if: always()
+        env: { GH_TOKEN: '${{ github.token }}', B: '${{ inputs.ref_branch }}' }
+        run: |
+          kaggle datasets delete "$KUSER/alan7-transfer-key" -y >/dev/null 2>&1 && echo "::notice title=cleanup::key deleted" || true
+          t=$RUNNER_TEMP/c; mkdir -p "$t"; cd "$t"; git init -q
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" --delete "$B" && echo "::notice title=cleanup::$B deleted" || true
