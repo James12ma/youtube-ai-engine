@@ -14,7 +14,7 @@ import re
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from typing import Optional, Protocol, Collection
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 import httpx
 from pipeline.models import Source
 
@@ -52,6 +52,9 @@ def _normalize_text(raw:str)->str:
 def _source_id(url:str)->str:
     return hashlib.sha256(url.encode('utf-8')).hexdigest()[:12]
 
+class _SameHostRedirect(Exception):
+    def __init__(self,location:str)->None:
+        super().__init__('same-host redirect');self.location=location
 class HttpSourceFetcher:
     """Fetch only explicitly trusted HTTPS hosts. No redirects or URL auth."""
     def __init__(self,*,client:Optional[httpx.Client]=None,
@@ -63,7 +66,20 @@ class HttpSourceFetcher:
         self._user_agent=user_agent
         self._timeout=timeout
 
+    MAX_SAME_HOST_REDIRECTS=3
     def fetch(self,url:str)->Source:
+        # Some official sites (e.g. irs.gov) answer with a redirect to the same
+        # page on the same host. Follow ONLY https redirects that stay on the
+        # exact same allowlisted host, at most three hops. Every hop is
+        # re-validated by _check_url. Provenance keeps the requested URL.
+        current=url
+        for _ in range(self.MAX_SAME_HOST_REDIRECTS+1):
+            try:
+                return self._fetch_once(url,current)
+            except _SameHostRedirect as hop:
+                current=hop.location
+        raise ValueError('Redirects are disabled for research sources')
+    def _check_url(self,url:str)->str:
         parsed=urlparse(url)
         host=(parsed.hostname or '').rstrip('.').lower()
         if parsed.scheme!='https' or not host or parsed.username or parsed.password or parsed.port not in (None,443):
@@ -77,12 +93,21 @@ class HttpSourceFetcher:
             if str(exc)=='IP-address source hosts are not permitted':raise
         if host=='localhost' or host.endswith('.local') or host.endswith('.internal'):
             raise ValueError('Local/internal hosts are not permitted')
-        # Non-following redirects prevents a trusted domain from taking us to
-        # file://, http://, private networks, or a non-allowlisted hostname.
-        with self._client.stream('GET',url,follow_redirects=False,
+        return host
+    def _fetch_once(self,url:str,current:str)->Source:
+        host=self._check_url(current)
+        # httpx never follows redirects here; a trusted domain cannot take us to
+        # file://, http://, private networks, or any other hostname.
+        with self._client.stream('GET',current,follow_redirects=False,
                     headers={'User-Agent':self._user_agent,'Accept':'text/html,text/plain'},
                     timeout=self._timeout) as response:
             if 300<=response.status_code<400:
+                location=response.headers.get('location','')
+                target=urljoin(current,location) if location else ''
+                tp=urlparse(target)
+                if (target and tp.scheme=='https' and (tp.hostname or '').rstrip('.').lower()==host
+                        and not tp.username and not tp.password and tp.port in (None,443) and target!=current):
+                    raise _SameHostRedirect(target)
                 raise ValueError('Redirects are disabled for research sources')
             if response.status_code>=400:
                 raise RuntimeError(f'Fetch failed {response.status_code} for {url}')

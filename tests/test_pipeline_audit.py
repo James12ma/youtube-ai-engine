@@ -136,3 +136,32 @@ def test_script_quality_retries_revised_request(repo):
     result=pipeline.run('Automation',base.SRC_URLS)
     assert adapter.calls==4
     assert result.script.title==good_script.title
+
+
+def test_same_host_https_redirect_is_followed_and_provenance_kept():
+    calls=[]
+    def handler(req):
+        calls.append(str(req.url))
+        if req.url.path=='/es/a':return httpx.Response(301,headers={'Location':'/es/a/'})
+        return httpx.Response(200,text='<html><title>T</title><main>Official text</main></html>',headers={'Content-Type':'text/html'})
+    fetcher=HttpSourceFetcher(client=httpx.Client(transport=httpx.MockTransport(handler)),allowed_hosts={'www.irs.gov'})
+    source=fetcher.fetch('https://www.irs.gov/es/a')
+    assert calls==['https://www.irs.gov/es/a','https://www.irs.gov/es/a/'] and source.url=='https://www.irs.gov/es/a'
+
+
+@pytest.mark.parametrize('location',['https://evil.example/x','http://www.irs.gov/es/a/','https://user:pw@www.irs.gov/x','https://www.irs.gov:8443/x','https://127.0.0.1/x'])
+def test_unsafe_redirect_targets_rejected(location):
+    calls=[]
+    def handler(req):calls.append(str(req.url));return httpx.Response(302,headers={'Location':location})
+    fetcher=HttpSourceFetcher(client=httpx.Client(transport=httpx.MockTransport(handler)),allowed_hosts={'www.irs.gov'})
+    with pytest.raises(ValueError,match='Redirects are disabled'):fetcher.fetch('https://www.irs.gov/es/a')
+    assert len(calls)==1
+
+
+def test_same_host_redirect_chain_is_bounded():
+    calls=[]
+    def handler(req):
+        calls.append(str(req.url));return httpx.Response(302,headers={'Location':'/hop'+str(len(calls))})
+    fetcher=HttpSourceFetcher(client=httpx.Client(transport=httpx.MockTransport(handler)),allowed_hosts={'www.irs.gov'})
+    with pytest.raises(ValueError,match='Redirects are disabled'):fetcher.fetch('https://www.irs.gov/start')
+    assert len(calls)==4
