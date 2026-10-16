@@ -32,8 +32,11 @@ class DocumentaryError(RuntimeError):
 
 
 class ClipSource(BaseModel):
-    kind: Literal['commons', 'ai'] = 'commons'
+    kind: Literal['commons', 'pixabay', 'ai'] = 'commons'
     title: str = ''            # exact Commons File: title (kind=commons)
+    pixabay_id: int | None = None
+    species_verified: bool = False   # set only after someone looked at the clip (tags are not proof)
+    ai_checked: bool = False         # set only after the Pixabay page was checked for an AI-generated label
     path: str = ''             # local file (kind=ai)
     ai_generated: bool = False
     location: str = ''         # where it was filmed, as stated by the source
@@ -49,6 +52,8 @@ class ClipSource(BaseModel):
             if not self.path:
                 raise ValueError('ai clips need a local path')
             self.disclosure = self.disclosure or AI_LABEL
+        if self.kind == 'pixabay' and (self.pixabay_id is None or self.ai_generated):
+            raise ValueError('pixabay clips need pixabay_id and must be real footage')
         if self.kind == 'commons' and self.ai_generated:
             raise ValueError('commons clips in footage mode must be real footage')
         return self
@@ -155,11 +160,32 @@ def timeline(plan: DocumentaryPlan, beat_audio_s: list[float]) -> dict:
     return {'narration_starts': starts, 'shots': shots, 'footage_s': t, 'total_s': t + plan.credits_s}
 
 
+def license_gate(plan: 'DocumentaryPlan', clip_info: dict[str, dict]) -> dict:
+    """Publication gate: every clip must have a confirmed licence and (for Pixabay) checked species/AI status."""
+    issues = []
+    for cid, src in plan.clips.items():
+        info = clip_info.get(cid, {})
+        if src.kind == 'commons' and info.get('license_review_pending', True):
+            issues.append(f'{cid}: Commons licence review pending (verify the original source page)')
+        if src.kind == 'pixabay':
+            if not src.species_verified:
+                issues.append(f'{cid}: species not verified')
+            if not src.ai_checked:
+                issues.append(f'{cid}: Pixabay page not checked for an AI-generated label')
+        if src.kind == 'ai':
+            issues.append(f'{cid}: AI clip — needs YouTube altered/synthetic disclosure')
+    return {'passed': not issues, 'issues': issues}
+
+
 def credit_lines(clips: dict[str, dict], ambience: dict | None, voice_note: str) -> list[str]:
     lines = []
     for info in clips.values():
         if info.get('ai_generated'):
             lines.append(f"{info['title']} — {AI_LABEL}")
+            continue
+        if info.get('source') == 'pixabay':
+            lines.append(f"Pixabay #{info['id']} — {info['author']} — {info['license']} — pixabay.com. "
+                         'Cambios: recortado, reencuadrado a 16:9, texto añadido.')
             continue
         name = info['title'].removeprefix('File:').rsplit('.', 1)[0]
         lines.append(f"«{name}» — {info['author']} — {info['license']} ({info['license_url']}) — Wikimedia Commons. "
@@ -435,7 +461,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
               'narration_starts_s': [round(s, 2) for s in tl['narration_starts']],
               'beat_windows_s': [[round(a, 2), round(b, 2)] for a, b in beat_windows],
               'shots': shot_report, 'clips': clip_info, 'ambience': {**(ambience or {}), **(amb_report or {})} or None,
-              'credits': lines, 'ai_generated_shots': sum(1 for s in shot_report if s['ai_generated']),
+              'credits': lines, 'license_gate': license_gate(plan, clip_info), 'ai_generated_shots': sum(1 for s in shot_report if s['ai_generated']),
               'ready_for_publication': False, 'manual_review_required': True}
     (work / 'render_report.json').write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding='utf-8')
     return report
@@ -456,6 +482,16 @@ def main() -> None:
     dl = args.out.parent / 'footage'
     with httpx.Client(trust_env=True) as client:
         for cid, src in plan.clips.items():
+            if src.kind == 'pixabay':
+                from channel import pixabay
+                clip = pixabay.get_video(client, src.pixabay_id)  # key from the secret, never printed
+                files[cid] = pixabay.download(client, clip['best']['url'], dl / f'{cid}.mp4')
+                infos[cid] = {'source': 'pixabay', 'id': clip['id'], 'title': f"Pixabay #{clip['id']}",
+                              'author': clip['author'], 'license': clip['license'], 'license_url': clip['license_url'],
+                              'page': clip['page'], 'tags': clip['tags'], 'height': clip['best']['height'],
+                              'has_audio': has_audio(files[cid]), 'location': src.location,
+                              'species_verified': src.species_verified, 'ai_checked': src.ai_checked}
+                continue
             if src.kind != 'commons':
                 continue
             info = commons_clip_info(client, src.title)          # licence re-checked here
