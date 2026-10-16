@@ -1,0 +1,61 @@
+name: Footage review sheets (encrypted delivery only)
+on:
+  workflow_dispatch:
+    inputs:
+      titles:
+        description: '"|"-separated exact Commons File: titles'
+        required: true
+      delivery_pubkey:
+        description: Base64 RSA public key (PEM); sheets leave the runner only encrypted
+        required: true
+permissions:
+  contents: write  # only to push an encrypted pack to qa/<run id>
+jobs:
+  sheets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
+          python -m pip install -r requirements.txt -r requirements-production.txt
+      - name: Download clips and make sheets
+        env:
+          TITLES: ${{ inputs.titles }}
+        run: |
+          python -m scripts.footage_sheets --titles "$TITLES" --out outputs/footage > outputs_summary.json
+          python - <<'PY'
+          import json
+          for c in json.load(open('outputs/footage/clips.json')):
+              short = {k: c[k] for k in ('title','license','author','duration_s','has_audio','sheet_every_s','download_height')}
+              short['description'] = c['description'][:500]
+              print('::notice title=clip::' + json.dumps(short, ensure_ascii=False)[:3800])
+          PY
+      - name: Encrypted pack to qa/${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBKEY_B64: ${{ inputs.delivery_pubkey }}
+        run: |
+          set -euo pipefail
+          umask 077
+          tar -C outputs/footage -cf "$RUNNER_TEMP/pack.tar" $(cd outputs/footage && ls *.jpg clips.json)
+          echo "$PUBKEY_B64" | base64 -d > "$RUNNER_TEMP/pub.pem"
+          out=$RUNNER_TEMP/enc; mkdir -p "$out"
+          openssl rand -hex 32 > "$RUNNER_TEMP/k"
+          openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/pub.pem" -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$RUNNER_TEMP/k" -out "$out/key.enc"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/k" \
+            -in "$RUNNER_TEMP/pack.tar" -out "$out/pack.enc.part00"
+          shred -u "$RUNNER_TEMP/k" "$RUNNER_TEMP/pack.tar"
+          (cd "$out" && sha256sum * > SHA256SUMS)
+          cd "$out"
+          git init -q -b "qa/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Encrypted footage review sheets ${{ github.run_id }}"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
+          echo "::notice title=qa-branch::qa/${{ github.run_id }} (encrypted only)"
