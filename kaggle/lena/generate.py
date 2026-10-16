@@ -47,29 +47,37 @@ try:
     cache = '/tmp/hf'
     mid = 'Wan-AI/Wan2.2-TI2V-5B-Diffusers'
     # T4 has no fast bf16: transformer in fp16; text encoder in bf16 (runs once; T5 overflows in fp16); VAE fp32.
-    vae = AutoencoderKLWan.from_pretrained(mid, subfolder='vae', torch_dtype=torch.float32, cache_dir=cache)
+    import gc
+    # Kaggle T4 box: 14.6 GB GPU, 31 GB RAM. Holding the text encoder (11 GB) and the transformer (10 GB)
+    # in RAM together got the process killed (run 38974674232). So: encode the prompts first on the GPU,
+    # free the text encoder, then load the transformer with block-level offloading (no pinned copies).
     te = UMT5EncoderModel.from_pretrained(mid, subfolder='text_encoder', torch_dtype=torch.bfloat16, cache_dir=cache)
+    enc = WanPipeline.from_pretrained(mid, text_encoder=te, transformer=None, vae=None, cache_dir=cache)
+    te.to('cuda')
+    with torch.no_grad():
+        pe, ne = enc.encode_prompt(prompt=CFG['prompt'], negative_prompt=CFG['negative_prompt'],
+                                   do_classifier_free_guidance=True, num_videos_per_prompt=1,
+                                   max_sequence_length=512, device=torch.device('cuda'))
+    pe, ne = pe.to('cpu', torch.float16), ne.to('cpu', torch.float16)
+    del enc, te; gc.collect(); torch.cuda.empty_cache()
+    report['encode_s'] = round(time.time() - T0, 1); save()
+    vae = AutoencoderKLWan.from_pretrained(mid, subfolder='vae', torch_dtype=torch.float32, cache_dir=cache)
     tr = WanTransformer3DModel.from_pretrained(mid, subfolder='transformer', torch_dtype=torch.float16, cache_dir=cache)
     report['disk_free_tmp_gb'] = round(shutil.disk_usage('/tmp').free / 2**30, 1)
-    if CFG['mode'] == 'a':
-        pipe = WanImageToVideoPipeline.from_pretrained(mid, vae=vae, text_encoder=te, transformer=tr,
-                                                       torch_dtype=torch.float16, cache_dir=cache, expand_timesteps=True)
-    else:
-        pipe = WanPipeline.from_pretrained(mid, vae=vae, text_encoder=te, transformer=tr, torch_dtype=torch.float16, cache_dir=cache)
-    # T4 (14.6 GB): model-level offload ran out of memory at native 1280x704 (run 38971992788).
-    # Group offloading streams the transformer's layers from CPU RAM, so only a few layers sit on the GPU.
-    from diffusers.hooks import apply_group_offloading
-    onload, offload = torch.device('cuda'), torch.device('cpu')
-    pipe.transformer.enable_group_offload(onload_device=onload, offload_device=offload, offload_type='leaf_level', use_stream=True)
-    apply_group_offloading(pipe.text_encoder, onload_device=onload, offload_device=offload, offload_type='block_level', num_blocks_per_group=4)
-    pipe.vae.to(onload)
-    report['offload'] = 'group_offload leaf_level (transformer) + block_level (text encoder)'
+    Pipe = WanImageToVideoPipeline if CFG['mode'] == 'a' else WanPipeline
+    extra = {'expand_timesteps': True} if CFG['mode'] == 'a' else {}
+    pipe = Pipe.from_pretrained(mid, vae=vae, transformer=tr, text_encoder=None, tokenizer=None,
+                                torch_dtype=torch.float16, cache_dir=cache, **extra)
+    tr.enable_group_offload(onload_device=torch.device('cuda'), offload_device=torch.device('cpu'),
+                            offload_type='block_level', num_blocks_per_group=1)
+    vae.to('cuda')
+    report['offload'] = 'prompts encoded first; transformer block-level group offload; VAE on GPU'
     try:
-        pipe.vae.enable_tiling()
+        vae.enable_tiling()
     except Exception:
         pass
     report['load_s'] = round(time.time() - T0, 1); save()
-    kw = dict(prompt=CFG['prompt'], negative_prompt=CFG['negative_prompt'], height=CFG['height'], width=CFG['width'],
+    kw = dict(prompt_embeds=pe.to('cuda'), negative_prompt_embeds=ne.to('cuda'), height=CFG['height'], width=CFG['width'],
               num_frames=CFG['frames'], guidance_scale=CFG['guidance'], num_inference_steps=CFG['steps'],
               generator=torch.Generator('cpu').manual_seed(CFG['seed']))
     if CFG['mode'] == 'a':
