@@ -1,0 +1,82 @@
+name: Kaggle check (auth + one tiny GPU hardware probe, no generation)
+on:
+  workflow_dispatch:
+    inputs:
+      gpu_probe:
+        description: '1 = also run a ~1-minute GPU hardware probe notebook'
+        default: '0'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q 'kaggle>=1.8'
+      - name: Find which secret authenticates (values never printed)
+        env:
+          C1: ${{ secrets.KAGGLE_API_TOKEN }}
+          C2: ${{ secrets.KAGGLE_KEY }}
+          C3: ${{ secrets.KAGGLE_USERNAME }}
+        run: |
+          set -u
+          found=''
+          for name in C1 C2 C3; do
+            val="${!name}"
+            [ -n "$val" ] || continue
+            label=$(case $name in C1) echo KAGGLE_API_TOKEN;; C2) echo KAGGLE_KEY;; C3) echo KAGGLE_USERNAME;; esac)
+            if KAGGLE_API_TOKEN="$val" kaggle kernels list --mine --page-size 1 >/tmp/out 2>&1; then
+              echo "::notice title=kaggle-auth::OK with secret $label (access token)"
+              found=$label; echo "TOKEN_SECRET=$name" >> "$GITHUB_ENV"; break
+            else
+              echo "::notice title=kaggle-auth::secret $label is not a working access token ($(head -c 160 /tmp/out | tr '\n' ' ' | sed 's/[A-Za-z0-9_-]\{30,\}/***/g'))"
+            fi
+          done
+          [ -n "$found" ] || { echo "::error title=kaggle-auth::no secret authenticated"; exit 1; }
+      - name: Account username
+        env:
+          C1: ${{ secrets.KAGGLE_API_TOKEN }}
+          C2: ${{ secrets.KAGGLE_KEY }}
+          C3: ${{ secrets.KAGGLE_USERNAME }}
+        run: |
+          export KAGGLE_API_TOKEN="${!TOKEN_SECRET}"
+          user=$(python - <<'PY'
+          try:
+              from kaggle.api.kaggle_api_extended import KaggleApi
+              a = KaggleApi(); a.authenticate()
+              print(a.config_values.get('username') or getattr(a, 'username', '') or '')
+          except Exception as e:
+              print('')
+          PY
+          )
+          if [ -z "$user" ]; then user=$(kaggle config view 2>/dev/null | sed -n 's/^- username: //p' | head -1); fi
+          if [ -n "$user" ]; then echo "KUSER=$user" >> "$GITHUB_ENV"; echo "::notice title=kaggle-user::$user"; else echo "::warning title=kaggle-user::username not resolved"; fi
+      - name: GPU probe notebook (private, ~1 min)
+        if: inputs.gpu_probe == '1' && env.KUSER != ''
+        env:
+          C1: ${{ secrets.KAGGLE_API_TOKEN }}
+          C2: ${{ secrets.KAGGLE_KEY }}
+          C3: ${{ secrets.KAGGLE_USERNAME }}
+        run: |
+          set -euo pipefail
+          export KAGGLE_API_TOKEN="${!TOKEN_SECRET}"
+          d=$RUNNER_TEMP/k; mkdir -p "$d"; cp kaggle/gpu_check/check.py "$d/"
+          cat > "$d/kernel-metadata.json" <<JSON
+          {"id": "$KUSER/alan7-gpu-check", "title": "alan7-gpu-check", "code_file": "check.py", "language": "python",
+           "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_internet": true,
+           "dataset_sources": [], "competition_sources": [], "kernel_sources": []}
+          JSON
+          kaggle kernels push -p "$d" 2>&1 | sed 's/[A-Za-z0-9_-]\{30,\}/***/g' | tee push.log
+          for i in $(seq 1 40); do
+            s=$(kaggle kernels status "$KUSER/alan7-gpu-check" 2>&1 | tail -1); echo "$s"
+            case "$s" in *complete*|*COMPLETE*) break;; *error*|*ERROR*|*cancel*) echo "::warning title=probe::$s"; break;; esac
+            sleep 20
+          done
+          mkdir -p out; kaggle kernels output "$KUSER/alan7-gpu-check" -p out >/dev/null 2>&1 || true
+          if [ -f out/gpu_check.json ]; then echo "::notice title=gpu::$(tr -d '\n' < out/gpu_check.json | head -c 3000)"; else echo "::warning title=gpu::no output ($(tail -c 300 push.log | tr '\n' ' '))"; fi
