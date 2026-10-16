@@ -11,6 +11,10 @@ on:
       research_run_id:
         description: Run ID of a passed research dry run (its artifact must still exist)
         required: true
+      voice:
+        description: Piper voice (auto picks by script language)
+        required: false
+        default: auto
       format:
         description: Output format
         type: choice
@@ -35,7 +39,6 @@ jobs:
       PYTHONUNBUFFERED: '1'
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
-      VOICE_NAME: en_US-libritts-high
       CUDA_VISIBLE_DEVICES: ''
       YOUTUBE_UPLOAD_ALLOWED: '0'
       YOUTUBE_PUBLIC_ALLOWED: '0'
@@ -69,6 +72,24 @@ jobs:
           s = json.loads((d / 'script.json').read_text())
           print(f"::notice title=draft::{s['title']} | {s['word_count']} words | {len(s['sections'])} sections")
           PY
+      - name: Choose voice
+        shell: bash
+        env:
+          VOICE_INPUT: ${{ inputs.voice }}
+        run: |
+          set -euo pipefail
+          lang=$(python -c "import json;print(json.load(open('outputs/draft/script.json')).get('language','en'))")
+          if [ "$VOICE_INPUT" = "auto" ] || [ -z "$VOICE_INPUT" ]; then
+            case "$lang" in
+              es) voice=es_MX-claude-high ;;
+              *)  voice=en_US-libritts-high ;;
+            esac
+          else
+            [[ "$VOICE_INPUT" =~ ^[a-zA-Z_]+-[a-zA-Z0-9_]+-(x_low|low|medium|high)$ ]] || { echo "invalid voice name"; exit 1; }
+            voice="$VOICE_INPUT"
+          fi
+          echo "VOICE_NAME=$voice" >> "$GITHUB_ENV"
+          echo "::notice title=voice::$voice ($lang)"
       - name: Configure runner-local model directories
         shell: bash
         run: |

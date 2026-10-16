@@ -73,6 +73,7 @@ class VerificationArtifact(BaseModel):
     verified_at: str
 class ScriptArtifact(BaseModel):
     requires_editorial_review: bool = True
+    language: str = 'en'
     topic: str
     title: str
     hook: str

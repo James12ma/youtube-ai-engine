@@ -51,16 +51,19 @@ def generate_metadata(script: ScriptArtifact, research: ResearchArtifact, gate: 
         if not result.passed:
             raise ValueError('Chapters invalid for YouTube: ' + '; '.join(result.errors))
         chapter_block = 'Chapters:\n' + format_chapters(chapters) + '\n\n'
+    t = _TEXT.get(script.language, _TEXT['en'])
+    if chapter_block and script.language != 'en':
+        chapter_block = chapter_block.replace('Chapters:', t['chapters'], 1)
     desc = (description_intro(script) + '\n\n'
             + chapter_block
-            + 'What this video covers:\n' + '\n'.join('- '+h for h in _headings(script)[:10])
-            + '\n\nSources referenced in the research:\n'+source_lines
-            + '\n\nEducational demonstration. Verify services and results independently.\n'
-            + 'Original narration and visuals; human editorial review required.')
+            + t['covers'] + '\n' + '\n'.join('- '+h for h in _headings(script)[:10])
+            + '\n\n' + t['sources'] + '\n'+source_lines
+            + '\n\n' + t['footer'])
     desc = _youtube_safe(desc)
     if len(desc.encode('utf-8'))>5000:  # YouTube's limit is 5000 bytes
         raise ValueError('Citation description too long')
-    return ReleaseMetadata(title=_youtube_safe(title), description=desc, tags=derive_tags(script))
+    return ReleaseMetadata(title=_youtube_safe(title), description=desc, tags=derive_tags(script),
+                           language=script.language)
 
 
 def _youtube_safe(text: str) -> str:
@@ -85,11 +88,11 @@ def _first_sentence(text: str, limit: int = 160) -> str:
     return sentence
 
 
-def _join(items: list[str]) -> str:
+def _join(items: list[str], conj: str = ' and ') -> str:
     items = [i for i in items if i]
     if len(items) <= 1:
         return ''.join(items)
-    return ', '.join(items[:-1]) + ' and ' + items[-1]
+    return ', '.join(items[:-1]) + conj + items[-1]
 
 
 def _soft_lower(heading: str) -> str:
@@ -97,6 +100,19 @@ def _soft_lower(heading: str) -> str:
     if len(heading) > 1 and heading[1].isupper():
         return heading
     return heading[:1].lower() + heading[1:]
+
+
+_TEXT = {
+    'en': {'explains': 'This video explains', 'covers': 'What this video covers:',
+           'sources': 'Sources referenced in the research:', 'chapters': 'Chapters:',
+           'footer': 'Educational demonstration. Verify services and results independently.\n'
+                     'Original narration and visuals; human editorial review required.'},
+    'es': {'explains': 'En este video explicamos', 'covers': 'En este video:',
+           'sources': 'Fuentes oficiales consultadas:', 'chapters': 'Capítulos:',
+           'footer': 'Información general y educativa; no es asesoría fiscal ni legal para su caso. '
+                     'Verifique siempre en IRS.gov o con un preparador de impuestos autorizado.\n'
+                     'Narración y gráficos originales; revisado por una persona antes de publicar.'},
+}
 
 
 def description_intro(script: ScriptArtifact) -> str:
@@ -109,9 +125,9 @@ def description_intro(script: ScriptArtifact) -> str:
     line1 = _first_sentence(script.hook)
     topic = ' '.join(script.topic.split())
     headings = _headings(script)[:3]
-    line2 = f'This video explains {topic}'
+    line2 = _TEXT.get(script.language, _TEXT['en'])['explains'] + ' ' + topic
     if headings:
-        line2 += ': ' + _join([_soft_lower(h) for h in headings])
+        line2 += ': ' + _join([_soft_lower(h) for h in headings], ' y ' if script.language == 'es' else ' and ')
     line2 = line2.rstrip('.') + '.'
     return line1 + '\n' + line2
 

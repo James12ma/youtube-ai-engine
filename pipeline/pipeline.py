@@ -29,6 +29,7 @@ class QualityThresholds:
     max_stage_revisions:int=2
     storyboard_tolerance:float=0.20
     schema_version:str='1.0'
+    language:str='en'  # narration language: 'en' or 'es'
 @dataclass
 class PipelineResult:
     research:ResearchArtifact
@@ -79,6 +80,15 @@ _NO_UNSOURCED_NUMBERS=('Do not write any number, digit or number word (one, two,
     'percentage or price unless that exact number appears in a claim you cite in claim_ids. '
     'Use ordinals (first, second, next) or phrases like "a few" or "several" instead. Avoid the word "one" even as a pronoun (write "a", "this", "each", "someone"). '
     'Hypothetical examples must use words, not numbers.')
+_LANGUAGE_NOTES={
+    'en':'',
+    'es':(' LANGUAGE: Write the title, hook, every heading, all narration, all on_screen_text and the cta in '
+          'clear, neutral Latin American Spanish (español neutro) for Spanish-speaking viewers in the United States. '
+          'Keep official form names and acronyms as published (for example IRS, ITIN, W-7). '
+          'Claims and claim_ids stay exactly as supplied.')}
+def _language_note(language:str)->str:
+    if language not in _LANGUAGE_NOTES:raise ValueError('Unsupported narration language: '+str(language))
+    return _LANGUAGE_NOTES[language]
 def _word_count(*parts:str)->int:return sum(len(p.split()) for p in parts if p)
 def _now()->str:return datetime.now(timezone.utc).isoformat()
 def _source_blob(sources:Sequence[Source],max_chars_per_source:int=6000)->str:
@@ -92,6 +102,7 @@ class ContentPipeline:
         self._router=router
         self._fetcher=fetcher
         self._t=thresholds or QualityThresholds()
+        _language_note(self._t.language)
         if self._t.max_stage_revisions < 1:
             raise ValueError("max_stage_revisions must be >= 1")
         if self._t.target_words_per_second <= 0 or self._t.min_script_duration_s > self._t.max_script_duration_s:
@@ -178,14 +189,14 @@ class ContentPipeline:
         self._state.record_completion(task_id,'pipeline.verify',artifact.model_dump())
         return artifact
     def _stage_script(self,topic:str,verification:VerificationArtifact,hits:List[str])->ScriptArtifact:
-        task_id=compute_task_id('script',{'topic':topic,'claims_fingerprint':_digest([c.model_dump() for c in verification.verified]),'verification_rate':verification.pass_rate, 'min_duration_s':self._t.min_script_duration_s, 'max_duration_s':self._t.max_script_duration_s},self._t.schema_version)
+        task_id=compute_task_id('script',{'topic':topic,'claims_fingerprint':_digest([c.model_dump() for c in verification.verified]),'verification_rate':verification.pass_rate, 'min_duration_s':self._t.min_script_duration_s, 'max_duration_s':self._t.max_script_duration_s,'language':self._t.language},self._t.schema_version)
         cached=self._state.get_cached_result(task_id)
         if cached is not None:
             hits.append('script');return ScriptArtifact.model_validate(cached)
         claim_lines=['- '+c.id+': '+c.text for c in verification.verified]
         request=LLMRequest(messages=[
             {'role':'system','content':'You write original, fact-bound YouTube narration. Every factual or numeric statement must cite at least one claim_id from the supplied list. Cite by putting those claim_ids in the section\'s claim_ids array; you may not invent claim ids.'},
-            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. '+_NO_UNSOURCED_NUMBERS+' The hook and cta must contain no numbers at all. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
+            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. '+_NO_UNSOURCED_NUMBERS+' The hook and cta must contain no numbers at all. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'+_language_note(self._t.language)}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
         feedback='';expansion_used=False;earlier_failures:List[str]=[];expanded_draft=None
         for revision in range(self._t.max_stage_revisions):
             if feedback:
@@ -226,7 +237,7 @@ class ContentPipeline:
                 feedback=json.dumps(exc.report,ensure_ascii=False)[:1000]
         words=_word_count(output.hook,*[s.narration for s in output.sections],output.cta)
         duration=words/self._t.target_words_per_second
-        artifact=ScriptArtifact(topic=topic,title=output.title,hook=output.hook,sections=output.sections,cta=output.cta,duration_s=duration,word_count=words,verified_at=_now())
+        artifact=ScriptArtifact(language=self._t.language,topic=topic,title=output.title,hook=output.hook,sections=output.sections,cta=output.cta,duration_s=duration,word_count=words,verified_at=_now())
         self._state.record_completion(task_id,'pipeline.script',artifact.model_dump())
         return artifact
     _MAX_EXPANSION_SECTIONS=12
@@ -248,7 +259,7 @@ class ContentPipeline:
         if found:
             request=LLMRequest(messages=[
                 {'role':'system','content':'Rewrite a YouTube tutorial hook and call to action as JSON. Never invent facts.'},
-                {'role':'user','content':'Topic: '+topic+'\nHook: '+hook+'\nCTA: '+cta+'\nThese were REJECTED because they use '+_describe_numbers(found)+'. The hook and CTA cannot cite sources, so they must contain no numbers or number words at all. Keep the same meaning; hook at most 40 words. '+_NO_UNSOURCED_NUMBERS+' Return fields hook, cta.'}],
+                {'role':'user','content':'Topic: '+topic+'\nHook: '+hook+'\nCTA: '+cta+'\nThese were REJECTED because they use '+_describe_numbers(found)+'. The hook and CTA cannot cite sources, so they must contain no numbers or number words at all. Keep the same meaning; hook at most 40 words. '+_NO_UNSOURCED_NUMBERS+' Return fields hook, cta.'+_language_note(self._t.language)}],
                 schema=_HookCta,temperature=.2,max_tokens=600)
             fixed=self._router.execute('pipeline.script_section',{'topic':topic,'revision':revision,'repair':'hook_cta'},request,_HookCta)
             hook,cta=fixed.hook,fixed.cta
@@ -260,7 +271,7 @@ class ContentPipeline:
             words=max(80,_word_count(section.narration))
             request=LLMRequest(messages=[
                 {'role':'system','content':'Rewrite one tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
-                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection heading: '+section.heading+'\nCurrent narration: '+section.narration+'\nThis narration was REJECTED because it uses '+_describe_numbers(bad)+', which do not appear in the claims it cites. Rewrite it with approximately '+str(words)+' narration words, same meaning and structure, with every unsupported number removed or replaced by words such as first, next, a few or several. '+_NO_UNSOURCED_NUMBERS+' Return fields heading, narration, on_screen_text, claim_ids.'}],
+                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection heading: '+section.heading+'\nCurrent narration: '+section.narration+'\nThis narration was REJECTED because it uses '+_describe_numbers(bad)+', which do not appear in the claims it cites. Rewrite it with approximately '+str(words)+' narration words, same meaning and structure, with every unsupported number removed or replaced by words such as first, next, a few or several. '+_NO_UNSOURCED_NUMBERS+' Return fields heading, narration, on_screen_text, claim_ids.'+_language_note(self._t.language)}],
                 schema=ScriptSection,temperature=.2,max_tokens=min(4096,max(1200,words*4)))
             part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':'numeric','round':round_},request,ScriptSection)
             assert isinstance(part,ScriptSection)
@@ -283,7 +294,7 @@ class ContentPipeline:
             target=max(80,math.ceil((target_total-base_words-emitted)/remaining))
             expansion=LLMRequest(messages=[
                 {'role':'system','content':'Write one complete tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
-                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id. '+_NO_UNSOURCED_NUMBERS+feedback_note}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
+                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id. '+_NO_UNSOURCED_NUMBERS+_language_note(self._t.language)+feedback_note}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
             part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision},expansion,ScriptSection)
             assert isinstance(part,ScriptSection)
             found=self._uncited_numbers(part,claim_numbers) if repairs_left>0 else set()

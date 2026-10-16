@@ -1,6 +1,20 @@
 name: Source-backed research and script dry run (no upload)
 on:
   workflow_dispatch:
+    inputs:
+      topic:
+        description: Topic (leave empty for the default test topic)
+        required: false
+        default: ''
+      sources:
+        description: 2-8 HTTPS source URLs separated by spaces (only these hosts are fetched)
+        required: false
+        default: ''
+      language:
+        description: Narration language
+        type: choice
+        options: [en, es]
+        default: en
 permissions:
   contents: read
 concurrency:
@@ -24,6 +38,9 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           YOUTUBE_UPLOAD_ALLOWED: '0'
           YOUTUBE_PUBLIC_ALLOWED: '0'
+          RESEARCH_TOPIC: ${{ inputs.topic }}
+          RESEARCH_SOURCES: ${{ inputs.sources }}
+          CONTENT_LANGUAGE: ${{ inputs.language }}
         run: python -m scripts.check_research_pipeline
       - name: Publish safe report summary as annotation
         if: always()

@@ -18,6 +18,9 @@ from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness
 
 class VideoBuildError(RuntimeError): pass
 
+_LABELS={'en':{'intro':'THE PROBLEM','end':'NEXT STEP'},
+         'es':{'intro':'EL PROBLEMA','end':'SIGUIENTE PASO'}}
+
 def _run(cmd:list[str])->None:
     p=subprocess.run(cmd,capture_output=True,text=True)
     if p.returncode:raise VideoBuildError('FFmpeg error: '+p.stderr[-700:])
@@ -33,6 +36,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     # scenes that need real footage become clearly labelled placeholder cards.
     if reviewed and unreviewed_preview:raise VideoBuildError('Choose either reviewed or unreviewed_preview, not both')
     if not reviewed and not unreviewed_preview:raise VideoBuildError('Human-reviewed script and storyboard required')
+    if script.language not in _LABELS:raise VideoBuildError('Unsupported narration language: '+script.language)
     if script.topic!=gate.topic or gate.contradictions.pairs or gate.traceability.unverified_cited_claims:
         raise VideoBuildError('Verification gate failed')
     accepted={v.claim_id for v in gate.verdicts if v.accepted}
@@ -67,7 +71,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     loud=normalize_loudness(raw,norm)
     # Real CTC forced alignment; NEVER use proportional timestamps as fallback.
     transcript=' '.join(segments)
-    aligned=WhisperXAligner(language='en',device='cpu',min_token_coverage=.98).align(norm,transcript)
+    aligned=WhisperXAligner(language=script.language,device='cpu',min_token_coverage=.98).align(norm,transcript)
     save_word_timestamps(aligned,work/'words.json')
     captions=work/'captions.ass'
     portrait=height>width
@@ -79,7 +83,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     srt=save_srt_from_blocks(blocks,output_path.with_suffix('.srt'))
 
     stages=[];placeholders:list[int]=[]
-    intro=work/'intro.png';card('text_overlay','THE PROBLEM',script.hook,(width,height),intro)
+    intro=work/'intro.png';card('text_overlay',_LABELS[script.language]['intro'],script.hook,(width,height),intro)
     stages.append((intro,synthesized[0].duration_s,0.0))
     # Divide actual narrated section time across that section's storyboard scenes.
     for sec_idx,sec in enumerate(script.sections):
@@ -105,7 +109,7 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
                 src=work/f'section_{sec_idx}_scene_{s.index}.png'
                 card(s.visual_type,sec.heading,sec.on_screen_text or s.instruction,(width,height),src)
             stages.append((src,seconds,0.0))
-    end=work/'end.png';card('text_overlay','NEXT STEP',script.cta,(width,height),end)
+    end=work/'end.png';card('text_overlay',_LABELS[script.language]['end'],script.cta,(width,height),end)
     stages.append((end,synthesized[-1].duration_s,0.0))
     # Crossfade overlaps shorten finished video. Compensate by lengthening the
     # source clips, so audio and video remain aligned in total duration.

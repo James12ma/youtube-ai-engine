@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import httpx
 from adapters import OpenRouterAdapter
 from adapters.config import OPENROUTER_CONFIG
-from pipeline import ContentPipeline, HttpSourceFetcher
+from pipeline import ContentPipeline, HttpSourceFetcher, QualityThresholds
 from pipeline.errors import PipelineQualityError
 from router import Router, RouterConfig
 from state_store import StateStore
@@ -20,11 +20,33 @@ from verification.integrated import VerifiedContentPipeline
 from channel.metadata import generate_metadata
 from scripts.check_free_providers import zero_priced_model
 
-TOPIC = 'Choosing a small-business cybersecurity baseline before workflow automation'
-SOURCES = (
+DEFAULT_TOPIC = 'Choosing a small-business cybersecurity baseline before workflow automation'
+DEFAULT_SOURCES = (
     'https://csrc.nist.gov/pubs/ir/7621/r1/final',
     'https://csrc.nist.gov/pubs/sp/1300/final',
 )
+
+
+def _configured():
+    """Topic, HTTPS sources and narration language; owner-supplied via environment.
+
+    Only the hosts of the supplied URLs are allowlisted for retrieval.
+    """
+    topic = ' '.join((os.environ.get('RESEARCH_TOPIC') or DEFAULT_TOPIC).split())
+    raw = os.environ.get('RESEARCH_SOURCES') or ''
+    sources = tuple(dict.fromkeys(u for u in re.split(r'[\s,]+', raw) if u)) or DEFAULT_SOURCES
+    language = (os.environ.get('CONTENT_LANGUAGE') or 'en').strip().lower()
+    if not 2 <= len(sources) <= 8:
+        raise ValueError('Between 2 and 8 source URLs are required')
+    for url in sources:
+        if urlparse(url).scheme != 'https':
+            raise ValueError('Only HTTPS source URLs are accepted')
+    if language not in ('en', 'es'):
+        raise ValueError('CONTENT_LANGUAGE must be en or es')
+    return topic, sources, language
+
+
+TOPIC, SOURCES, LANGUAGE = _configured()
 
 
 class RequestBudgetExceeded(RuntimeError):
@@ -91,7 +113,7 @@ def safe_quality_failure(exc):
 
 def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=None):
     out.mkdir(parents=True, exist_ok=True)
-    report = {'ready_for_publication': False, 'uploads_enabled': False,
+    report = {'topic': TOPIC, 'language': LANGUAGE, 'ready_for_publication': False, 'uploads_enabled': False,
               'paid_calls': 0, 'generation_requests': 0, 'generation_requests_max': 20,
               'source_checks': [], 'pipeline_passed': False}
     owned = metadata_client is None
@@ -204,7 +226,7 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
             class SnapshotFetcher:
                 def fetch(self, url): return snapshots[url]
             report['stage'] = 'research_script_storyboard_and_verification'
-            result = VerifiedContentPipeline(CheckpointPipeline(state, audited_router, SnapshotFetcher()),
+            result = VerifiedContentPipeline(CheckpointPipeline(state, audited_router, SnapshotFetcher(), QualityThresholds(language=LANGUAGE)),
                                              VerificationGate(audited_router)).run(TOPIC, SOURCES)
             for name, value in (('research', result.content.research), ('verification', result.content.verification),
                 ('script', result.content.script), ('storyboard', result.content.storyboard),
