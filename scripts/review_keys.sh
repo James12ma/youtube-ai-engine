@@ -12,8 +12,9 @@ case "$cmd" in
   decrypt)
     branch=$3; out=$4; repo=${REPO:-James12ma/youtube-ai-engine}
     work=$(mktemp -d); mkdir -p "$out"
-    for f in $(gh api "repos/$repo/contents?ref=$branch" --jq '.[].name'); do
-      gh api "repos/$repo/contents/$f?ref=$branch" -H "Accept: application/vnd.github.raw" > "$work/$f"
+    # Blob API (base64) — raw downloads of small binary files were sometimes altered in transit.
+    gh api "repos/$repo/git/trees/$branch" --jq '.tree[]|"\(.path) \(.sha)"' | while read -r f sha; do
+      gh api "repos/$repo/git/blobs/$sha" --jq .content | base64 -d > "$work/$f"
     done
     (cd "$work" && sha256sum -c SHA256SUMS --quiet)
     openssl pkeyutl -decrypt -inkey "$dir/private.pem" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
