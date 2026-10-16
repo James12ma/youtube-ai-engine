@@ -5,6 +5,12 @@ on:
       queries:
         description: Semicolon-separated searches
         default: humpback whale;humpback whale underwater;humpback calf;whale mother calf;whale underwater;humpback breach;whale breaching;whale tail
+      min_width:
+        description: Minimum width (1920 = Full HD)
+        default: '1920'
+      review_tags:
+        description: Regex on tags selecting clips for review sheets (empty = first results)
+        default: 'whale|humpback|megaptera|cetacean'
       delivery_pubkey:
         description: Base64 RSA public key (PEM)
         required: true
@@ -28,17 +34,21 @@ jobs:
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           QUERIES: ${{ inputs.queries }}
+          MIN_WIDTH: ${{ inputs.min_width }}
+          REVIEW_TAGS: ${{ inputs.review_tags }}
         run: |
           set -uo pipefail
           if [ -z "${PIXABAY_API_KEY}" ]; then echo "::error title=secret::PIXABAY_API_KEY is not set"; exit 1; fi
-          python -m channel.pixabay --queries "$QUERIES" --out outputs/pixabay > outputs_summary.json 2> err.txt; rc=$?
+          python -m channel.pixabay --queries "$QUERIES" --min-width "$MIN_WIDTH" --review-tags "$REVIEW_TAGS" --review-limit 60 --out outputs/pixabay > outputs_summary.json 2> err.txt; rc=$?
           echo "::notice title=summary::rc=$rc $(head -c 3000 outputs_summary.json)"
           [ $rc -eq 0 ] || echo "::warning title=stderr::$(tail -c 1500 err.txt | tr '\n' ' ' | sed "s/${PIXABAY_API_KEY}/***/g")"
           [ $rc -eq 0 ] || exit $rc
           python - <<'PY'
           import json
           r = json.load(open('outputs/pixabay/pixabay_audit.json'))
-          rows = [f"{c['id']}|{c['best']['height']}p|{c['duration_s']}s|{c['author'][:20]}|{c['tags'][:70]}" for c in r['clips']]
+          import re
+          rows = [f"{c['id']}|{c['best']['height']}p|{c['duration_s']}s|{c['author'][:20]}|{c['tags'][:70]}" for c in r['clips'] if re.search(r'whale|humpback|megaptera|cetacean', c['tags'], re.I)]
+          print(f"::notice title=whale-tagged::{len(rows)} of {r['unique_clips']} unique clips")
           for i in range(0, len(rows), 15):
               print(f'::notice title=clips {i//15}::' + json.dumps(rows[i:i+15], ensure_ascii=False)[:3800])
           PY

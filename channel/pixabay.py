@@ -138,7 +138,8 @@ def download(client: httpx.Client, url: str, dest: Path) -> Path:
     return dest
 
 
-def audit(queries: list[str], out: Path, *, review_limit: int = 40) -> dict:
+def audit(queries: list[str], out: Path, *, review_limit: int = 40, min_width: int = 1920,
+          review_tags: str = '') -> dict:
     """Search, dedupe and download small review copies of the most promising clips."""
     import subprocess
     out.mkdir(parents=True, exist_ok=True)
@@ -146,14 +147,15 @@ def audit(queries: list[str], out: Path, *, review_limit: int = 40) -> dict:
     per_query = {}
     with httpx.Client(trust_env=True) as client:
         for q in queries:
-            clips, meta = search(client, q)
+            clips, meta = search(client, q, min_width=min_width)
             per_query[q] = {**meta, 'usable_1080p_plus': len(clips)}
             for c in clips:
                 if c['id'] in seen:
                     seen[c['id']]['also_matched'] = seen[c['id']].get('also_matched', []) + [q]
                 else:
                     seen[c['id']] = c
-        ranked = list(seen.values())[:review_limit]
+        pattern = re.compile(review_tags, re.I) if review_tags else None
+        ranked = [c for c in seen.values() if pattern is None or pattern.search(c['tags'])][:review_limit]
         for i, c in enumerate(ranked):
             if not c['review']:
                 continue
@@ -169,7 +171,7 @@ def audit(queries: list[str], out: Path, *, review_limit: int = 40) -> dict:
             c['sheet'] = sheet.name
             c['sheet_every_s'] = every
             path.unlink()
-    report = {'queries': per_query, 'unique_clips': len(seen), 'reviewed': min(len(seen), review_limit),
+    report = {'queries': per_query, 'unique_clips': len(seen), 'reviewed': len(ranked), 'min_width': min_width,
               'clips': list(seen.values()), 'cached_at': int(time.time())}
     (out / 'pixabay_audit.json').write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding='utf-8')
     return report
@@ -181,9 +183,12 @@ if __name__ == '__main__':
     ap.add_argument('--queries', required=True, help='semicolon-separated')
     ap.add_argument('--out', type=Path, required=True)
     ap.add_argument('--review-limit', type=int, default=40)
+    ap.add_argument('--min-width', type=int, default=1920)
+    ap.add_argument('--review-tags', default='', help='regex; only clips whose tags match get review sheets')
     args = ap.parse_args()
     try:
-        rep = audit([q.strip() for q in args.queries.split(';') if q.strip()], args.out, review_limit=args.review_limit)
+        rep = audit([q.strip() for q in args.queries.split(';') if q.strip()], args.out, review_limit=args.review_limit,
+                    min_width=args.min_width, review_tags=args.review_tags)
     except PixabayError as exc:
         print(json.dumps({'error': str(exc)}))
         raise SystemExit(2)
