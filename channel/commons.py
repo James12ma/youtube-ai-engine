@@ -84,6 +84,7 @@ def fetch_for_storyboard(storyboard_path: Path, out_dir: Path, *,
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     asset_map, credits, missing, used = {}, [], [], set()
+    reasons: dict[str, str] = {}
     with client_factory() as client:
         for scene in scenes:
             if scene.get('visual_type') != 'broll':
@@ -92,15 +93,23 @@ def fetch_for_storyboard(storyboard_path: Path, out_dir: Path, *,
             try:
                 # Prefer landscape; a portrait photo is cropped to fill the frame.
                 found = search_photo(client, terms, used) or search_photo(client, terms, used, allow_portrait=True)
-            except (httpx.HTTPError, ValueError):
-                found = None
+            except httpx.HTTPStatusError as exc:
+                found = None; reasons[str(scene['index'])] = f'search_http_{exc.response.status_code}'
+            except (httpx.HTTPError, ValueError) as exc:
+                found = None; reasons[str(scene['index'])] = 'search_' + type(exc).__name__
             if not found:
+                reasons.setdefault(str(scene['index']), 'no_qualifying_photo')
                 missing.append(scene['index'])
                 continue
             suffix = '.png' if found['url'].lower().endswith('.png') else '.jpg'
             try:
                 path = download(client, found['url'], out_dir / f"scene_{scene['index']}{suffix}")
-            except (httpx.HTTPError, CommonsError):
+            except httpx.HTTPStatusError as exc:
+                reasons[str(scene['index'])] = f'download_http_{exc.response.status_code}'
+                missing.append(scene['index'])
+                continue
+            except (httpx.HTTPError, CommonsError) as exc:
+                reasons[str(scene['index'])] = 'download_' + type(exc).__name__
                 missing.append(scene['index'])
                 continue
             used.add(found['title'])
@@ -111,7 +120,10 @@ def fetch_for_storyboard(storyboard_path: Path, out_dir: Path, *,
     lines = ['Fotos (Wikimedia Commons):'] + [f"- {c['title'].removeprefix('File:')} — {c['author']}, {c['license']}, {c['page']}"
                                               for c in credits]
     (out_dir / 'credits.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    return {'photos': len(asset_map), 'missing_scenes': missing}
+    summary = {'photos': len(asset_map), 'missing_scenes': missing}
+    if reasons:
+        summary['missing_reasons'] = reasons
+    return summary
 
 
 if __name__ == '__main__':

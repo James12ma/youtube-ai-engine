@@ -36,7 +36,7 @@ def test_fetch_picks_free_large_landscape_photo_and_writes_credits(tmp_path):
                                         {'index':2,'visual_type':'broll','search_terms':'woman portrait'}]}))
     calls=[]
     summary=commons.fetch_for_storyboard(sb,tmp_path/'photos',client_factory=lambda:_client(pages,calls))
-    assert summary=={'photos':1,'missing_scenes':[2]}
+    assert summary=={'photos':1,'missing_scenes':[2],'missing_reasons':{'2':'no_qualifying_photo'}}
     amap=json.loads((tmp_path/'photos'/'asset_map.json').read_text())
     assert list(amap)==['1'] and amap['1'].endswith('scene_1.jpg')
     credits=json.loads((tmp_path/'photos'/'credits.json').read_text())
@@ -52,7 +52,7 @@ def test_same_photo_not_reused_and_foreign_hosts_refused(tmp_path):
                                         {'index':1,'visual_type':'broll','search_terms':'jaguar'}]}))
     calls=[]
     summary=commons.fetch_for_storyboard(sb,tmp_path/'p',client_factory=lambda:_client(pages,calls))
-    assert summary=={'photos':1,'missing_scenes':[1]}
+    assert summary=={'photos':1,'missing_scenes':[1],'missing_reasons':{'1':'no_qualifying_photo'}}
     assert not any('evil.example' in c for c in calls)
 
 
