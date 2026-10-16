@@ -15,6 +15,11 @@ on:
         type: choice
         options: [en, es]
         default: en
+      visual_mode:
+        description: cards (diagrams/text) or photos (free-licensed photos + text)
+        type: choice
+        options: [cards, photos]
+        default: cards
 permissions:
   contents: read
 concurrency:
@@ -41,6 +46,7 @@ jobs:
           RESEARCH_TOPIC: ${{ inputs.topic }}
           RESEARCH_SOURCES: ${{ inputs.sources }}
           CONTENT_LANGUAGE: ${{ inputs.language }}
+          VISUAL_MODE: ${{ inputs.visual_mode }}
         run: python -m scripts.check_research_pipeline
       - name: Publish safe report summary as annotation
         if: always()

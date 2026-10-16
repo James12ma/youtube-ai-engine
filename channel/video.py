@@ -84,12 +84,13 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
 
     stages=[];placeholders:list[int]=[]
     intro=work/'intro.png';card('text_overlay',_LABELS[script.language]['intro'],script.hook,(width,height),intro)
-    stages.append((intro,synthesized[0].duration_s,0.0))
+    stages.append((intro,synthesized[0].duration_s,0.0,False))
     # Divide actual narrated section time across that section's storyboard scenes.
     for sec_idx,sec in enumerate(script.sections):
         scenes=[s for s in storyboard.scenes if s.section_index==sec_idx]
         sum_original=sum(s.end_s-s.start_s for s in scenes)
         for s in scenes:
+            motion=False
             seconds=synthesized[sec_idx+1].duration_s * (s.end_s-s.start_s)/sum_original
             if s.visual_type in ('screen_recording','chart','broll') and unreviewed_preview and s.index not in actual_assets:
                 src=work/f'section_{sec_idx}_scene_{s.index}_placeholder.png'
@@ -105,22 +106,23 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
                 if s.visual_type=='chart' and Path(source).suffix.lower() not in ('.png','.jpg','.jpeg'):
                     raise VideoBuildError('Chart must be a reviewed evidence-backed image')
                 src=Path(source)
+                motion=s.visual_type=='broll' and src.suffix.lower() in ('.jpg','.jpeg','.png')
             else:
                 src=work/f'section_{sec_idx}_scene_{s.index}.png'
                 card(s.visual_type,sec.heading,sec.on_screen_text or s.instruction,(width,height),src)
-            stages.append((src,seconds,0.0))
+            stages.append((src,seconds,0.0,motion))
     end=work/'end.png';card('text_overlay',_LABELS[script.language]['end'],script.cta,(width,height),end)
-    stages.append((end,synthesized[-1].duration_s,0.0))
+    stages.append((end,synthesized[-1].duration_s,0.0,False))
     # Crossfade overlaps shorten finished video. Compensate by lengthening the
     # source clips, so audio and video remain aligned in total duration.
     overlap=.30
     plans=[]
-    for i,(asset,duration,start) in enumerate(stages):
+    for i,(asset,duration,start,motion) in enumerate(stages):
         next_overlap=overlap if i<len(stages)-1 else 0.0
         plans.append(EditPlan(scene_index=i,source_path=str(asset),start_s=start,
                               duration_s=max(.4,duration)+next_overlap,
                               transition='fade' if i%2==0 else 'smoothleft',
-                              overlap_s=overlap if i>0 else 0.0))
+                              overlap_s=overlap if i>0 else 0.0,photo_motion=motion))
     composed=work/'uncaptioned.mp4'
     edit=compose_scenes(plans,norm,composed,width=width,height=height,fps=fps,workdir=work/'edits')
     burn_captions(composed,captions,output_path)

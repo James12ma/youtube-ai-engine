@@ -48,6 +48,7 @@ class EditPlan(BaseModel):
     overlap_s: float = Field(default=0.35, ge=0, le=1)
     zoom: float = Field(default=1.0, ge=1.0, le=1.35)
     highlight_rect: list[int] | None = None
+    photo_motion: bool = False  # still photo: fill the frame and slowly zoom (Ken Burns)
 
 class QCReport(BaseModel):
     passed: bool

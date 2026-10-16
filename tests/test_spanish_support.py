@@ -53,13 +53,13 @@ def test_research_check_reads_owner_topic_sources_language(monkeypatch):
     monkeypatch.setenv('RESEARCH_TOPIC','  Qué es el   ITIN ')
     monkeypatch.setenv('RESEARCH_SOURCES','https://www.irs.gov/es/a https://www.irs.gov/es/b')
     monkeypatch.setenv('CONTENT_LANGUAGE','es')
-    assert crp._configured()==('Qué es el ITIN',('https://www.irs.gov/es/a','https://www.irs.gov/es/b'),'es')
+    assert crp._configured()==('Qué es el ITIN',('https://www.irs.gov/es/a','https://www.irs.gov/es/b'),'es','cards')
     monkeypatch.setenv('RESEARCH_SOURCES','http://insecure.example/a https://www.irs.gov/b')
     with pytest.raises(ValueError,match='HTTPS'):crp._configured()
     monkeypatch.setenv('RESEARCH_SOURCES','https://www.irs.gov/only-one')
     with pytest.raises(ValueError,match='Between 2 and 8'):crp._configured()
     for k in ('RESEARCH_TOPIC','RESEARCH_SOURCES','CONTENT_LANGUAGE'):monkeypatch.delenv(k)
-    assert crp._configured()==(crp.DEFAULT_TOPIC,crp.DEFAULT_SOURCES,'en')
+    assert crp._configured()==(crp.DEFAULT_TOPIC,crp.DEFAULT_SOURCES,'en','cards')
 
 
 def test_storyboard_prompt_avoids_footage_scenes_by_default(tmp_path):
@@ -76,3 +76,19 @@ def test_storyboard_prompt_avoids_footage_scenes_by_default(tmp_path):
     assert 'never use screen_recording, chart or broll' in prompts[-1]
     ContentPipeline(StateStore(_init_repo(tmp_path/'b'),push_required=False),Router_(),FakeFetcher({}),QualityThresholds(footage_available=True))._stage_storyboard(script,verification,[])
     assert 'never use' not in prompts[-1]
+
+
+def test_photos_mode_prompt_asks_for_broll_with_search_terms(tmp_path):
+    from pipeline.models import ScriptArtifact, StoryboardOutput, Scene
+    script=ScriptArtifact(language='es',topic='t',title='T',hook='h',cta='c',duration_s=10,word_count=25,verified_at='now',
+        sections=[ScriptSection(heading='A',narration=' '.join(['w']*20))])
+    prompts=[]
+    class Router_:
+        def execute(self,task_type,input_data,request,schema):
+            prompts.append(request.messages[0]['content'])
+            return StoryboardOutput(scenes=[Scene(index=0,section_index=0,start_s=0,end_s=10,visual_type='broll',instruction='x',search_terms='green anaconda')])
+    verification=VerificationArtifact(topic='t',verified=[],rejected=[],pass_rate=1,verified_at='now')
+    out=ContentPipeline(StateStore(_init_repo(tmp_path/'a'),push_required=False),Router_(),FakeFetcher({}),QualityThresholds(visual_mode='photos'))._stage_storyboard(script,verification,[])
+    assert 'search_terms' in prompts[-1] and out.scenes[0].search_terms=='green anaconda'
+    with pytest.raises(ValueError,match='visual_mode'):
+        ContentPipeline(StateStore(_init_repo(tmp_path/'b'),push_required=False),None,FakeFetcher({}),QualityThresholds(visual_mode='video'))

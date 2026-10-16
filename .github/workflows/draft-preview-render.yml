@@ -121,6 +121,16 @@ jobs:
           mkdir -p "$VOICE_DIR"
           python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
           test -s "$VOICE_DIR/${VOICE_NAME}.onnx"
+      - name: Free-licensed photos for photo scenes (Wikimedia Commons)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if python -c "import json,sys;sys.exit(0 if any(s.get('visual_type')=='broll' for s in json.load(open('outputs/draft/storyboard.json'))['scenes']) else 1)"; then
+            summary=$(python -m channel.commons --storyboard outputs/draft/storyboard.json --out outputs/preview/photos)
+            echo "::notice title=photos::$summary"
+          else
+            mkdir -p outputs/preview/photos && echo '{}' > outputs/preview/photos/asset_map.json
+          fi
       - name: Render unreviewed preview
         shell: bash
         run: |
@@ -128,6 +138,7 @@ jobs:
           python -m channel.cli render --draft outputs/draft \
             --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
             --out outputs/preview/preview.mp4 --format "${{ inputs.format }}" \
+            --asset-map outputs/preview/photos/asset_map.json \
             --unreviewed-preview
       - name: Cut vertical Shorts from the long video
         if: success() && inputs.format == 'landscape'
@@ -187,6 +198,8 @@ jobs:
             outputs/preview/shorts/shorts_report.json
             outputs/preview/preview_work/render_report.json
             outputs/preview/preview_work/words.json
+            outputs/preview/photos/credits.txt
+            outputs/preview/photos/credits.json
             outputs/draft/script.json
             outputs/draft/storyboard.json
             outputs/draft/metadata_draft.json

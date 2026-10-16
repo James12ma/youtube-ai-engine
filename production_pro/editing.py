@@ -20,6 +20,16 @@ def _source_clip(plan:EditPlan,dest:Path,width:int,height:int,fps:int):
  src=Path(plan.source_path)
  if not src.exists():raise EditingError(f'missing source: {src}')
  still=src.suffix.lower() in ('.png','.jpg','.jpeg')
+ if still and plan.photo_motion:
+  # Fill the frame (no letterbox) and zoom slowly towards the centre.
+  frames=max(2,int(round(plan.duration_s*fps)))
+  w2,h2=width*2,height*2
+  vf=(f'scale={w2}:{h2}:force_original_aspect_ratio=increase,crop={w2}:{h2},'
+      f"zoompan=z='1+0.10*on/{frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={width}x{height}:fps={fps},"
+      f'setsar=1,settb=AVTB,format=yuv420p')
+  _run(['ffmpeg','-y','-hide_banner','-loglevel','error','-i',str(src),'-vf',vf,'-t',f'{plan.duration_s:.3f}',
+        '-an','-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p',str(dest)])
+  return float(_probe(dest)['format']['duration'])
  cmd=['ffmpeg','-y','-hide_banner','-loglevel','error']
  if still:cmd+=['-loop','1','-framerate',str(fps),'-i',str(src)]
  else:cmd+=['-ss',str(plan.start_s),'-i',str(src)]

@@ -39,6 +39,7 @@ class Scene(BaseModel):
     visual_type: Literal['screen_recording','diagram','text_overlay','chart','broll']
     instruction: str
     claim_ids: List[str] = Field(default_factory=list)
+    search_terms: str = ''  # photo scenes: short English subject name used to find a free-licensed photo
     @field_validator('visual_type', mode='before')
     @classmethod
     def _normalize_visual_type(cls, value):
