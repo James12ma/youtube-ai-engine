@@ -265,7 +265,7 @@ class ContentPipeline:
 
         Free models pick sensible visuals but often miscalculate timestamps
         (live run: a zero-length scene). Each section's spoken time is its
-        word count at the configured words-per-second (hook goes with the first
+        share of the script's duration by spoken words (hook goes with the first
         section, CTA with the last); that time is split evenly across the
         section's scenes in their original order. Every section must have at
         least one scene. Model-supplied timestamps are ignored, and the
@@ -281,10 +281,12 @@ class ContentPipeline:
         missing=[i for i,scenes in by_section.items() if not scenes]
         if missing:
             raise PipelineQualityError('storyboard',{'reason':'section without scene','index':missing[0]})
-        wps=self._t.target_words_per_second
-        seconds=[_word_count(section.narration)/wps for section in script.sections]
-        seconds[0]+=_word_count(script.hook)/wps
-        seconds[-1]+=_word_count(script.cta)/wps
+        words=[_word_count(section.narration) for section in script.sections]
+        words[0]+=_word_count(script.hook);words[-1]+=_word_count(script.cta)
+        total_words=sum(words)
+        if total_words<=0 or script.duration_s<=0:return output  # validator reports zero duration
+        # Split the script's own duration in proportion to spoken words.
+        seconds=[script.duration_s*w/total_words for w in words]
         retimed=[];clock=0.0
         for i in range(n):
             scenes=by_section[i];share=seconds[i]/len(scenes)
