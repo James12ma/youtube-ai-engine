@@ -14,7 +14,7 @@
     {"narration": "Cada año, las ballenas jorobadas emprenden una de las migraciones más largas de cualquier mamífero.",
      "sources": ["https://www.fisheries.noaa.gov/species/humpback-whale"],
      "shots": [
-       {"clip": "gordons", "in_s": 31.0, "out_s": 38.5, "label": "Bahía Gordon, Sídney (Australia)", "note": "ballena sale a la superficie con salpicadura"},
+       {"clip": "gordons", "in_s": 32.0, "out_s": 39.0, "label": "Bahía Gordon, Sídney (Australia)", "note": "ballena sale a la superficie con salpicadura"},
        {"clip": "gordons", "in_s": 52.5, "out_s": 60.0, "label": "Bahía Gordon, Sídney (Australia)", "note": "gran salpicadura en superficie"}]},
     {"narration": "Viajan miles de kilómetros entre las aguas frías donde se alimentan y las aguas cálidas donde nacen sus crías.",
      "sources": ["https://www.fisheries.noaa.gov/species/humpback-whale"],
@@ -38,7 +38,7 @@
        {"clip": "gerringong", "in_s": 116.0, "out_s": 126.0, "label": "Gerringong (Australia)", "note": "ballena nadando"}]},
     {"narration": "Estas imágenes vienen de otros océanos, pero la historia es la misma: viajar, nacer y sobrevivir.",
      "shots": [
-       {"clip": "gordons", "in_s": 70.0, "out_s": 84.0, "label": "Bahía Gordon, Sídney (Australia)", "note": "ballena bajo la superficie y salpicadura"}]}
+       {"clip": "gordons", "in_s": 74.0, "out_s": 86.0, "label": "Bahía Gordon, Sídney (Australia)", "note": "ballena bajo la superficie y salpicadura final"}]}
   ],
   "ambience": ["ocean waves", "sea waves", "waves beach"],
   "credits_note": "Narración: voz sintética Piper (es_MX, texto a voz). Datos: NOAA Fisheries (fisheries.noaa.gov/species/humpback-whale). Muestra de revisión de Alan7 — no publicada."
