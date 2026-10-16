@@ -40,6 +40,12 @@ jobs:
           for k,v in amap.items():
               d=_source_clip(EditPlan(scene_index=int(k),source_path=v,duration_s=6,photo_motion=True),out/f'clip_{k}.mp4',1920,1080,24)
               summary[f'clip_{k}_s']=round(d,2)
+          import httpx
+          from channel.commons import API, USER_AGENT
+          r=httpx.get(API,params={'action':'query','format':'json','formatversion':'2','generator':'search','gsrsearch':'filetype:bitmap '+terms[0],'gsrnamespace':'6','gsrlimit':'20','prop':'imageinfo','iiprop':'url|size|mime|extmetadata','iiurlwidth':'1920'},headers={'User-Agent':USER_AGENT},timeout=20)
+          j=r.json()
+          pages=j.get('query',{}).get('pages',[])
+          summary['debug']={'status':r.status_code,'keys':list(j)[:5],'pages':len(pages),'sample':[(p.get('title','')[:40],(p.get('imageinfo') or [{}])[0].get('mime'),(p.get('imageinfo') or [{}])[0].get('width'),(p.get('imageinfo') or [{}])[0].get('height'),((p.get('imageinfo') or [{}])[0].get('extmetadata') or {}).get('LicenseShortName',{}).get('value'),bool((p.get('imageinfo') or [{}])[0].get('thumburl'))) for p in pages[:6]]}
           summary['credits']=[f"{c['search_terms']}: {c['title']} | {c['license']} | {c['author'][:40]}" for c in json.loads((out/'photos'/'credits.json').read_text())]
           print('::notice title=photo-check::'+json.dumps(summary,ensure_ascii=False)[:3500])
           PY
