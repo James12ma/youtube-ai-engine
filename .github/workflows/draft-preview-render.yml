@@ -129,6 +129,16 @@ jobs:
             --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
             --out outputs/preview/preview.mp4 --format "${{ inputs.format }}" \
             --unreviewed-preview
+      - name: Cut vertical Shorts from the long video
+        if: success() && inputs.format == 'landscape'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m channel.shorts --work outputs/preview/preview_work --out outputs/preview/shorts --count 3
+          for f in outputs/preview/shorts/short_*.mp4; do
+            d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
+            echo "::notice title=short::$(basename "$f") duration_s=$d"
+          done
       - name: Thumbnail draft from title
         if: success()
         shell: bash
@@ -173,6 +183,8 @@ jobs:
             outputs/preview/preview.mp4
             outputs/preview/preview.srt
             outputs/preview/thumbnail.jpg
+            outputs/preview/shorts/short_*.mp4
+            outputs/preview/shorts/shorts_report.json
             outputs/preview/preview_work/render_report.json
             outputs/preview/preview_work/words.json
             outputs/draft/script.json
