@@ -25,5 +25,6 @@ jobs:
             [[ "$TARGET" =~ ^qa/[0-9]+$ ]] || { echo "only qa/<run id> branches"; exit 1; }
             refs="$TARGET"
           fi
-          for r in $refs; do git push -q "$repo" --delete "$r" && echo "deleted $r"; done
+          git init -q "$RUNNER_TEMP/r" && cd "$RUNNER_TEMP/r"
+          for r in $refs; do git push -q "$repo" --delete "$r"; echo "deleted $r"; done
           echo "::notice title=qa-cleanup::remaining=$(git ls-remote --heads "$repo" 'qa/*' | wc -l)"
