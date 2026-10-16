@@ -1,0 +1,57 @@
+name: Alan7 bot deploy (Cloudflare Worker + D1, free plan)
+# Needs GitHub secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+# Bot secrets (TELEGRAM_BOT_TOKEN, OWNER_ID, GITHUB_TOKEN) are set in the Cloudflare dashboard, not here.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: alan7-bot-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: alan7_bot
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Cloudflare secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error title=cloudflare::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID GitHub secrets are missing"; exit 1
+          fi
+      - run: npm install --no-audit --no-fund
+      - name: Tests must pass before deploy
+        run: npm test
+      - name: D1 database (create once, reuse after)
+        run: |
+          set -euo pipefail
+          id=$(npx wrangler d1 list --json | python3 -c "import json,sys;print(next((d['uuid'] for d in json.load(sys.stdin) if d['name']=='alan7-bot'),''))")
+          if [ -z "$id" ]; then
+            npx wrangler d1 create alan7-bot > create.log 2>&1 || { tail -5 create.log; exit 1; }
+            id=$(npx wrangler d1 list --json | python3 -c "import json,sys;print(next(d['uuid'] for d in json.load(sys.stdin) if d['name']=='alan7-bot'))")
+            echo "::notice title=d1::created alan7-bot"
+          fi
+          sed -i "s/__D1_ID__/$id/" wrangler.toml
+          npx wrangler d1 migrations apply alan7-bot --remote
+      - name: Deploy Worker
+        run: |
+          set -euo pipefail
+          npx wrangler deploy 2>&1 | tee deploy.log
+          url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1 || true)
+          echo "::notice title=worker-url::${url:-see Cloudflare dashboard}"
+          if [ -n "$url" ]; then
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url/health" || true)
+            echo "::notice title=health::$url/health -> HTTP $code"
+          fi

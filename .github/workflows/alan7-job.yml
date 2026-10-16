@@ -1,0 +1,38 @@
+name: Alan7 job (dispatched by the Telegram bot)
+run-name: alan7 ${{ inputs.job_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Bot job id
+        required: true
+      kind:
+        description: Job kind
+        required: true
+      arg:
+        description: Optional argument
+        required: false
+        default: ''
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Validate request
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          KIND: ${{ inputs.kind }}
+        run: |
+          [[ "$JOB_ID" =~ ^[0-9a-f]{8}$ ]] || { echo "::error::bad job id"; exit 1; }
+          case "$KIND" in test) ;; *) echo "::error::kind '$KIND' is not runnable here"; exit 1 ;; esac
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: System test (no GPU, nothing published)
+        run: |
+          set -euo pipefail
+          python3 --version; ffmpeg -version 2>/dev/null | head -1 || true
+          test -f channel/documentary.py && test -f alan7_bot/src/index.js
+          echo "::notice title=alan7-job::job ${{ inputs.job_id }} kind=${{ inputs.kind }} OK"

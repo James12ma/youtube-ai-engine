@@ -1,0 +1,19 @@
+# Alan7 Telegram control bot. The D1 database_id is filled in by the deploy workflow.
+name = "alan7-bot"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "alan7-bot"
+database_id = "__D1_ID__"
+migrations_dir = "migrations"
+
+[observability]
+enabled = true
+# Secrets (set in the Cloudflare dashboard, never here):
+#   TELEGRAM_BOT_TOKEN, OWNER_ID, GITHUB_TOKEN (optional)

@@ -1,0 +1,29 @@
+name: Alan7 bot tests (Worker in Miniflare, fake Telegram/GitHub)
+on:
+  workflow_dispatch:
+  push:
+    paths: ['alan7_bot/**', '.github/workflows/alan7-bot-test.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: alan7_bot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Tests
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test.log
+          echo "::notice title=bot-tests::$(grep -E '^# (tests|pass|fail)' test.log | tr '\n' ' ')"
+      - if: failure()
+        run: echo "::error title=bot-tests::$(grep -E 'not ok|AssertionError|Error' test.log | head -8 | tr '\n' ' ' | cut -c1-1500)"
