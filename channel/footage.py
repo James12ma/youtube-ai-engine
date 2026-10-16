@@ -36,7 +36,7 @@ def _best_derivative(info: dict) -> dict | None:
     return best
 
 
-def search_clips(client: httpx.Client, terms: str, *, limit: int = 30, min_height: int = 720,
+def search_clips(client: httpx.Client, terms: str, *, limit: int = 50, min_height: int = 720,
                  min_seconds: float = 4.0) -> tuple[list[dict], dict]:
     params = {'action': 'query', 'format': 'json', 'formatversion': '2', 'generator': 'search',
               'gsrsearch': f'filetype:video {terms}', 'gsrnamespace': '6', 'gsrlimit': str(limit),

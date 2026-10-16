@@ -5,6 +5,10 @@ on:
       species:
         description: Semicolon-separated search terms (scientific names work best)
         required: true
+      detail:
+        description: '1 = list every usable clip with its description'
+        required: false
+        default: '0'
 permissions:
   contents: read
 jobs:
@@ -22,15 +26,24 @@ jobs:
       - name: Audit
         env:
           SPECIES: ${{ inputs.species }}
+          DETAIL: ${{ inputs.detail }}
         run: |
           python - <<'PY'
           import json, os, pathlib
           from channel.footage import audit
           rows = audit([s.strip() for s in os.environ['SPECIES'].split(';') if s.strip()], pathlib.Path('outputs/footage/audit.json'))
+          detail = os.environ.get('DETAIL') == '1'
           for r in rows:
               short = {k: v for k, v in r.items() if k != 'clips'}
-              short['titles'] = [f"{c['title'][5:60]} | {c['duration_s']}s | {c['height']}p | {c['license']}" for c in r.get('clips', [])[:8]]
-              print('::notice title=' + r['species'].replace(':', ' ') + '::' + json.dumps(short, ensure_ascii=False)[:3800])
+              if detail:
+                  # Several notices per species so every clip's description is visible (no downloads).
+                  clips = r.get('clips', [])
+                  for i in range(0, len(clips), 6):
+                      part = [f"{c['title'][5:70]} | {c['duration_s']}s {c['height']}p | {c['license']} | {c['author'][:30]} | {c['description'][:160]}" for c in clips[i:i+6]]
+                      print('::notice title=' + r['species'].replace(':', ' ') + f' {i//6}::' + json.dumps(part, ensure_ascii=False)[:3800])
+              else:
+                  short['titles'] = [f"{c['title'][5:60]} | {c['duration_s']}s | {c['height']}p | {c['license']}" for c in r.get('clips', [])[:8]]
+                  print('::notice title=' + r['species'].replace(':', ' ') + '::' + json.dumps(short, ensure_ascii=False)[:3800])
           PY
       - uses: actions/upload-artifact@v4
         with:
