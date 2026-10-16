@@ -30,6 +30,7 @@ class QualityThresholds:
     storyboard_tolerance:float=0.20
     schema_version:str='1.0'
     language:str='en'  # narration language: 'en' or 'es'
+    footage_available:bool=False  # no reviewed screen recordings/charts/b-roll unless the owner supplies them
 @dataclass
 class PipelineResult:
     research:ResearchArtifact
@@ -336,12 +337,14 @@ class ContentPipeline:
                 # number must appear in a claim this section cites.
                 raise PipelineQualityError('script',{'reason':'numeric claim without citation','section':section.heading})
     def _stage_storyboard(self,script:ScriptArtifact,verification:VerificationArtifact,hits:List[str])->StoryboardOutput:
-        task_id=compute_task_id('storyboard',{'script_fingerprint':_digest(script.model_dump(exclude={'verified_at'})), 'claims_fingerprint':_digest([c.model_dump() for c in verification.verified]),'tolerance':self._t.storyboard_tolerance},self._t.schema_version)
+        task_id=compute_task_id('storyboard',{'script_fingerprint':_digest(script.model_dump(exclude={'verified_at'})), 'claims_fingerprint':_digest([c.model_dump() for c in verification.verified]),'tolerance':self._t.storyboard_tolerance,'footage':self._t.footage_available},self._t.schema_version)
         cached=self._state.get_cached_result(task_id)
         if cached is not None:
             hits.append('storyboard');return StoryboardOutput.model_validate(cached)
         section_blob='\n'.join('- #'+str(i)+' '+s.heading+': '+s.narration for i,s in enumerate(script.sections))
-        request=LLMRequest(messages=[{'role':'system','content':'You convert a script into a scene-by-scene storyboard. Every scene references a valid section_index and uses one of: screen_recording, diagram, text_overlay, chart, broll.'},
+        visual_types=('screen_recording, diagram, text_overlay, chart, broll' if self._t.footage_available
+                      else 'diagram or text_overlay (no real footage, recordings or charts exist for this video; never use screen_recording, chart or broll)')
+        request=LLMRequest(messages=[{'role':'system','content':'You convert a script into a scene-by-scene storyboard. Every scene references a valid section_index and uses one of: '+visual_types+'.'},
             {'role':'user','content':'Total target duration: '+str(round(script.duration_s,1))+' seconds.\n\nSections:\n'+section_blob+'\n\nReturn json with a \'scenes\' array of 10 to 24 scenes (at least one per section); each scene has index, section_index, start_s, end_s, visual_type, instruction (one short sentence, at most 20 words), claim_ids. Scenes must be contiguous with no gaps, starting at 0.'}],schema=StoryboardOutput,temperature=0.3,max_tokens=4096)
         feedback=''
         for revision in range(self._t.max_stage_revisions):
