@@ -31,6 +31,37 @@ class RequestBudgetExceeded(RuntimeError):
     pass
 
 
+def safe_gate_failure(exc):
+    """Export verification-gate categories and counts only; never claim or narration text."""
+    reason = str(getattr(exc, 'reason', ''))
+    categories = ['no claims passed verification', 'contradiction(s) detected',
+                  'script cites unverified or rejected claim ids', 'numeric narration without citation',
+                  'untraceable numbers in hook or CTA', 'Artifact topics do not match',
+                  'Inconsistent source evidence', 'Duplicate claim IDs', 'Verification artifact changed claim evidence',
+                  'Malformed claim provenance', 'Missing claim evidence', 'Claim excerpt missing from source text',
+                  'Invalid source IDs']
+    result = {'categories': [c for c in categories if c in reason]}
+    rep = getattr(exc, 'report', {}) or {}
+    for key in ('accepted_count', 'rejected_count'):
+        if isinstance(rep.get(key), int): result[key] = rep[key]
+    if isinstance(rep.get('contradictions'), dict):
+        result['contradiction_pairs'] = len(rep['contradictions'].get('pairs') or [])
+    tr = rep.get('traceability')
+    if isinstance(tr, dict):
+        result['unverified_cited_claims'] = len(tr.get('unverified_cited_claims') or [])
+        result['uncited_numeric_sections'] = len(tr.get('uncited_numeric_sections') or [])
+    verdicts = rep.get('verdicts')
+    if isinstance(verdicts, list):
+        allowed = {'At least one candidate source contradicts this claim', 'No sufficiently supported evidence'}
+        result['verdicts'] = [{'accepted': bool(v.get('accepted')),
+                               'label': str(v.get('best_label'))[:20],
+                               'confidence': round(float(v.get('best_confidence') or 0), 3),
+                               'weighted': round(float(v.get('weighted_score') or 0), 3),
+                               'reason': v.get('reason') if v.get('reason') in allowed else ('heuristic score' if str(v.get('reason','')).startswith('Heuristic') else 'other')}
+                              for v in verdicts[:12] if isinstance(v, dict)]
+    return result
+
+
 def safe_quality_failure(exc):
     """Export gate-owned vocabulary/counts; never generated text or provider bodies."""
     import math
@@ -189,6 +220,8 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
             report['blocked'] = 'generation_request_budget_exhausted'
         if isinstance(exc, PipelineQualityError):
             report['quality_failure'] = safe_quality_failure(exc)
+        if type(exc).__name__ == 'GateRejected':
+            report['gate_failure'] = safe_gate_failure(exc)
         known=re.search(r'\b(RateLimitError|AuthError|ClientError|SchemaValidationError|ServerError|BillableModelRejected|ConfigurationError)\b',str(exc))
         if known:report['classified_failure']=known.group(1)
     finally:
