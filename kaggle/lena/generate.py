@@ -5,6 +5,7 @@
 # PRIVATE Kaggle dataset; the decrypted image stays in /tmp (not in the notebook output).
 # Hard limits: a watchdog ends the process at CFG['max_seconds']; NaN latents abort immediately.
 import glob, json, os, shutil, subprocess, sys, threading, time, urllib.request
+os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True')
 T0 = time.time()
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Kaggle script kernels upload only the code file, so the workflow prepends CFG_JSON to this script.
@@ -55,7 +56,14 @@ try:
                                                        torch_dtype=torch.float16, cache_dir=cache, expand_timesteps=True)
     else:
         pipe = WanPipeline.from_pretrained(mid, vae=vae, text_encoder=te, transformer=tr, torch_dtype=torch.float16, cache_dir=cache)
-    pipe.enable_model_cpu_offload()
+    # T4 (14.6 GB): model-level offload ran out of memory at native 1280x704 (run 38971992788).
+    # Group offloading streams the transformer's layers from CPU RAM, so only a few layers sit on the GPU.
+    from diffusers.hooks import apply_group_offloading
+    onload, offload = torch.device('cuda'), torch.device('cpu')
+    pipe.transformer.enable_group_offload(onload_device=onload, offload_device=offload, offload_type='leaf_level', use_stream=True)
+    apply_group_offloading(pipe.text_encoder, onload_device=onload, offload_device=offload, offload_type='block_level', num_blocks_per_group=4)
+    pipe.vae.to(onload)
+    report['offload'] = 'group_offload leaf_level (transformer) + block_level (text encoder)'
     try:
         pipe.vae.enable_tiling()
     except Exception:
@@ -76,7 +84,15 @@ try:
         if lat is not None and not torch.isfinite(lat).all():
             report['error'] = f'non-finite latents at step {i + 1} (fp16 overflow) — aborted, no retry'; save()
             os._exit(4)
-        report['steps_done'] = i + 1; report['step_times'] = step_times; save()
+        report['steps_done'] = i + 1; report['step_times'] = step_times
+        if i + 1 == 3:  # projection after 3 steps: stop early (saves quota) if the clip cannot finish in time
+            per = sum(step_times[1:]) / max(1, len(step_times) - 1)
+            projected = (time.time() - T0) + per * (CFG['steps'] - 3) + 600
+            report['projected_total_s'] = round(projected)
+            if projected > CFG['max_seconds']:
+                report['error'] = f'projected {round(projected)} s exceeds the {CFG["max_seconds"]} s limit — stopped early to save GPU quota'
+                save(); os._exit(5)
+        save()
         return kwargs
     t1 = time.time()
     frames = pipe(**kw, callback_on_step_end=cb, callback_on_step_end_tensor_inputs=['latents']).frames[0]
