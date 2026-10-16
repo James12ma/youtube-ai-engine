@@ -15,7 +15,7 @@ import httpx
 
 API = 'https://commons.wikimedia.org/w/api.php'
 USER_AGENT = 'Alan7VideoEngine/1.0 (https://github.com/James12ma/youtube-ai-engine; owner-reviewed educational videos)'
-ALLOWED_DOWNLOAD_HOSTS = {'upload.wikimedia.org'}
+ALLOWED_DOWNLOAD_HOSTS = {'upload.wikimedia.org', 'thumb.wikimedia.org'}  # Wikimedia serves resized photos from thumb.
 MAX_IMAGE_BYTES = 12_000_000
 MIN_WIDTH = 1200
 _ALLOWED_LICENSE = re.compile(r'^(public domain|pd\b.*|cc0.*|cc[ -]by(-sa)?[ -]\d(\.\d)?.*|cc[ -]by(-sa)?)$', re.I)
