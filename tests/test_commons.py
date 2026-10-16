@@ -42,7 +42,7 @@ def test_fetch_picks_free_large_landscape_photo_and_writes_credits(tmp_path):
     credits=json.loads((tmp_path/'photos'/'credits.json').read_text())
     assert credits[0]['title']=='File:D.jpg' and credits[0]['author']=='Ana Pérez' and credits[0]['license']=='CC BY 2.0'
     assert 'D.jpg — Ana Pérez, CC BY 2.0' in (tmp_path/'photos'/'credits.txt').read_text()
-    assert sum('commons.wikimedia.org' in c for c in calls)==1  # blocked terms never searched
+    assert sum('commons.wikimedia.org' in c for c in calls)==1  # landscape found first; blocked terms never searched
 
 
 def test_same_photo_not_reused_and_foreign_hosts_refused(tmp_path):
@@ -54,3 +54,12 @@ def test_same_photo_not_reused_and_foreign_hosts_refused(tmp_path):
     summary=commons.fetch_for_storyboard(sb,tmp_path/'p',client_factory=lambda:_client(pages,calls))
     assert summary=={'photos':1,'missing_scenes':[1]}
     assert not any('evil.example' in c for c in calls)
+
+
+def test_portrait_used_only_when_no_landscape(tmp_path):
+    pages=[_page('File:P.jpg','CC0',width=2000,height=3000)]
+    sb=tmp_path/'s.json'
+    sb.write_text(json.dumps({'scenes':[{'index':0,'visual_type':'broll','search_terms':'jaguar'}]}))
+    calls=[]
+    assert commons.fetch_for_storyboard(sb,tmp_path/'p',client_factory=lambda:_client(pages,calls))=={'photos':1,'missing_scenes':[]}
+    assert sum('commons.wikimedia.org' in c for c in calls)==2

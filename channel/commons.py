@@ -35,7 +35,7 @@ def license_allowed(short_name: str) -> bool:
     return bool(_ALLOWED_LICENSE.match((short_name or '').strip()))
 
 
-def search_photo(client: httpx.Client, terms: str, exclude: set[str]) -> dict | None:
+def search_photo(client: httpx.Client, terms: str, exclude: set[str], *, allow_portrait: bool = False) -> dict | None:
     """Best free-licensed, landscape-ish, large bitmap for ``terms``; None if nothing qualifies."""
     terms = ' '.join(terms.split())[:60]
     if not terms or _BLOCKED_TERMS.search(terms):
@@ -53,7 +53,7 @@ def search_photo(client: httpx.Client, terms: str, exclude: set[str]) -> dict | 
         url = info.get('thumburl') or info.get('url') or ''
         if (page.get('title') in exclude or info.get('mime') not in ('image/jpeg', 'image/png')
                 or not license_allowed(lic) or int(info.get('width') or 0) < MIN_WIDTH
-                or int(info.get('width') or 0) < int(info.get('height') or 1)
+                or (not allow_portrait and int(info.get('width') or 0) < int(info.get('height') or 1))
                 or urlparse(url).hostname not in ALLOWED_DOWNLOAD_HOSTS or urlparse(url).scheme != 'https'):
             continue
         return {'title': page['title'], 'url': url, 'license': lic,
@@ -90,7 +90,8 @@ def fetch_for_storyboard(storyboard_path: Path, out_dir: Path, *,
                 continue
             terms = scene.get('search_terms') or ''
             try:
-                found = search_photo(client, terms, used)
+                # Prefer landscape; a portrait photo is cropped to fill the frame.
+                found = search_photo(client, terms, used) or search_photo(client, terms, used, allow_portrait=True)
             except (httpx.HTTPError, ValueError):
                 found = None
             if not found:
