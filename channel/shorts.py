@@ -77,6 +77,16 @@ def plan_shorts(words: Sequence[WordTimestamp], chapters: Sequence[dict], *, cou
     return [c.model_copy(update={'index': i}) for i, c in enumerate(candidates)]
 
 
+def _dimensions(path: Path) -> tuple[int, int]:
+    proc = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height',
+                           '-of', 'csv=p=0:s=x', str(path)], capture_output=True, text=True)
+    try:
+        w, h = proc.stdout.strip().split('x')[:2]
+        return int(w), int(h)
+    except ValueError:
+        return 16, 9
+
+
 def cut_short(source_video: Path, words: Sequence[WordTimestamp], plan: ShortPlan, output: Path,
               *, width: int = 1080, height: int = 1920) -> dict:
     """Reframe one excerpt of the UNCAPTIONED long video to vertical with new captions."""
@@ -97,11 +107,17 @@ def cut_short(source_video: Path, words: Sequence[WordTimestamp], plan: ShortPla
                          max_chars_per_line=18, bottom_margin=430, max_duration_s=2.0)
     sub = str(ass.resolve()).replace('\\', '\\\\').replace(':', '\\:').replace("'", r"\'") \
         .replace('[', r'\[').replace(']', r'\]')
-    # Blurred full-bleed background + the original 16:9 frame centred above captions.
-    graph = (f'[0:v]split=2[bg][fg];'
-             f'[bg]scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},boxblur=24:2[b];'
-             f'[fg]scale={width}:-2[f];'
-             f'[b][f]overlay=(W-w)/2:(H-h)/2-260,subtitles=filename=\'{sub}\'[v]')
+    src_w, src_h = _dimensions(source_video)
+    if src_h > src_w:
+        # Native vertical render: scenes were drawn for 9:16, just add captions.
+        graph = f'[0:v]scale={width}:{height},subtitles=filename=\'{sub}\'[v]'
+    else:
+        # Fallback for a landscape source: blurred full-bleed background + the
+        # original 16:9 frame centred above captions (small text gets hard to read).
+        graph = (f'[0:v]split=2[bg][fg];'
+                 f'[bg]scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},boxblur=24:2[b];'
+                 f'[fg]scale={width}:-2[f];'
+                 f'[b][f]overlay=(W-w)/2:(H-h)/2-260,subtitles=filename=\'{sub}\'[v]')
     _run(['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error',
           '-ss', f'{plan.start_s:.3f}', '-t', f'{plan.duration_s:.3f}', '-i', str(source_video),
           '-filter_complex', graph, '-map', '[v]', '-map', '0:a:0',

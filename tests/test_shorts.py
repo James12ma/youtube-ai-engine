@@ -46,6 +46,7 @@ def test_cut_short_builds_vertical_command_with_shifted_captions(tmp_path,monkey
     plan=shorts.ShortPlan(index=0,chapter_title='C',start_s=100.0,end_s=words[-1].end_s+0.25,words=len(words))
     cmds=[]
     monkeypatch.setattr(shorts,'_run',lambda cmd:cmds.append(cmd))
+    monkeypatch.setattr(shorts,'_dimensions',lambda p:(1920,1080))
     result=shorts.cut_short(src,words,plan,tmp_path/'out'/'short_1.mp4')
     cmd=cmds[0]
     assert cmd[cmd.index('-ss')+1]=='100.000' and 'crop=1080:1920' in cmd[cmd.index('-filter_complex')+1]
@@ -58,3 +59,15 @@ def test_make_shorts_requires_some_excerpt(tmp_path):
     (work/'render_report.json').write_text(json.dumps({'chapters':[{'start_s':0,'title':'A'}]}))
     (work/'words.json').write_text(json.dumps({'words':[{'word':'sin','start_s':0,'end_s':0.3}]}))
     with pytest.raises(shorts.ShortsError,match='no sentence-aligned'):shorts.make_shorts(work,tmp_path/'o')
+
+
+def test_native_vertical_source_is_not_letterboxed(tmp_path,monkeypatch):
+    src=tmp_path/'uncaptioned.mp4';src.write_bytes(b'x')
+    words=_words(['Hola esto es una prueba.'],start=10)
+    plan=shorts.ShortPlan(index=0,chapter_title='C',start_s=10.0,end_s=words[-1].end_s+0.25,words=len(words))
+    cmds=[]
+    monkeypatch.setattr(shorts,'_run',lambda cmd:cmds.append(cmd))
+    monkeypatch.setattr(shorts,'_dimensions',lambda p:(1080,1920))
+    shorts.cut_short(src,words,plan,tmp_path/'o'/'s.mp4')
+    graph=cmds[0][cmds[0].index('-filter_complex')+1]
+    assert 'boxblur' not in graph and 'overlay' not in graph

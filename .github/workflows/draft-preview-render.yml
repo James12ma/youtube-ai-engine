@@ -33,7 +33,7 @@ jobs:
   render:
     if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 120
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       PYTHONUNBUFFERED: '1'
@@ -140,12 +140,22 @@ jobs:
             --out outputs/preview/preview.mp4 --format "${{ inputs.format }}" \
             --asset-map outputs/preview/photos/asset_map.json \
             --unreviewed-preview
-      - name: Cut vertical Shorts from the long video
+      - name: Render native vertical version for Shorts
         if: success() && inputs.format == 'landscape'
         shell: bash
         run: |
           set -euo pipefail
-          python -m channel.shorts --work outputs/preview/preview_work --out outputs/preview/shorts --count 3
+          python -m channel.cli render --draft outputs/draft \
+            --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
+            --out outputs/preview_vertical/vertical.mp4 --format portrait \
+            --asset-map outputs/preview/photos/asset_map.json \
+            --unreviewed-preview
+      - name: Cut vertical Shorts from the vertical render
+        if: success() && inputs.format == 'landscape'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m channel.shorts --work outputs/preview_vertical/vertical_work --out outputs/preview/shorts --count 3
           for f in outputs/preview/shorts/short_*.mp4; do
             d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
             echo "::notice title=short::$(basename "$f") duration_s=$d"
