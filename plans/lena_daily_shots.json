@@ -1,0 +1,40 @@
+{
+ "base": {
+  "seed": 2026,
+  "width": 1280,
+  "height": 704,
+  "frames": 73,
+  "steps": 40,
+  "guidance": 5.0,
+  "negative_prompt": "leopard, cheetah, slender body, small rosettes without center spots, extra legs, extra tail, missing legs, merged animals, deformed paws, deformed face, morphing, flicker, static frame, slideshow, text, watermark, cartoon, CGI, painting, low quality, blurry",
+  "mode": "a",
+  "max_seconds": 16200
+ },
+ "shots": [
+  {
+   "id": "walk",
+   "ref_file": "shot1.png",
+   "prompt": "An adult female jaguar walks slowly forward through the leaf litter, her two cubs following close behind her, each paw placed firmly on the ground, the camera dollies slowly with them, photorealistic wildlife documentary footage, Amazon rainforest, natural soft light through the canopy, fine fur and whisker detail, natural anatomy, smooth slow camera movement, continuous natural motion"
+  },
+  {
+   "id": "closeup",
+   "ref_file": "shot2.png",
+   "prompt": "Close-up of an adult female jaguar's face: she slowly turns her head, blinks, her ears twitch and her whiskers move as she breathes and watches the forest, very slow push-in, photorealistic wildlife documentary footage, Amazon rainforest, natural soft light through the canopy, fine fur and whisker detail, natural anatomy, smooth slow camera movement, continuous natural motion"
+  },
+  {
+   "id": "drink",
+   "ref_file": "shot3.png",
+   "prompt": "An adult female jaguar laps water at the muddy edge of a forest river while her cub stands beside her, gentle ripples spread across the water, the camera holds steady with a slight drift, photorealistic wildlife documentary footage, Amazon rainforest, natural soft light through the canopy, fine fur and whisker detail, natural anatomy, smooth slow camera movement, continuous natural motion"
+  },
+  {
+   "id": "stalk",
+   "ref_file": "shot4.png",
+   "prompt": "An adult female jaguar stalks low and slowly through the undergrowth, shoulders rolling with each deliberate step, the camera tracks smoothly beside her at ground level, photorealistic wildlife documentary footage, Amazon rainforest, natural soft light through the canopy, fine fur and whisker detail, natural anatomy, smooth slow camera movement, continuous natural motion"
+  },
+  {
+   "id": "ferns",
+   "ref_file": "shot5.png",
+   "prompt": "An adult female jaguar steps quietly between large ferns, pausing to look ahead, the fronds sway gently as she passes, slow cinematic tracking shot, photorealistic wildlife documentary footage, Amazon rainforest, natural soft light through the canopy, fine fur and whisker detail, natural anatomy, smooth slow camera movement, continuous natural motion"
+  }
+ ]
+}

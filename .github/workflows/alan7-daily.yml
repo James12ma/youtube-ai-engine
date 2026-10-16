@@ -1,0 +1,86 @@
+name: Alan7 daily AI shot (Kaggle free GPU -> private Telegram delivery)
+# One 3-second native 1280x704 shot per day from the LENA storyboard, generated on the owner's free
+# Kaggle T4 (~1 GPU-hour) from private start frames, AI-labelled and sent ONLY to the owner on Telegram.
+# Nothing is published. No automatic retries.
+on:
+  schedule:
+    - cron: '17 9 * * *'   # 09:17 UTC = 05:17 in Santo Domingo
+  workflow_dispatch:
+    inputs:
+      shot:
+        description: 'Shot index (empty = rotate by day)'
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: kaggle-gpu
+  cancel-in-progress: false
+jobs:
+  shot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_USERNAME }}
+      KUSER: goldgoat
+      TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+      OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install -q 'kaggle>=1.8'
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg fonts-dejavu-core
+      - name: Build the kernel for today's shot
+        env: { SHOT: '${{ inputs.shot }}' }
+        run: |
+          set -euo pipefail
+          d=$RUNNER_TEMP/k; mkdir -p "$d"
+          python - "$d" <<'PY'
+          import datetime, json, os, sys
+          d = sys.argv[1]
+          plan = json.load(open('plans/lena_daily_shots.json'))
+          shots = plan['shots']
+          s = os.environ.get('SHOT', '')
+          i = int(s) if s.strip() else datetime.date.today().toordinal() % len(shots)
+          shot = shots[i % len(shots)]
+          cfg = dict(plan['base'], mode='a', prompt=shot['prompt'], ref_file=shot['ref_file'], seed=2026 + i)
+          code = open('kaggle/lena/generate.py').read()
+          open(f'{d}/script.py', 'w').write('CFG_JSON = ' + repr(json.dumps(cfg)) + '\n' + code)
+          open(os.environ['GITHUB_ENV'], 'a').write(f"SHOT_ID={shot['id']}\n")
+          PY
+          cat > "$d/kernel-metadata.json" <<JSON
+          {"id": "$KUSER/alan7-daily-shot", "title": "alan7-daily-shot", "code_file": "script.py", "language": "python",
+           "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_internet": true,
+           "dataset_sources": ["$KUSER/alan7-lena-refs"], "competition_sources": [], "kernel_sources": []}
+          JSON
+          kaggle kernels push -p "$d" 2>&1 | sed 's/[A-Za-z0-9_-]\{30,\}/***/g'
+          echo "::notice title=shot::$SHOT_ID"
+      - name: Wait (hard limit; the notebook also has its own 4.5 h watchdog)
+        run: |
+          for i in $(seq 1 280); do
+            s=$(kaggle kernels status "$KUSER/alan7-daily-shot" 2>&1 | tail -1)
+            case "$s" in *complete*|*COMPLETE*|*error*|*ERROR*|*cancel*) echo "::notice title=kaggle::$s"; break;; esac
+            sleep 60
+          done
+      - name: Label and deliver privately on Telegram
+        if: always()
+        run: |
+          mkdir -p out; kaggle kernels output "$KUSER/alan7-daily-shot" -p out >/dev/null 2>&1 || true
+          if [ -f out/lena.mp4 ]; then
+            F=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+            ffmpeg -y -loglevel error -i out/lena.mp4 -vf "drawtext=fontfile=$F:text='Recreación generada con IA':x=(w-tw)/2:y=h-50:fontsize=26:fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=10" -c:v libx264 -crf 18 -pix_fmt yuv420p -an shot.mp4
+            gen=$(python -c "import json;print(round(json.load(open('out/report.json')).get('generate_s',0)/60))")
+            code=$(curl -s -o /dev/null -w '%{http_code}' -F chat_id="$OWNER" -F supports_streaming=true \
+              -F caption="🎬 Plan IA chak jou — LENA ($SHOT_ID) · 3 s · 1280×704 natif · ${gen} min GPU Kaggle · Recreación generada con IA · pa pibliye" \
+              -F video=@shot.mp4 "https://api.telegram.org/bot$TG/sendVideo")
+            echo "::notice title=telegram::sendVideo HTTP $code"
+          else
+            err=$(python -c "import json;print(json.load(open('out/report.json')).get('error','no output'))" 2>/dev/null || echo 'no output')
+            curl -s -o /dev/null --data-urlencode chat_id="$OWNER" --data-urlencode text="⚠️ Plan IA jodi a ($SHOT_ID) pa t fèt: ${err:0:300}" "https://api.telegram.org/bot$TG/sendMessage"
+            echo "::warning title=shot::$err"
+          fi

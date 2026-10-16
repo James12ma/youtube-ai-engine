@@ -81,7 +81,13 @@ try:
               num_frames=CFG['frames'], guidance_scale=CFG['guidance'], num_inference_steps=CFG['steps'],
               generator=torch.Generator('cpu').manual_seed(CFG['seed']))
     if CFG['mode'] == 'a':
-        img = load_image(private_reference())
+        if CFG.get('ref_file'):  # start frame from the PRIVATE Kaggle dataset alan7-lena-refs
+            hits = glob.glob(f"/kaggle/input/**/{CFG['ref_file']}", recursive=True)
+            if not hits:
+                raise SystemExit('reference frame not found in the attached private dataset')
+            img = load_image(hits[0])
+        else:
+            img = load_image(private_reference())
         if img.size != (CFG['width'], CFG['height']):
             raise SystemExit(f'reference must be {CFG["width"]}x{CFG["height"]}, got {img.size}')
         kw['image'] = img
