@@ -22,7 +22,7 @@ on:
         default: landscape
 
 permissions:
-  contents: read
+  contents: write  # only to push the review pack (frames, QA numbers) to a qa/<run id> branch
   actions: read
 
 concurrency:
@@ -150,6 +150,39 @@ jobs:
             d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
             echo "::notice title=short::$(basename "$f") duration_s=$d"
           done
+      - name: Review pack (contact sheets, audio levels, speech round-trip)
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m scripts.qa_pack --video outputs/preview/preview.mp4 --script outputs/draft/script.json \
+            --shorts outputs/preview/shorts --out outputs/qa > outputs/qa_summary.json
+          python - <<'PY'
+          import json
+          r=json.load(open('outputs/qa/qa_report.json'))
+          v=r['video']; keep={k:v.get(k) for k in ('duration_s','integrated_lufs','true_peak_dbfs','silences_over_1_5s','longest_silence_s','black_segments','asr')}
+          keep['shorts']=[{k:s.get(k) for k in ('file','duration_s','integrated_lufs','silences_over_1_5s','black_segments')} for s in r['shorts']]
+          print('::notice title=qa::'+json.dumps(keep,ensure_ascii=False)[:3800])
+          PY
+      - name: Publish review pack to branch qa/${{ github.run_id }}
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/qa && cp outputs/qa/*.jpg outputs/qa/qa_report.json /tmp/qa/
+          cp outputs/qa/asr_transcript.txt /tmp/qa/ 2>/dev/null || true
+          cp outputs/draft/script.json outputs/draft/storyboard.json /tmp/qa/
+          cp outputs/preview/photos/credits.txt /tmp/qa/ 2>/dev/null || true
+          cp outputs/preview/preview_work/render_report.json /tmp/qa/ 2>/dev/null || true
+          cd /tmp/qa
+          git init -q -b "qa/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'
+          git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Review pack for preview run ${{ github.run_id }} (no upload)"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
+          echo "::notice title=qa-branch::qa/${{ github.run_id }}"
       - name: Thumbnail draft from title
         if: success()
         shell: bash
