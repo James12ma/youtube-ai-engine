@@ -53,13 +53,13 @@ def test_research_check_reads_owner_topic_sources_language(monkeypatch):
     monkeypatch.setenv('RESEARCH_TOPIC','  Qué es el   ITIN ')
     monkeypatch.setenv('RESEARCH_SOURCES','https://www.irs.gov/es/a https://www.irs.gov/es/b')
     monkeypatch.setenv('CONTENT_LANGUAGE','es')
-    assert crp._configured()==('Qué es el ITIN',('https://www.irs.gov/es/a','https://www.irs.gov/es/b'),'es','cards')
+    assert crp._configured()==('Qué es el ITIN',('https://www.irs.gov/es/a','https://www.irs.gov/es/b'),'es','cards','standard')
     monkeypatch.setenv('RESEARCH_SOURCES','http://insecure.example/a https://www.irs.gov/b')
     with pytest.raises(ValueError,match='HTTPS'):crp._configured()
     monkeypatch.setenv('RESEARCH_SOURCES','https://www.irs.gov/only-one')
     with pytest.raises(ValueError,match='Between 2 and 8'):crp._configured()
     for k in ('RESEARCH_TOPIC','RESEARCH_SOURCES','CONTENT_LANGUAGE'):monkeypatch.delenv(k)
-    assert crp._configured()==(crp.DEFAULT_TOPIC,crp.DEFAULT_SOURCES,'en','cards')
+    assert crp._configured()==(crp.DEFAULT_TOPIC,crp.DEFAULT_SOURCES,'en','cards','standard')
 
 
 def test_storyboard_prompt_avoids_footage_scenes_by_default(tmp_path):
@@ -92,3 +92,17 @@ def test_photos_mode_prompt_asks_for_broll_with_search_terms(tmp_path):
     assert 'search_terms' in prompts[-1] and out.scenes[0].search_terms=='green anaconda'
     with pytest.raises(ValueError,match='visual_mode'):
         ContentPipeline(StateStore(_init_repo(tmp_path/'b'),push_required=False),None,FakeFetcher({}),QualityThresholds(visual_mode='video'))
+
+
+def test_growth_packaging_rules_only_when_requested(tmp_path):
+    ids=['c1']
+    verification=VerificationArtifact(topic='t',verified=[VerifiedClaim(id='c1',text='E',source_ids=['s'],supporting_snippets=['E'])],rejected=[],pass_rate=1,verified_at='now')
+    full=ScriptOutput(title='T',hook='Empiece aquí.',cta='Mire el siguiente.',sections=[ScriptSection(heading='S'+str(i),narration=' '.join(['palabra']*170),claim_ids=ids) for i in range(8)])
+    prompts=[]
+    class Router_:
+        def execute(self,task_type,input_data,request,schema):
+            prompts.append(request.messages[-1]['content']);return full
+    ContentPipeline(StateStore(_init_repo(tmp_path/'g'),push_required=False),Router_(),FakeFetcher({}),QualityThresholds(language='es',packaging_style='growth'))._stage_script('t',verification,[])
+    assert 'GROWTH RULES' in prompts[-1]
+    ContentPipeline(StateStore(_init_repo(tmp_path/'s'),push_required=False),Router_(),FakeFetcher({}))._stage_script('t',verification,[])
+    assert 'GROWTH RULES' not in prompts[-1]

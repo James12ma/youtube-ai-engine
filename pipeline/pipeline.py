@@ -31,6 +31,7 @@ class QualityThresholds:
     schema_version:str='1.0'
     language:str='en'  # narration language: 'en' or 'es'
     footage_available:bool=False  # no reviewed screen recordings/charts/b-roll unless the owner supplies them
+    packaging_style:str='standard'  # 'growth' adds retention/subscription rules (Alan7)
     visual_mode:str='cards'  # 'cards' (diagram/text), 'photos' (free-licensed photos as broll + cards)
 @dataclass
 class PipelineResult:
@@ -88,6 +89,11 @@ _LANGUAGE_NOTES={
           'clear, neutral Latin American Spanish (español neutro) for Spanish-speaking viewers in the United States. '
           'Keep official form names and acronyms as published (for example IRS, ITIN, W-7). '
           'Claims and claim_ids stay exactly as supplied.')}
+_GROWTH_NOTE=(' GROWTH RULES: The hook opens with the single most surprising supplied fact (no greeting, no channel name, '
+    'no "in this video"), then promises what is coming next in one sentence. Order sections so interest rises and keep the '
+    'strongest item for the last section. Each section opens with a short curiosity question answered inside that section. '
+    'End the FIRST section with one short, natural invitation to subscribe for more videos like this one. '
+    'The cta invites viewers to watch the next video of the series; it does not say goodbye.')
 def _language_note(language:str)->str:
     if language not in _LANGUAGE_NOTES:raise ValueError('Unsupported narration language: '+str(language))
     return _LANGUAGE_NOTES[language]
@@ -106,6 +112,7 @@ class ContentPipeline:
         self._t=thresholds or QualityThresholds()
         _language_note(self._t.language)
         if self._t.visual_mode not in ('cards','photos'):raise ValueError('visual_mode must be cards or photos')
+        if self._t.packaging_style not in ('standard','growth'):raise ValueError('packaging_style must be standard or growth')
         if self._t.max_stage_revisions < 1:
             raise ValueError("max_stage_revisions must be >= 1")
         if self._t.target_words_per_second <= 0 or self._t.min_script_duration_s > self._t.max_script_duration_s:
@@ -195,14 +202,14 @@ class ContentPipeline:
         self._state.record_completion(task_id,'pipeline.verify',artifact.model_dump())
         return artifact
     def _stage_script(self,topic:str,verification:VerificationArtifact,hits:List[str])->ScriptArtifact:
-        task_id=compute_task_id('script',{'topic':topic,'claims_fingerprint':_digest([c.model_dump() for c in verification.verified]),'verification_rate':verification.pass_rate, 'min_duration_s':self._t.min_script_duration_s, 'max_duration_s':self._t.max_script_duration_s,'language':self._t.language},self._t.schema_version)
+        task_id=compute_task_id('script',{'topic':topic,'claims_fingerprint':_digest([c.model_dump() for c in verification.verified]),'verification_rate':verification.pass_rate, 'min_duration_s':self._t.min_script_duration_s, 'max_duration_s':self._t.max_script_duration_s,'language':self._t.language,'packaging':self._t.packaging_style},self._t.schema_version)
         cached=self._state.get_cached_result(task_id)
         if cached is not None:
             hits.append('script');return ScriptArtifact.model_validate(cached)
         claim_lines=['- '+c.id+': '+c.text for c in verification.verified]
         request=LLMRequest(messages=[
             {'role':'system','content':'You write original, fact-bound YouTube narration. Every factual or numeric statement must cite at least one claim_id from the supplied list. Cite by putting those claim_ids in the section\'s claim_ids array; you may not invent claim ids.'},
-            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. '+_NO_UNSOURCED_NUMBERS+' The hook and cta must contain no numbers at all. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'+_language_note(self._t.language)}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
+            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. '+_NO_UNSOURCED_NUMBERS+' The hook and cta must contain no numbers at all. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'+_language_note(self._t.language)+(_GROWTH_NOTE if self._t.packaging_style=='growth' else '')}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
         feedback='';expansion_used=False;earlier_failures:List[str]=[];expanded_draft=None
         for revision in range(self._t.max_stage_revisions):
             if feedback:

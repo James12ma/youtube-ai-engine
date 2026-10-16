@@ -39,6 +39,9 @@ def _configured():
     visual_mode = (os.environ.get('VISUAL_MODE') or 'cards').strip().lower()
     if visual_mode not in ('cards', 'photos'):
         raise ValueError('VISUAL_MODE must be cards or photos')
+    packaging = (os.environ.get('PACKAGING_STYLE') or 'standard').strip().lower()
+    if packaging not in ('standard', 'growth'):
+        raise ValueError('PACKAGING_STYLE must be standard or growth')
     if not 2 <= len(sources) <= 8:
         raise ValueError('Between 2 and 8 source URLs are required')
     for url in sources:
@@ -46,10 +49,10 @@ def _configured():
             raise ValueError('Only HTTPS source URLs are accepted')
     if language not in ('en', 'es'):
         raise ValueError('CONTENT_LANGUAGE must be en or es')
-    return topic, sources, language, visual_mode
+    return topic, sources, language, visual_mode, packaging
 
 
-TOPIC, SOURCES, LANGUAGE, VISUAL_MODE = _configured()
+TOPIC, SOURCES, LANGUAGE, VISUAL_MODE, PACKAGING = _configured()
 
 
 class RequestBudgetExceeded(RuntimeError):
@@ -116,7 +119,7 @@ def safe_quality_failure(exc):
 
 def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=None):
     out.mkdir(parents=True, exist_ok=True)
-    report = {'topic': TOPIC, 'language': LANGUAGE, 'visual_mode': VISUAL_MODE, 'ready_for_publication': False, 'uploads_enabled': False,
+    report = {'topic': TOPIC, 'language': LANGUAGE, 'visual_mode': VISUAL_MODE, 'packaging': PACKAGING, 'ready_for_publication': False, 'uploads_enabled': False,
               'paid_calls': 0, 'generation_requests': 0, 'generation_requests_max': 20,
               'source_checks': [], 'pipeline_passed': False}
     owned = metadata_client is None
@@ -229,7 +232,7 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
             class SnapshotFetcher:
                 def fetch(self, url): return snapshots[url]
             report['stage'] = 'research_script_storyboard_and_verification'
-            result = VerifiedContentPipeline(CheckpointPipeline(state, audited_router, SnapshotFetcher(), QualityThresholds(language=LANGUAGE, visual_mode=VISUAL_MODE)),
+            result = VerifiedContentPipeline(CheckpointPipeline(state, audited_router, SnapshotFetcher(), QualityThresholds(language=LANGUAGE, visual_mode=VISUAL_MODE, packaging_style=PACKAGING)),
                                              VerificationGate(audited_router)).run(TOPIC, SOURCES)
             for name, value in (('research', result.content.research), ('verification', result.content.verification),
                 ('script', result.content.script), ('storyboard', result.content.storyboard),

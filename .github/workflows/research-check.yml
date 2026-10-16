@@ -20,6 +20,11 @@ on:
         type: choice
         options: [cards, photos]
         default: cards
+      packaging:
+        description: standard, or growth (Alan7 hook/retention/subscribe rules)
+        type: choice
+        options: [standard, growth]
+        default: standard
 permissions:
   contents: read
 concurrency:
@@ -47,6 +52,7 @@ jobs:
           RESEARCH_SOURCES: ${{ inputs.sources }}
           CONTENT_LANGUAGE: ${{ inputs.language }}
           VISUAL_MODE: ${{ inputs.visual_mode }}
+          PACKAGING_STYLE: ${{ inputs.packaging }}
         run: python -m scripts.check_research_pipeline
       - name: Publish safe report summary as annotation
         if: always()
