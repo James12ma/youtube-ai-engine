@@ -32,3 +32,20 @@ run's `source-script-dry-run-*` artifact (kept 3 days).
 - Secure rotation of the previously exposed Google OAuth credentials.
 - Source quality: both sources are NIST abstract pages; fuller sources would
   make stronger lessons.
+
+## Unreviewed preview render (2026-10-16)
+https://github.com/James12ma/youtube-ai-engine/actions/runs/38886219188 — artifact `unreviewed-preview-38886219188` (kept 14 days)
+
+| Item | Result |
+|---|---|
+| Title (draft) | Building a Cybersecurity Baseline for Small Business Automation |
+| Duration | 625.46 s (10 min 25 s), 1920×1080 |
+| Voice / alignment | Piper; WhisperX 1,458/1,458 words (100%) |
+| Captions / chapters | 278 caption blocks; 8 chapters |
+| Technical QC | PASS, no failures |
+| Placeholder scenes | 8 (scenes 1, 4, 7, 10, 13, 16, 19, 22) — b-roll/recording/chart scenes with no real footage yet, shown as labelled cards |
+| SHA256 | `9ae86dd1d5f385bd7c5de16f8ec50b56dc08dddc65c0e4858080ea915bb21e10` |
+
+Status: **unreviewed preview, not publishable.** It was not watched or listened to by a
+human in this session. Before release: owner review, real footage (or a decision to
+replace those scenes with diagrams), then the normal reviewed render, package and approval.
