@@ -23,7 +23,7 @@ jobs:
           python-version: '3.12'
       - run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements.txt -r requirements-production.txt
       - name: Search (key never printed; GitHub also masks secrets)
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
@@ -31,8 +31,9 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "${PIXABAY_API_KEY}" ]; then echo "::error title=secret::PIXABAY_API_KEY is not set"; exit 1; fi
-          python -m channel.pixabay --queries "$QUERIES" --out outputs/pixabay > outputs_summary.json; rc=$?
-          echo "::notice title=summary::$(head -c 3500 outputs_summary.json)"
+          python -m channel.pixabay --queries "$QUERIES" --out outputs/pixabay > outputs_summary.json 2> err.txt; rc=$?
+          echo "::notice title=summary::rc=$rc $(head -c 3000 outputs_summary.json)"
+          [ $rc -eq 0 ] || echo "::warning title=stderr::$(tail -c 1500 err.txt | tr '\n' ' ' | sed "s/${PIXABAY_API_KEY}/***/g")"
           [ $rc -eq 0 ] || exit $rc
           python - <<'PY'
           import json
