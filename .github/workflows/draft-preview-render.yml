@@ -160,6 +160,18 @@ jobs:
             d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
             echo "::notice title=short::$(basename "$f") duration_s=$d"
           done
+      - name: Thumbnail draft from title
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib, subprocess, sys
+          s = json.loads(pathlib.Path('outputs/draft/script.json').read_text())
+          words = [w for w in s['title'].replace(':', ' ').split() if w.isalpha()][:3]
+          subprocess.run([sys.executable, '-m', 'channel.cli', 'thumbnail', '--text', ' '.join(words).upper(),
+                          '--title', s['title'], '--out', 'outputs/preview/thumbnail.jpg'], check=True)
+          PY
       - name: Review pack (contact sheets, audio levels, speech round-trip)
         if: success()
         shell: bash
@@ -186,6 +198,13 @@ jobs:
           cp outputs/draft/script.json outputs/draft/storyboard.json /tmp/qa/
           cp outputs/preview/photos/credits.txt /tmp/qa/ 2>/dev/null || true
           cp outputs/preview/preview_work/render_report.json /tmp/qa/ 2>/dev/null || true
+          # The MP4s themselves, so the owner can watch them on a phone (each well under GitHub's 100 MB file limit).
+          cp outputs/preview/preview.mp4 /tmp/qa/long_video.mp4
+          cp outputs/preview/preview.srt /tmp/qa/long_video.srt 2>/dev/null || true
+          for f in outputs/preview/shorts/short_*.mp4; do cp "$f" /tmp/qa/; done
+          cp outputs/preview/thumbnail.jpg /tmp/qa/ 2>/dev/null || true
+          ls -la /tmp/qa
+          find /tmp/qa -size +95M -print -exec false {} + || { echo "file too large for git"; exit 1; }
           cd /tmp/qa
           git init -q -b "qa/${{ github.run_id }}"
           git config user.name 'youtube-ai-engine'
@@ -193,18 +212,6 @@ jobs:
           git add -A && git commit -q -m "Review pack for preview run ${{ github.run_id }} (no upload)"
           git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
           echo "::notice title=qa-branch::qa/${{ github.run_id }}"
-      - name: Thumbnail draft from title
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json, pathlib, subprocess, sys
-          s = json.loads(pathlib.Path('outputs/draft/script.json').read_text())
-          words = [w for w in s['title'].replace(':', ' ').split() if w.isalpha()][:3]
-          subprocess.run([sys.executable, '-m', 'channel.cli', 'thumbnail', '--text', ' '.join(words).upper(),
-                          '--title', s['title'], '--out', 'outputs/preview/thumbnail.jpg'], check=True)
-          PY
       - name: Publish safe render summary
         if: always()
         shell: bash
