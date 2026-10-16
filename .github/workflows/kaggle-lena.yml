@@ -8,6 +8,10 @@ on:
       confirm:
         description: Type LANSE to confirm the owner approved this single GPU run
         required: true
+      ref_branch:
+        description: Branch holding the ENCRYPTED reference (mode a)
+        required: false
+        default: ''
       delivery_pubkey:
         description: Base64 RSA public key (PEM)
         required: true
@@ -37,17 +41,25 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -q 'kaggle>=1.8'
       - name: Push the private notebook (GPU, internet)
-        env: { MODE: '${{ inputs.mode }}' }
+        env: { MODE: '${{ inputs.mode }}', REF_BRANCH: '${{ inputs.ref_branch }}' }
         run: |
           set -euo pipefail
           d=$RUNNER_TEMP/k; mkdir -p "$d"
           cp kaggle/lena/generate.py "$d/"
-          [ "$MODE" = b ] || { echo "::error::mode a needs the reference image, which must not be stored in this public repo; not supported yet"; exit 1; }
-          cp "kaggle/lena/lena_config_$MODE.json" "$d/lena_config.json"
+          python - "$MODE" "$REF_BRANCH" "$d/lena_config.json" <<'PY'
+          import json, re, sys
+          mode, branch, out = sys.argv[1:4]
+          c = json.load(open(f'kaggle/lena/lena_config_{mode}.json'))
+          if mode == 'a':
+              assert re.fullmatch(r'qa/ref-[0-9]+', branch), 'mode a needs ref_branch qa/ref-<n>'
+              c['ref_branch'] = branch
+          json.dump(c, open(out, 'w'))
+          PY
+          ds='[]'; [ "$MODE" = a ] && ds="[\"$KUSER/alan7-transfer-key\"]"
           cat > "$d/kernel-metadata.json" <<JSON
           {"id": "$KUSER/alan7-lena-test", "title": "alan7-lena-test", "code_file": "generate.py", "language": "python",
            "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_internet": true,
-           "dataset_sources": [], "competition_sources": [], "kernel_sources": []}
+           "dataset_sources": $ds, "competition_sources": [], "kernel_sources": []}
           JSON
           kaggle kernels push -p "$d" 2>&1 | sed 's/[A-Za-z0-9_-]\{30,\}/***/g'
       - name: Wait (hard limit ~5 h)
@@ -63,6 +75,17 @@ jobs:
           mkdir -p out; kaggle kernels output "$KUSER/alan7-lena-test" -p out >/dev/null 2>&1 || true
           ls -la out
           [ -f out/report.json ] && echo "::notice title=report::$(python -c "import json;r=json.load(open('out/report.json'));r.pop('config',None);print(json.dumps(r)[:3000])")"
+      - name: Remove the transfer key dataset and the encrypted reference branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_BRANCH: ${{ inputs.ref_branch }}
+        run: |
+          kaggle datasets delete "$KUSER/alan7-transfer-key" -y >/dev/null 2>&1 && echo "::notice title=cleanup::transfer key dataset deleted" || echo "::warning title=cleanup::key dataset not deleted"
+          if [[ "$REF_BRANCH" =~ ^qa/ref-[0-9]+$ ]]; then
+            t=$RUNNER_TEMP/c; mkdir -p "$t"; cd "$t"; git init -q
+            git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" --delete "$REF_BRANCH" && echo "::notice title=cleanup::$REF_BRANCH deleted" || echo "::warning title=cleanup::branch not deleted"
+          fi
       - name: Encrypted pack to qa/${{ github.run_id }}
         if: always()
         env:
