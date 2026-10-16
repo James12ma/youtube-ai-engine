@@ -143,7 +143,7 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
             report['blocked'] = 'No verified zero-priced JSON model'; return report
         model = models[0]['id']
         report.update(model=model, all_prices_verified_zero=True, free_request_quota={k:v for k,v in account.get('free_model_daily_requests',{}).items() if k in ('limit','remaining','used') and type(v) is int})
-        cap = min(24, remaining) if isinstance(remaining, int) else 24  # 2 extra for bounded numeric section repairs
+        cap = min(30, remaining) if isinstance(remaining, int) else 30  # room for bounded numeric section repairs
         report['generation_requests_max'] = cap
         def before_request(request):
             if request.method != 'POST' or str(request.url) != 'https://openrouter.ai/api/v1/chat/completions':

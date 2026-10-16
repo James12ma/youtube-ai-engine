@@ -175,11 +175,17 @@ class ContentPipeline:
         request=LLMRequest(messages=[
             {'role':'system','content':'You write original, fact-bound YouTube narration. Every factual or numeric statement must cite at least one claim_id from the supplied list. Cite by putting those claim_ids in the section\'s claim_ids array; you may not invent claim ids.'},
             {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. '+_NO_UNSOURCED_NUMBERS+' The hook and cta must contain no numbers at all. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
-        feedback='';expansion_used=False;earlier_failures:List[str]=[]
+        feedback='';expansion_used=False;earlier_failures:List[str]=[];expanded_draft=None
         for revision in range(self._t.max_stage_revisions):
             if feedback:
                 request.messages[-1]['content'] += '\nPREVIOUS ATTEMPT FAILED: '+feedback+'\nProduce a corrected script.'
-            output=self._router.execute('pipeline.script',{'topic':topic},request,ScriptOutput)
+            if expanded_draft is not None:
+                # The expanded long draft only failed the spoken-number rule:
+                # repair the offending sections instead of discarding it.
+                output=self._repair_numeric_sections(topic,expanded_draft,claim_lines,revision,self._claim_numbers(verification))
+                expanded_draft=None
+            else:
+                output=self._router.execute('pipeline.script',{'topic':topic},request,ScriptOutput)
             assert isinstance(output,ScriptOutput)
             try:
                 self._validate_script(output,verification)
@@ -200,6 +206,8 @@ class ContentPipeline:
                     except PipelineQualityError as second_exc:
                         earlier_failures.append(str(exc.report.get('reason')))
                         exc=second_exc
+                        if exc.report.get('reason')=='numeric claim without citation':
+                            expanded_draft=output
                 if revision+1>=self._t.max_stage_revisions:
                     if earlier_failures:exc.report.setdefault('earlier_failures',list(earlier_failures))
                     raise exc
@@ -222,6 +230,20 @@ class ContentPipeline:
     def _uncited_numbers(section:ScriptSection,claim_numbers:dict)->set:
         allowed=set().union(*[claim_numbers.get(cid,set()) for cid in section.claim_ids]) if section.claim_ids else set()
         return _spoken_numbers(section.narration)-allowed
+    def _repair_numeric_sections(self,topic:str,draft:ScriptOutput,claim_lines:List[str],revision:int,claim_numbers:dict)->ScriptOutput:
+        sections=list(draft.sections)
+        for index,section in enumerate(sections):
+            bad=self._uncited_numbers(section,claim_numbers)
+            if not bad:continue
+            words=max(80,_word_count(section.narration))
+            request=LLMRequest(messages=[
+                {'role':'system','content':'Rewrite one tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
+                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection heading: '+section.heading+'\nCurrent narration: '+section.narration+'\nThis narration was REJECTED because it contains numbers or number words that do not appear in the claims it cites. Rewrite it with approximately '+str(words)+' narration words, same meaning and structure, with every unsupported number removed or replaced by words such as first, next, a few or several. '+_NO_UNSOURCED_NUMBERS+' Return fields heading, narration, on_screen_text, claim_ids.'}],
+                schema=ScriptSection,temperature=.2,max_tokens=min(4096,max(1200,words*4)))
+            part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':'numeric'},request,ScriptSection)
+            assert isinstance(part,ScriptSection)
+            sections[index]=part
+        return draft.model_copy(update={'sections':sections})
     def _expand_short_script(self,topic:str,short:ScriptOutput,claim_lines:List[str],revision:int,claim_numbers:Optional[dict]=None)->ScriptOutput:
         # Expand real model output section by section within the existing
         # adapter token cap. Never pad text or alter duration thresholds.

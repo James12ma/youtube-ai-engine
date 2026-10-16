@@ -287,3 +287,23 @@ def test_expansion_repairs_numeric_sections_at_most_twice(repo):
     output=pipe._stage_script('test',verification,[])
     assert 1200<=output.word_count<=1800
     assert sum(1 for t,r in calls if r)==2 and calls.count(('pipeline.script',0))==1
+
+
+def test_numeric_failure_after_expansion_repairs_sections_not_whole_script(repo):
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    ids=['evidence'];verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(id='evidence',text='Evidence',source_ids=['s'],supporting_snippets=['Evidence'])],rejected=[],pass_rate=1,verified_at='now')
+    short=ScriptOutput(title='Tutorial',hook='Start here.',cta='Done.',sections=[ScriptSection(heading='S'+str(i),narration='Short explanation.',claim_ids=ids) for i in range(8)])
+    calls=[]
+    class Router_:
+        def execute(self,task_type,input_data,request,schema):
+            calls.append((task_type,input_data.get('repair',0)))
+            if task_type=='pipeline.script':return short
+            if input_data.get('repair')=='numeric':
+                return ScriptSection(heading='S',narration=' '.join(['evidence']*170),claim_ids=ids)
+            # Every expanded section (and its inline retry) keeps an uncited number.
+            return ScriptSection(heading='S',narration=' '.join(['evidence']*169+['three']),claim_ids=ids)
+    pipe=ContentPipeline(StateStore(repo,push_required=False),Router_(),FakeFetcher({}))
+    output=pipe._stage_script('test',verification,[])
+    assert 1200<=output.word_count<=1800
+    assert calls.count(('pipeline.script',0))==1  # long draft kept, not regenerated
+    assert sum(1 for t,r in calls if r=='numeric')==8
