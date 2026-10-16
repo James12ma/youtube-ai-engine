@@ -18,7 +18,9 @@ USER_AGENT = 'Alan7VideoEngine/1.0 (https://github.com/James12ma/youtube-ai-engi
 ALLOWED_DOWNLOAD_HOSTS = {'upload.wikimedia.org', 'thumb.wikimedia.org'}  # Wikimedia serves resized photos from thumb.
 MAX_IMAGE_BYTES = 12_000_000
 MIN_WIDTH = 1200
-_ALLOWED_LICENSE = re.compile(r'^(public domain|pd\b.*|cc0.*|cc[ -]by(-sa)?[ -]\d(\.\d)?.*|cc[ -]by(-sa)?)$', re.I)
+# Commercial use allowed and no ShareAlike: SA could require the whole video
+# to carry the same licence once the photo is cropped/animated into it.
+_ALLOWED_LICENSE = re.compile(r'^(public domain|pd\b.*|cc0.*|cc[ -]by[ -]\d(\.\d)?|cc[ -]by)$', re.I)
 _BLOCKED_TERMS = re.compile(r'\b(logo|brand|trademark|person|people|man|woman|child|face|portrait)\b', re.I)
 
 
@@ -60,9 +62,12 @@ def search_photo(client: httpx.Client, terms: str, exclude: set[str], *, allow_p
         lic = _clean((meta.get('LicenseShortName') or {}).get('value'))
         url = info.get('thumburl') or info.get('url') or ''
         width, height = int(info.get('width') or 0), int(info.get('height') or 1)
+        restricted = _clean((meta.get('Restrictions') or {}).get('value'))
+        nonfree = str((meta.get('NonFree') or {}).get('value') or '').lower() == 'true'
         why = ('reused' if page.get('title') in exclude else
                'mime' if info.get('mime') not in ('image/jpeg', 'image/png') else
-               'license' if not license_allowed(lic) else
+               'license' if (not license_allowed(lic) or nonfree) else
+               'restricted' if restricted else
                'small' if width < MIN_WIDTH else
                'portrait' if (not allow_portrait and width < height) else
                'host' if (urlparse(url).hostname not in ALLOWED_DOWNLOAD_HOSTS or urlparse(url).scheme != 'https') else '')
@@ -71,6 +76,8 @@ def search_photo(client: httpx.Client, terms: str, exclude: set[str], *, allow_p
             LAST_SEARCH['rejects'] = rejects
             continue
         return {'title': page['title'], 'url': url, 'license': lic,
+                'license_url': _clean((meta.get('LicenseUrl') or {}).get('value')),
+                'attribution_required': str((meta.get('AttributionRequired') or {}).get('value') or '').lower() != 'false',
                 'author': _clean((meta.get('Artist') or {}).get('value')) or 'Unknown author',
                 'page': info.get('descriptionurl') or '', 'search_terms': terms}
     return None
@@ -133,8 +140,11 @@ def fetch_for_storyboard(storyboard_path: Path, out_dir: Path, *,
             credits.append({**found, 'scene_index': scene['index']})
     (out_dir / 'asset_map.json').write_text(json.dumps(asset_map, indent=2), encoding='utf-8')
     (out_dir / 'credits.json').write_text(json.dumps(credits, indent=2, ensure_ascii=False), encoding='utf-8')
-    lines = ['Fotos (Wikimedia Commons):'] + [f"- {c['title'].removeprefix('File:')} — {c['author']}, {c['license']}, {c['page']}"
-                                              for c in credits]
+    # TASL credit (title, author, source, licence) plus the changes we made.
+    lines = ['Fotos (Wikimedia Commons). Cambios: recortadas, redimensionadas y con zoom animado.'] + [
+        f"- \"{c['title'].removeprefix('File:')}\" por {c['author']}, {c['license']}"
+        + (f" ({c['license_url']})" if c.get('license_url') else '') + f", fuente: {c['page']}"
+        for c in credits]
     (out_dir / 'credits.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     summary = {'photos': len(asset_map), 'missing_scenes': missing}
     if reasons:
