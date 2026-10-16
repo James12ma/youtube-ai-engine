@@ -51,6 +51,23 @@ def _digest(obj):
     return hashlib.sha256(json.dumps(obj,sort_keys=True,ensure_ascii=False,default=str).encode()).hexdigest()
 def _norm(text:str)->str:return _WS_RE.sub(' ',text).strip().lower()
 def _claim_id(text:str,source_id:str)->str:return hashlib.sha256((_norm(text)+'|'+source_id).encode('utf-8')).hexdigest()[:16]
+# Mirrors verification.numbers.numbers (imported there by the final gate);
+# kept local to avoid a pipeline<->verification import cycle. A regression
+# test asserts both give identical results.
+_SPOKEN_NUMBER_WORDS={'zero':'0','one':'1','two':'2','three':'3','four':'4','five':'5',
+ 'six':'6','seven':'7','eight':'8','nine':'9','ten':'10','eleven':'11',
+ 'twelve':'12','thirteen':'13','fourteen':'14','fifteen':'15',
+ 'sixteen':'16','seventeen':'17','eighteen':'18','nineteen':'19','twenty':'20'}
+_SPOKEN_NUM_RE=re.compile(r'(?<![\w])\d+(?:[.,]\d+)*(?![\w])')
+def _spoken_numbers(text:str)->set:
+    simplified=text.lower()
+    for word,value in _SPOKEN_NUMBER_WORDS.items():
+        simplified=re.sub(r'\b'+word+r'\b',value,simplified)
+    return {m.group().replace(',','') for m in _SPOKEN_NUM_RE.finditer(simplified)}
+_NO_UNSOURCED_NUMBERS=('Do not write any number, digit or number word (one, two, three, ten, etc.), year, '
+    'percentage or price unless that exact number appears in a claim you cite in claim_ids. '
+    'Use ordinals (first, second, next) or phrases like "a few" or "several" instead. '
+    'Hypothetical examples must use words, not numbers.')
 def _word_count(*parts:str)->int:return sum(len(p.split()) for p in parts if p)
 def _now()->str:return datetime.now(timezone.utc).isoformat()
 def _source_blob(sources:Sequence[Source],max_chars_per_source:int=6000)->str:
@@ -157,7 +174,7 @@ class ContentPipeline:
         claim_lines=['- '+c.id+': '+c.text for c in verification.verified]
         request=LLMRequest(messages=[
             {'role':'system','content':'You write original, fact-bound YouTube narration. Every factual or numeric statement must cite at least one claim_id from the supplied list. Cite by putting those claim_ids in the section\'s claim_ids array; you may not invent claim ids.'},
-            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
+            {'role':'user','content':'Topic: '+topic+'\n\nAvailable verified claims (id: text):\n'+'\n'.join(claim_lines)+'\n\nWrite a complete long-form tutorial, NOT an outline or summary. Narration must contain '+str(math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second))+' to '+str(math.floor(self._t.max_script_duration_s*self._t.target_words_per_second))+' spoken words total (hook + section narration + cta). Aim for the middle of that range. Use 8 to 10 developed sections of roughly 150 to 170 narration words each. Include a concrete, clearly labeled hypothetical exercise, step-by-step explanation, common mistakes and a useful conclusion. Do not invent software features or claim to have run a demonstration. Explain only supplied evidence; clearly label suggested exercises as suggestions. Count narration words before returning; on-screen text does not count. '+_NO_UNSOURCED_NUMBERS+' The hook and cta must contain no numbers at all. Return json with fields: title (<=60 chars so desktop search does not truncate it), hook (<=40 words, no numerical assertions), sections (array of {heading, narration, on_screen_text, claim_ids}), cta (no numerical assertions).'}],schema=ScriptOutput,temperature=0.4,max_tokens=4096)
         feedback='';expansion_used=False;earlier_failures:List[str]=[]
         for revision in range(self._t.max_stage_revisions):
             if feedback:
@@ -176,7 +193,7 @@ class ContentPipeline:
                 if (not expansion_used and self._is_short(exc)
                         and 1<=len(output.sections)<=self._MAX_EXPANSION_SECTIONS):
                     expansion_used=True
-                    output=self._expand_short_script(topic,output,claim_lines,revision)
+                    output=self._expand_short_script(topic,output,claim_lines,revision,self._claim_numbers(verification))
                     try:
                         self._validate_script(output,verification)
                         break
@@ -197,9 +214,20 @@ class ContentPipeline:
     def _is_short(self,exc:PipelineQualityError)->bool:
         return (exc.report.get('reason')=='duration outside 8-12 minute target'
                 and exc.report.get('duration_s',0)<self._t.min_script_duration_s)
-    def _expand_short_script(self,topic:str,short:ScriptOutput,claim_lines:List[str],revision:int)->ScriptOutput:
+    _MAX_NUMERIC_REPAIRS=2
+    @staticmethod
+    def _claim_numbers(verification:VerificationArtifact)->dict:
+        return {c.id:_spoken_numbers(c.text).union(*[_spoken_numbers(x) for x in c.supporting_snippets]) for c in verification.verified}
+    @staticmethod
+    def _uncited_numbers(section:ScriptSection,claim_numbers:dict)->set:
+        allowed=set().union(*[claim_numbers.get(cid,set()) for cid in section.claim_ids]) if section.claim_ids else set()
+        return _spoken_numbers(section.narration)-allowed
+    def _expand_short_script(self,topic:str,short:ScriptOutput,claim_lines:List[str],revision:int,claim_numbers:Optional[dict]=None)->ScriptOutput:
         # Expand real model output section by section within the existing
         # adapter token cap. Never pad text or alter duration thresholds.
+        claim_numbers=claim_numbers or {}
+        repairs_left=self._MAX_NUMERIC_REPAIRS if claim_numbers else 0
+        feedback_note=''
         expanded:List[ScriptSection]=[]
         target_total=math.ceil(((self._t.min_script_duration_s+self._t.max_script_duration_s)/2)*self._t.target_words_per_second)
         base_words=_word_count(short.hook,short.cta)
@@ -211,9 +239,17 @@ class ContentPipeline:
             target=max(80,math.ceil((target_total-base_words-emitted)/remaining))
             expansion=LLMRequest(messages=[
                 {'role':'system','content':'Write one complete tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
-                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id.'}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
+                {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection '+str(index+1)+' of '+str(len(short.sections))+': '+section.heading+'\nOriginal narration: '+section.narration+'\nWrite approximately '+str(target)+' narration words for this section, with concrete explanation and a clearly labeled suggested exercise where useful. Keep this section distinct from these other headings: '+', '.join(x.heading for x in short.sections if x is not section)+'. Return fields heading, narration, on_screen_text, claim_ids. Every factual statement needs a supplied claim_id. '+_NO_UNSOURCED_NUMBERS+feedback_note}],schema=ScriptSection,temperature=.3,max_tokens=min(4096,max(1200,target*4)))
             part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision},expansion,ScriptSection)
             assert isinstance(part,ScriptSection)
+            if repairs_left>0 and self._uncited_numbers(part,claim_numbers):
+                # One bounded retry for this section only, with explicit feedback.
+                repairs_left-=1
+                feedback_note=' PREVIOUS VERSION OF THIS SECTION WAS REJECTED: it contained numbers not present in its cited claims. Remove them.'
+                retry=LLMRequest(messages=[expansion.messages[0],{'role':'user','content':expansion.messages[1]['content']+feedback_note}],schema=ScriptSection,temperature=.2,max_tokens=expansion.max_tokens)
+                part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':1},retry,ScriptSection)
+                assert isinstance(part,ScriptSection)
+                feedback_note=''
             expanded.append(part)
         return short.model_copy(update={'sections':expanded})
     def _validate_script(self,output:ScriptOutput,verification:VerificationArtifact)->None:
@@ -231,10 +267,17 @@ class ContentPipeline:
         duration=words/self._t.target_words_per_second
         if not self._t.min_script_duration_s <= duration <= self._t.max_script_duration_s:
             raise PipelineQualityError('script',{'reason':'duration outside 8-12 minute target','duration_s':duration,'word_count':words,'min_words':math.ceil(self._t.min_script_duration_s*self._t.target_words_per_second),'max_words':math.floor(self._t.max_script_duration_s*self._t.target_words_per_second)})
+        if _spoken_numbers(output.hook) or _spoken_numbers(output.cta):
+            raise PipelineQualityError('script',{'reason':'numeric hook or CTA cannot be cited'})
+        claim_numbers=self._claim_numbers(verification)
         for section in output.sections:
             unknown=[c for c in section.claim_ids if c not in valid_ids]
             if unknown:raise PipelineQualityError('script',{'reason':'unknown claim_id cited','section':section.heading,'unknown':unknown})
             if _NUMERIC_CLAIM_RE.search(section.narration) and not section.claim_ids:
+                raise PipelineQualityError('script',{'reason':'numeric claim without citation','section':section.heading})
+            if not unknown and self._uncited_numbers(section,claim_numbers):
+                # Same rule the final verification gate applies: every spoken
+                # number must appear in a claim this section cites.
                 raise PipelineQualityError('script',{'reason':'numeric claim without citation','section':section.heading})
     def _stage_storyboard(self,script:ScriptArtifact,verification:VerificationArtifact,hits:List[str])->StoryboardOutput:
         task_id=compute_task_id('storyboard',{'script_fingerprint':_digest(script.model_dump(exclude={'verified_at'})), 'claims_fingerprint':_digest([c.model_dump() for c in verification.verified]),'tolerance':self._t.storyboard_tolerance},self._t.schema_version)

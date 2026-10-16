@@ -244,3 +244,46 @@ def test_schema_error_export_has_field_paths_not_values():
     fields=re.findall(r'(?m)^([A-Za-z_][\w]*(?:\.\w+)*)\n\s+[^\n]*\[type=(\w+)',str(exc).replace('\\n','\n'))
     assert ('scenes.0.visual_type','literal_error') in fields
     assert all('SECRET' not in f and 'SECRET' not in t for f,t in fields)
+
+
+def test_spoken_number_helper_matches_final_gate():
+    from pipeline.pipeline import _spoken_numbers
+    from verification.numbers import numbers
+    for text in ['Step one, then two.','Saved 4 hours in 2025','$1,200.50 and ten items','first, second, a few','Twenty-one ways']:
+        assert _spoken_numbers(text)==numbers(text)
+
+
+def test_script_rejects_spoken_numbers_missing_from_cited_claims(repo):
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    verification=VerificationArtifact(topic='t',verified=[VerifiedClaim(id='c1',text='Teams saved 4 hours.',source_ids=['s'],supporting_snippets=['saved 4 hours'])],rejected=[],pass_rate=1,verified_at='now')
+    def script(narration):
+        body=' '.join(['word']*1300)
+        return ScriptOutput(title='T',hook='Start.',cta='Bye.',sections=[ScriptSection(heading='A',narration=body),ScriptSection(heading='B',narration=narration,claim_ids=['c1'])])
+    pipe=ContentPipeline(StateStore(repo,push_required=False),None,FakeFetcher({}))
+    pipe._validate_script(script('Teams saved 4 hours each day.'),verification)
+    with pytest.raises(PipelineQualityError) as exc:pipe._validate_script(script('There are two common mistakes.'),verification)
+    assert exc.value.report['reason']=='numeric claim without citation'
+    bad_hook=script('Fine.').model_copy(update={'hook':'Learn three tricks.'})
+    with pytest.raises(PipelineQualityError) as exc:pipe._validate_script(bad_hook,verification)
+    assert exc.value.report['reason']=='numeric hook or CTA cannot be cited'
+
+
+def test_expansion_repairs_numeric_sections_at_most_twice(repo):
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    ids=['evidence'];verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(id='evidence',text='Evidence',source_ids=['s'],supporting_snippets=['Evidence'])],rejected=[],pass_rate=1,verified_at='now')
+    short=ScriptOutput(title='Tutorial',hook='Start here.',cta='Done.',sections=[ScriptSection(heading='S'+str(i),narration='Short explanation.',claim_ids=ids) for i in range(8)])
+    calls=[]
+    class Router_:
+        def execute(self,task_type,input_data,request,schema):
+            calls.append((task_type,input_data.get('repair',0)))
+            if task_type=='pipeline.script':return short
+            if input_data.get('repair'):
+                assert 'REJECTED' in request.messages[-1]['content']
+                return ScriptSection(heading='S',narration=' '.join(['evidence']*170),claim_ids=ids)
+            # The first two sections come back with an uncited spoken number.
+            word='two' if input_data['index']<2 else 'evidence'
+            return ScriptSection(heading='S',narration=' '.join(['evidence']*169+[word]),claim_ids=ids)
+    pipe=ContentPipeline(StateStore(repo,push_required=False),Router_(),FakeFetcher({}))
+    output=pipe._stage_script('test',verification,[])
+    assert 1200<=output.word_count<=1800
+    assert sum(1 for t,r in calls if r)==2 and calls.count(('pipeline.script',0))==1
