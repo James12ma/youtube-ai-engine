@@ -1,0 +1,33 @@
+name: Kaggle private transfer key (keypair; private half stored only in a PRIVATE Kaggle dataset)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  key:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_USERNAME }}   # access token stored under this secret name
+      KUSER: goldgoat
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q 'kaggle>=1.8'
+      - name: Generate keypair and upload the private key as a private dataset
+        run: |
+          set -euo pipefail
+          umask 077
+          d=$RUNNER_TEMP/key; mkdir -p "$d"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "$d/private.pem" 2>/dev/null
+          pub=$(openssl pkey -in "$d/private.pem" -pubout | base64 -w0)
+          cat > "$d/dataset-metadata.json" <<JSON
+          {"title": "alan7-transfer-key", "id": "$KUSER/alan7-transfer-key", "licenses": [{"name": "CC0-1.0"}]}
+          JSON
+          kaggle datasets delete "$KUSER/alan7-transfer-key" -y >/dev/null 2>&1 || true
+          kaggle datasets create -p "$d" 2>&1 | sed 's/[A-Za-z0-9_-]\{30,\}/***/g'   # private by default (no --public)
+          shred -u "$d/private.pem"
+          echo "::notice title=pubkey::$pub"
+          sleep 20
+          kaggle datasets status "$KUSER/alan7-transfer-key" || true
