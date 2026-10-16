@@ -93,7 +93,7 @@ jobs:
           keep['freezes'] = open('outputs/qa/freeze_events.txt').read().count('freeze_start')
           print('::notice title=sample::' + json.dumps(keep, ensure_ascii=False)[:3800])
           for c in r['clips'].values():
-              print('::notice title=clip::' + json.dumps({k: c.get(k) for k in ('title', 'license', 'author', 'has_audio')}, ensure_ascii=False))
+              print('::notice title=clip::' + json.dumps({k: c.get(k) for k in ('title', 'license', 'author', 'has_audio', 'categories')}, ensure_ascii=False))
           PY
       - name: Encrypted pack to qa/${{ github.run_id }}
         env:

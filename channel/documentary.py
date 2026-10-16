@@ -95,7 +95,10 @@ class DocumentaryPlan(BaseModel):
     credits_s: float = Field(default=5.0, ge=3, le=12)
     crossfade_s: float = Field(default=0.5, ge=0, le=1.0)
     ambience: list[str] = Field(default_factory=list)  # Commons audio search terms (optional)
-    credits_note: str = ''     # voice / fact sources line for the credits card
+    credits_note: str = ''
+    title_start_s: float = Field(default=0.4, ge=0, le=20)
+    # Spoken-only phonetic fixes (Piper [[ IPA ]] syntax); subtitles keep the normal spelling.
+    pronunciations: dict[str, str] = Field(default_factory=dict)     # voice / fact sources line for the credits card
 
     @model_validator(mode='after')
     def _refs(self):
@@ -158,6 +161,13 @@ def credit_lines(clips: dict[str, dict], ambience: dict | None, voice_note: str)
     return lines
 
 
+def spoken_text(text: str, pronunciations: dict[str, str]) -> str:
+    """Replace whole words with explicit phonemes for the voice only (longest words first)."""
+    for word in sorted(pronunciations, key=len, reverse=True):
+        text = re.sub(r'(?<![\w\[])' + re.escape(word) + r'(?![\w\]])', '[[ ' + pronunciations[word] + ' ]]', text)
+    return text
+
+
 # ---------------------------------------------------------------- rendering
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess:
@@ -184,7 +194,7 @@ def _cut_shot(src: Path, shot: Shot, seconds: float, out: Path, work: Path, idx:
           f'crop={width}:{height}', f'fps={fps}', 'format=yuv420p']
     if label:
         tf = _textfile(work, f'label_{idx}.txt', label)
-        vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=48:y=44:fontsize=30:fontcolor=white:"
+        vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=56:y=48:fontsize=42:fontcolor=white:borderw=2:bordercolor=black@0.6:"
                   'shadowcolor=black@0.7:shadowx=2:shadowy=2:'
                   f"alpha='min(1,max(0,(t-0.3)/0.5))*min(1,max(0,({seconds:.3f}-0.4-t)/0.5))'")
     if disclosure:   # AI clips: label on every frame, never fading out
@@ -296,7 +306,8 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
 
     # 1. narration, one WAV per beat (real Piper voice; no fallback service)
     narrator = PiperOrEdgeNarrator(voice_model, allow_edge_fallback=False)
-    wavs = [narrator.synthesize(b.narration, work / f'beat_{i}.wav') for i, b in enumerate(plan.beats)]
+    wavs = [narrator.synthesize(spoken_text(b.narration, plan.pronunciations), work / f'beat_{i}.wav')
+            for i, b in enumerate(plan.beats)]
     tl = timeline(plan, [w.duration_s for w in wavs])
     total = tl['total_s']
 
@@ -319,8 +330,8 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
     aligned = WhisperXAligner(language=plan.language, device='cpu', min_token_coverage=.98).align(voice, transcript)
     save_word_timestamps(aligned, work / 'words.json')
     ass = work / 'captions.ass'
-    count, blocks = build_ass_from_words(aligned.words, ass, width=width, height=height, animated=False, size=50,
-                                         max_chars_per_line=38, bottom_margin=70, max_duration_s=3.2)
+    count, blocks = build_ass_from_words(aligned.words, ass, width=width, height=height, animated=False, size=64,
+                                         max_chars_per_line=32, bottom_margin=70, max_duration_s=3.2)
     caption_qc = assess_caption_quality(aligned.words, blocks, aligned.duration_s, min_coverage=.98)
     if not caption_qc.passed:
         raise DocumentaryError('Forced captions failed QC: ' + repr(caption_qc.failures))
@@ -361,15 +372,16 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
 
     # 5. titles and beat overlays on top of the cut
     vf = []
+    ta, tb = plan.title_start_s, plan.title_start_s + 3.8
     tf = _textfile(work, 'series.txt', plan.series.upper())
     vf.append(f"drawtext=fontfile={FONT_BOLD}:textfile='{tf}':x=(w-tw)/2:y=h/2-90:fontsize=88:fontcolor=white:"
-              "shadowcolor=black@0.6:shadowx=3:shadowy=3:enable='between(t,0.4,4.2)':"
-              "alpha='min(1,(t-0.4)/0.6)*min(1,(4.2-t)/0.6)'")
+              f"shadowcolor=black@0.6:shadowx=3:shadowy=3:enable='between(t,{ta:.2f},{tb:.2f})':"
+              f"alpha='min(1,(t-{ta:.2f})/0.6)*min(1,({tb:.2f}-t)/0.6)'")
     if plan.subtitle:
         tf = _textfile(work, 'subtitle.txt', plan.subtitle)
         vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=(w-tw)/2:y=h/2+20:fontsize=42:fontcolor=white:"
-                  "shadowcolor=black@0.6:shadowx=2:shadowy=2:enable='between(t,0.9,4.2)':"
-                  "alpha='min(1,(t-0.9)/0.6)*min(1,(4.2-t)/0.6)'")
+                  f"shadowcolor=black@0.6:shadowx=2:shadowy=2:enable='between(t,{ta + 0.5:.2f},{tb:.2f})':"
+                  f"alpha='min(1,(t-{ta + 0.5:.2f})/0.6)*min(1,({tb:.2f}-t)/0.6)'")
     t = 0.0
     beat_windows = []
     for i, beat in enumerate(plan.beats):
@@ -377,7 +389,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
         beat_windows.append((t, t + span))
         if beat.overlay:
             tf = _textfile(work, f'overlay_{i}.txt', beat.overlay)
-            vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=w-tw-48:y=44:fontsize=28:fontcolor=white:"
+            vf.append(f"drawtext=fontfile={FONT}:textfile='{tf}':x=w-tw-56:y=48:fontsize=38:fontcolor=white:"
                       f"box=1:boxcolor=black@0.5:boxborderw=10:enable='between(t,{t + 0.3:.2f},{t + span - 0.3:.2f})'")
         t += span
     titled = work / 'titled.mp4'

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from channel.documentary import (AI_LABEL, DocumentaryError, DocumentaryPlan, Shot, allocate, credit_lines,
-                                 load_plan, timeline)
+                                 load_plan, spoken_text, timeline)
 
 PLAN = Path(__file__).resolve().parents[1] / 'plans' / 'humpback_poc.json'
 
@@ -15,8 +15,9 @@ def _plan(**over):
     return DocumentaryPlan.model_validate(base)
 
 
-def test_poc_plan_is_valid_and_fits_45_to_60_seconds():
-    plan = load_plan(PLAN)
+@pytest.mark.parametrize('name', ['humpback_poc.json', 'humpback_poc2.json'])
+def test_poc_plan_is_valid_and_fits_45_to_60_seconds(name):
+    plan = load_plan(PLAN.parent / name)
     assert all(c.kind == 'commons' and not c.ai_generated for c in plan.clips.values())
     # Piper es_MX speaks roughly 2.2-2.8 words/s; the sample must stay in 45-60 s either way.
     for wps in (2.2, 2.8):
@@ -64,3 +65,9 @@ def test_credit_lines_state_licence_changes_and_ambience_origin():
     assert AI_LABEL in lines[1]
     assert 'No fue grabado' in lines[2]
     assert lines[-1] == 'Voz: Piper'
+
+
+def test_spoken_text_only_swaps_whole_words():
+    p = {'frías': 'fɾˈias', 'crías': 'kɾˈias', 'cría': 'kɾˈia'}
+    assert spoken_text('aguas frías, sus crías y su cría; criadero', p) == \
+        'aguas [[ fɾˈias ]], sus [[ kɾˈias ]] y su [[ kɾˈia ]]; criadero'

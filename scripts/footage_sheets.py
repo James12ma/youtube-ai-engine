@@ -16,7 +16,8 @@ from channel.footage import _best_derivative, download_clip
 
 def clip_info(client: httpx.Client, title: str) -> dict:
     r = client.get(API, params={'action': 'query', 'format': 'json', 'formatversion': '2', 'titles': title,
-                                'prop': 'videoinfo', 'viprop': 'url|size|mime|extmetadata|derivatives'},
+                                'prop': 'videoinfo|categories', 'cllimit': 'max',
+                                'viprop': 'url|size|mime|extmetadata|derivatives'},
                    headers={'User-Agent': USER_AGENT}, timeout=30)
     r.raise_for_status()
     page = r.json()['query']['pages'][0]
@@ -36,7 +37,8 @@ def clip_info(client: httpx.Client, title: str) -> dict:
             'credit': _clean((meta.get('Credit') or {}).get('value')),
             'description': desc[:600], 'page': info.get('descriptionurl') or '',
             'duration_s': float(info.get('duration') or 0), 'download': deriv['src'],
-            'download_height': deriv.get('height')}
+            'download_height': deriv.get('height'),
+            'categories': [c['title'].removeprefix('Category:') for c in page.get('categories', [])]}
 
 
 def resolve_title(client: httpx.Client, terms: str, prefix: str) -> str:
