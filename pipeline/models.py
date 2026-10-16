@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 class Source(BaseModel):
     source_id: str
     url: str
@@ -23,6 +23,14 @@ class ScriptOutput(BaseModel):
     hook: str
     sections: List[ScriptSection]
     cta: str
+# Free models often vary spelling/case of the same visual category. Map
+# only unambiguous synonyms; anything else still fails validation.
+_VISUAL_SYNONYMS = {
+    'screenrecording':'screen_recording','screencast':'screen_recording','screencapture':'screen_recording','screen':'screen_recording',
+    'diagram':'diagram','animation':'diagram','animateddiagram':'diagram','flowchart':'diagram','illustration':'diagram',
+    'textoverlay':'text_overlay','text':'text_overlay','title':'text_overlay','titlecard':'text_overlay','overlay':'text_overlay',
+    'chart':'chart','graph':'chart','datachart':'chart',
+    'broll':'broll','stockfootage':'broll','footage':'broll'}
 class Scene(BaseModel):
     index: int
     section_index: int
@@ -31,6 +39,17 @@ class Scene(BaseModel):
     visual_type: Literal['screen_recording','diagram','text_overlay','chart','broll']
     instruction: str
     claim_ids: List[str] = Field(default_factory=list)
+    @field_validator('visual_type', mode='before')
+    @classmethod
+    def _normalize_visual_type(cls, value):
+        if isinstance(value, str):
+            key=''.join(ch for ch in value.lower() if ch.isalnum())
+            return _VISUAL_SYNONYMS.get(key, value)
+        return value
+    @field_validator('claim_ids', mode='before')
+    @classmethod
+    def _none_claims_to_empty(cls, value):
+        return [] if value is None else value
 class StoryboardOutput(BaseModel):
     scenes: List[Scene]
 class VerifiedClaim(BaseModel):

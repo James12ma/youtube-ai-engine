@@ -224,6 +224,11 @@ def run(out: Path, *, metadata_client=None, source_fetcher=None, wire_factory=No
             report['gate_failure'] = safe_gate_failure(exc)
         known=re.search(r'\b(RateLimitError|AuthError|ClientError|SchemaValidationError|ServerError|BillableModelRejected|ConfigurationError)\b',str(exc))
         if known:report['classified_failure']=known.group(1)
+        if known and known.group(1)=='SchemaValidationError':
+            # Field paths and pydantic error types only; never the input values.
+            fields=re.findall(r'(?m)^([A-Za-z_][\w]*(?:\.\w+)*)\n\s+[^\n]*\[type=(\w+)',str(exc).replace('\\n','\n'))
+            if fields:report['schema_errors']=[{'field':f,'type':t} for f,t in fields[:8]]
+            elif 'Non-JSON response' in str(exc):report['schema_errors']=[{'field':'(whole response)','type':'non_json'}]
     finally:
         if adapter: adapter.close()
         elif wire: wire.close()

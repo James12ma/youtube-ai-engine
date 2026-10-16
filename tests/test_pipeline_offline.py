@@ -204,3 +204,26 @@ def test_expansion_runs_once_and_reports_earlier_failures(repo):
     safe=safe_quality_failure(exc.value)
     assert safe['reason']=='duration outside 8-12 minute target'
     assert safe['earlier_failures']==['duration outside 8-12 minute target']*2
+
+
+def test_storyboard_scene_accepts_visual_type_synonyms_only():
+    from pipeline.models import Scene
+    base=dict(index=0,section_index=0,start_s=0,end_s=5,instruction='Show the form.')
+    assert Scene(**base,visual_type='B-Roll').visual_type=='broll'
+    assert Scene(**base,visual_type='Screen Recording').visual_type=='screen_recording'
+    assert Scene(**base,visual_type='text overlay',claim_ids=None).claim_ids==[]
+    with pytest.raises(Exception):Scene(**base,visual_type='hologram')
+
+
+def test_schema_error_export_has_field_paths_not_values():
+    import re
+    from pydantic import ValidationError
+    from pipeline.models import StoryboardOutput
+    from router.errors import AllProvidersFailed
+    from adapters import SchemaValidationError
+    try:StoryboardOutput.model_validate({'scenes':[{'index':0,'section_index':0,'start_s':0,'end_s':1,'visual_type':'SECRET-VALUE','instruction':'x'}]})
+    except ValidationError as v:inner=SchemaValidationError(str(v))
+    exc=AllProvidersFailed('No available approved provider. Last error: '+repr(inner))
+    fields=re.findall(r'(?m)^([A-Za-z_][\w]*(?:\.\w+)*)\n\s+[^\n]*\[type=(\w+)',str(exc).replace('\\n','\n'))
+    assert ('scenes.0.visual_type','literal_error') in fields
+    assert all('SECRET' not in f and 'SECRET' not in t for f,t in fields)
