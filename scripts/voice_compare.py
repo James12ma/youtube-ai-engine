@@ -33,6 +33,12 @@ def _voices():
     spec.loader.exec_module(mod)
     return mod
 
+TEXT_EN = """Here is a bug that looks impossible. The total is right on Monday… and wrong by one cent on Friday.
+
+Nothing changed. Or did it?
+
+Let's slow down and follow the money, one line at a time. Because once you see where that cent disappears, you will never write this kind of code the same way again."""
+
 
 def synth(engine: str, out: Path, ref: Path | None) -> dict:
     voices = _voices()
@@ -43,6 +49,16 @@ def synth(engine: str, out: Path, ref: Path | None) -> dict:
     if engine == 'piper-plus':         # same voice, story rhythm + more natural variation
         e = voices.PiperEngine(vdir / 'es_MX-claude-high.onnx', length_scale=1.05, noise_scale=0.8, noise_w=1.0)
         return voices.narrate(e, TEXT, out)
+    if engine == 'piper-en-current':   # LogicScript today (render_educational settings)
+        e = voices.PiperEngine(vdir / 'en_US-libritts-high.onnx', length_scale=1.03, noise_scale=0.5)
+        return voices.narrate(e, TEXT_EN, out, sentence_level=False)
+    if engine in ('chatterbox-en', 'chatterbox-en-mtl'):
+        e = voices.ChatterboxEngine(ref, latam=False, language='en', english_model=engine == 'chatterbox-en',
+                                    exaggeration=float(os.environ.get('CB_EXAG', '0.6')),
+                                    cfg_weight=float(os.environ.get('CB_CFG_EN', '0.3')))
+        r = voices.narrate(e, TEXT_EN, out)
+        r['model'] = e.loaded
+        return r
     if engine == 'kokoro':
         return voices.narrate(voices.KokoroEngine(os.environ.get('KOKORO_VOICE', 'em_alex'), speed=0.95), TEXT, out)
     if engine == 'chatterbox':
@@ -71,15 +87,16 @@ def wer(ref: str, hyp: str) -> float:
     return round(d[len(h)] / max(1, len(r)), 3)
 
 
-def analyze(folder: Path) -> list[dict]:
+def analyze(folder: Path, language: str = 'es') -> list[dict]:
     import whisperx
     prosody = _voices().prosody
-    asr = whisperx.load_model('small', 'cpu', compute_type='int8', language='es')
+    ref_text = TEXT_EN if language == 'en' else TEXT
+    asr = whisperx.load_model('small', 'cpu', compute_type='int8', language=language)
     rows = []
     for wav in sorted(folder.glob('*.wav')):
         audio = whisperx.load_audio(str(wav))
-        heard = ' '.join(s['text'] for s in asr.transcribe(audio, batch_size=4, language='es')['segments'])
-        rows.append({'sample': wav.stem, 'wer': wer(TEXT, heard), **prosody(wav), 'heard': heard[:400]})
+        heard = ' '.join(s['text'] for s in asr.transcribe(audio, batch_size=4, language=language)['segments'])
+        rows.append({'sample': wav.stem, 'wer': wer(ref_text, heard), **prosody(wav), 'heard': heard[:400]})
     (folder / 'analysis.json').write_text(json.dumps(rows, indent=1, ensure_ascii=False), encoding='utf-8')
     return rows
 
@@ -90,13 +107,14 @@ def main() -> None:
     s = sub.add_parser('synth'); s.add_argument('--engine', required=True); s.add_argument('--out', type=Path, required=True)
     s.add_argument('--ref', type=Path)
     a = sub.add_parser('analyze'); a.add_argument('--dir', type=Path, required=True)
+    a.add_argument('--language', default='es')
     args = ap.parse_args()
     if args.cmd == 'synth':
         r = synth(args.engine, args.out, args.ref)
         r.pop('sentences', None)
         print(json.dumps(r, ensure_ascii=False))
     else:
-        for r in analyze(args.dir):
+        for r in analyze(args.dir, args.language):
             print(json.dumps({k: v for k, v in r.items() if k != 'heard'}, ensure_ascii=False))
 
 

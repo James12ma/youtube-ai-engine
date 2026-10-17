@@ -103,14 +103,21 @@ class ChatterboxEngine:
     name = 'chatterbox'
 
     def __init__(self, reference_wav: Path | None, *, latam: bool = True, exaggeration: float = 0.6,
-                 cfg_weight: float = 0.4, temperature: float = 0.8, device: str = 'cpu', seed: int = 7):
+                 cfg_weight: float = 0.4, temperature: float = 0.8, device: str = 'cpu', seed: int = 7,
+                 language: str = 'es', english_model: bool = False):
         import shutil
         import torch
         from huggingface_hub import hf_hub_download, snapshot_download
         from chatterbox.mtl_tts import ChatterboxMultilingualTTS
         torch.manual_seed(seed)
         self.loaded = 'multilingual-v3'
-        if latam:
+        self.language = language
+        self.english = None
+        if english_model:   # Resemble's English-only model (MIT); same reference clip -> same timbre
+            from chatterbox.tts import ChatterboxTTS
+            self.english = ChatterboxTTS.from_pretrained(device=device)
+            self.model, self.loaded = self.english, 'english'
+        elif latam:
             base = Path(snapshot_download('ResembleAI/chatterbox', allow_patterns=[
                 've.pt', 's3gen.pt', 'grapheme_mtl_merged_expanded_v1.json', 'conds.pt', 'Cangjie5_TC.json']))
             work = Path('/tmp/chatterbox_latam')
@@ -134,7 +141,10 @@ class ChatterboxEngine:
         self.sr = self.model.sr
 
     def say(self, text: str) -> np.ndarray:
-        wav = self.model.generate(text, language_id='es', audio_prompt_path=self.ref, **self.kw)
+        if self.english is not None:
+            wav = self.model.generate(text, audio_prompt_path=self.ref, **self.kw)
+        else:
+            wav = self.model.generate(text, language_id=self.language, audio_prompt_path=self.ref, **self.kw)
         return wav.squeeze().cpu().numpy().astype(np.float32)
 
 
