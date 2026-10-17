@@ -21,8 +21,17 @@ A su lado nada su cría, nacida hace apenas unas semanas en estas aguas cálidas
 ¿Cuánto tiempo pasarán juntas? Casi un año. Y en ese tiempo, la cría aprenderá todo lo que necesita para cruzar un océano entero."""
 
 
+def _voices():
+    """Load channel/voices.py without channel/__init__ (the Chatterbox venv lacks the app deps)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('alan7_voices', Path(__file__).resolve().parents[1] / 'channel' / 'voices.py')
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def synth(engine: str, out: Path, ref: Path | None) -> dict:
-    from channel import voices
+    voices = _voices()
     vdir = Path(os.environ.get('VOICE_DIR', 'voices'))
     if engine == 'piper-current':      # exactly what the pipeline does today: one block, default noise
         e = voices.PiperEngine(vdir / 'es_MX-claude-high.onnx', length_scale=1.1)
@@ -60,7 +69,7 @@ def wer(ref: str, hyp: str) -> float:
 
 def analyze(folder: Path) -> list[dict]:
     import whisperx
-    from channel.voices import prosody
+    prosody = _voices().prosody
     asr = whisperx.load_model('small', 'cpu', compute_type='int8', language='es')
     rows = []
     for wav in sorted(folder.glob('*.wav')):
