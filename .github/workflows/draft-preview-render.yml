@@ -20,6 +20,11 @@ on:
         type: choice
         options: [landscape, portrait]
         default: landscape
+      narrator:
+        description: 'chatterbox = owner-approved shared voice (same as Alan7), piper = old voice'
+        type: choice
+        options: [chatterbox, piper]
+        default: chatterbox
       delivery_pubkey:
         description: Base64 RSA public key (PEM). Videos leave the runner ONLY encrypted to this key; empty = no video leaves the runner.
         required: false
@@ -37,7 +42,7 @@ jobs:
   render:
     if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 300
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       PYTHONUNBUFFERED: '1'
@@ -125,6 +130,21 @@ jobs:
           mkdir -p "$VOICE_DIR"
           python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
           test -s "$VOICE_DIR/${VOICE_NAME}.onnx"
+      - name: Texts to narrate (shared voice)
+        if: inputs.narrator == 'chatterbox'
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=$(python -m channel.cli render --draft outputs/draft --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
+            --out outputs/preview/preview.mp4 --dump-texts narration_texts.json)
+          echo "NARR_LANG=$(echo "$out" | python -c 'import json,sys;print(json.load(sys.stdin)["language"])')" >> "$GITHUB_ENV"
+      - name: Narrate (owner-approved shared voice)
+        if: inputs.narrator == 'chatterbox'
+        uses: ./.github/actions/alan7-voice
+        with:
+          texts: narration_texts.json
+          language: ${{ env.NARR_LANG }}
+          out: outputs/narration
       - name: Free-licensed photos for photo scenes (Wikimedia Commons)
         shell: bash
         run: |
@@ -143,7 +163,7 @@ jobs:
             --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
             --out outputs/preview/preview.mp4 --format "${{ inputs.format }}" \
             --asset-map outputs/preview/photos/asset_map.json \
-            --unreviewed-preview
+            --unreviewed-preview ${{ inputs.narrator == 'chatterbox' && '--narration-dir outputs/narration' || '' }}
       - name: Render native vertical version for Shorts
         if: success() && inputs.format == 'landscape'
         shell: bash
@@ -153,7 +173,7 @@ jobs:
             --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
             --out outputs/preview_vertical/vertical.mp4 --format portrait \
             --asset-map outputs/preview/photos/asset_map.json \
-            --unreviewed-preview
+            --unreviewed-preview ${{ inputs.narrator == 'chatterbox' && '--narration-dir outputs/narration' || '' }}
       - name: Cut vertical Shorts from the vertical render
         if: success() && inputs.format == 'landscape'
         shell: bash

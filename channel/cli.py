@@ -28,6 +28,8 @@ def main(argv=None):
                    help='Render an owner preview of an UNREVIEWED draft; never counts as editorial approval')
     r.add_argument('--format',choices=('landscape','portrait'),default='landscape')
     r.add_argument('--allow-edge-fallback',action='store_true')
+    r.add_argument('--narration-dir',type=Path,help='premade narration from scripts/narrate_texts.py (shared approved voice)')
+    r.add_argument('--dump-texts',type=Path,help='write the narration texts (hook, sections, CTA) as JSON and exit')
     t=sub.add_parser('thumbnail');t.add_argument('--text',required=True);t.add_argument('--out',type=Path,required=True)
     t.add_argument('--screenshot',type=Path)
     t.add_argument('--title',help='Video title; records pairing advisories (blocks only if the policy says so)')
@@ -67,6 +69,10 @@ def main(argv=None):
     elif args.command=='render':
         from .video import render_approved_video
         draft=args.draft
+        if args.dump_texts:
+            sc=_json_model(draft/'script.json',ScriptArtifact)
+            args.dump_texts.write_text(json.dumps([sc.hook]+[x.narration for x in sc.sections]+[sc.cta],ensure_ascii=False))
+            print(json.dumps({'texts':args.dump_texts.name,'language':sc.language}));return 0
         assets={}
         if args.asset_map:assets={int(k):Path(v) for k,v in json.loads(args.asset_map.read_text()).items()}
         result=render_approved_video(_json_model(draft/'script.json',ScriptArtifact),
@@ -76,7 +82,7 @@ def main(argv=None):
              width=1080 if args.format=='portrait' else 1920,
              height=1920 if args.format=='portrait' else 1080,
              allow_edge_fallback=args.allow_edge_fallback,
-             unreviewed_preview=args.unreviewed_preview)
+             unreviewed_preview=args.unreviewed_preview,narration_dir=args.narration_dir)
     elif args.command=='thumbnail':
         from .packaging_lint import QualityPolicy
         path=make_thumbnail(args.text,args.out,genuine_screenshot=args.screenshot,title=args.title,

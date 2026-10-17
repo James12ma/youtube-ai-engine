@@ -14,7 +14,7 @@ from production_pro.models import EditPlan
 from production_pro.editing import compose_scenes,burn_captions
 from production_pro.qc import run_qc
 from channel.chapters import timeline_from_segments,normalize_timeline
-from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,build_ass_from_words,assess_caption_quality,save_word_timestamps,save_srt_from_blocks
+from narration_pro import PremadeNarrator,PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,build_ass_from_words,assess_caption_quality,save_word_timestamps,save_srt_from_blocks
 
 class VideoBuildError(RuntimeError): pass
 
@@ -30,7 +30,8 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
                           *,actual_assets:Mapping[int,Path]|None=None,
                           reviewed:bool=False, width:int=1920,height:int=1080,fps:int=24,
                           allow_edge_fallback:bool=False,
-                          unreviewed_preview:bool=False)->dict:
+                          unreviewed_preview:bool=False,
+                          narration_dir:Path|None=None)->dict:
     # A preview lets the owner WATCH an automated draft before deciding on
     # editorial approval. It never counts as review: the report says so, and
     # scenes that need real footage become clearly labelled placeholder cards.
@@ -57,7 +58,10 @@ def render_approved_video(script:ScriptArtifact, storyboard:StoryboardOutput,
     work=output_path.parent/(output_path.stem+'_work');work.mkdir(parents=True,exist_ok=True)
     segments=[script.hook]+[sec.narration for sec in script.sections]+[script.cta]
     if not all(t.strip() for t in segments):raise VideoBuildError('Every narration segment must be nonempty')
-    narrator=PiperOrEdgeNarrator(model_path,allow_edge_fallback=allow_edge_fallback)
+    # Owner-approved shared voice (Chatterbox, same timbre as Alan7) when narrated beforehand with
+    # scripts/narrate_texts.py; otherwise the original Piper voice.
+    narrator=(PremadeNarrator(narration_dir) if narration_dir else
+              PiperOrEdgeNarrator(model_path,allow_edge_fallback=allow_edge_fallback))
     synthesized=[]
     for i,text in enumerate(segments):synthesized.append(narrator.synthesize(text,work/f'speech_{i}.wav'))
     concat_list=work/'speech_concat.txt'
