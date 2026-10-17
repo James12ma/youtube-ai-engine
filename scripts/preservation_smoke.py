@@ -82,8 +82,10 @@ def screen(out: Path):
         for a in setup['rows']:rec.apply(a,sleep=lambda s:None)
         rec.apply({'do':'row','row':9,'values':[{'date':'2026-01-28'},'Corner cafe','Client lunch','Meals',38.75,'Card','Yes','','']},sleep=lambda s:None)
         rec.apply({'do':'select','ref':'Expenses!A6'})
+        rec.snapshot(out/'capture'/'initial.png')
         captured=rec.record(actions,narration.total_duration_s+.4,out/'capture'/'raw.mp4',
                             evidence_refs=lambda a:list(a.get('expect',{})))
+    (out/'actions.json').write_text(json.dumps(captured.log,indent=2))
     failures=[(ref,want,a.get('observed',{}).get(ref)) for a in captured.log
               for ref,want in a['action'].get('expect',{}).items() if a.get('observed',{}).get(ref)!=want]
     if failures:raise RuntimeError('Actual workbook mismatch: '+repr(failures))

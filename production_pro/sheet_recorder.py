@@ -69,6 +69,16 @@ class SheetRecorder:
         self.workbook = self.workdir / ('recording_' + self.source.name)
         shutil.copy2(self.source, self.workbook)          # never touch the published template
         self.profile = Path(tempfile.mkdtemp(prefix='lo_profile_'))
+        # A fresh recording profile must not put a first-run tip in front of
+        # the sheet. UNO imports still work behind that modal; keyboard input
+        # does not. This affects only the disposable recording profile.
+        (self.profile / 'user').mkdir()
+        (self.profile / 'user' / 'registrymodifications.xcu').write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<oor:items xmlns:oor="http://openoffice.org/2001/registry">'
+            '<item oor:path="/org.openoffice.Office.Common/Misc">'
+            '<prop oor:name="ShowTipOfTheDay" oor:op="fuse"><value>false</value></prop>'
+            '</item></oor:items>')
         self._startup_log = (self.workdir / 'libreoffice-startup.log').open('w')
         self.proc = subprocess.Popen([self.soffice, '--calc', '--norestore', '--nologo', '--nodefault',
                                       '--nolockcheck', f'-env:UserInstallation={self.profile.as_uri()}',
@@ -190,9 +200,11 @@ class SheetRecorder:
                 sheet, cell = self._range(action['ref'])
                 self._show(sheet, cell)
                 self.controller.getFrame().getContainerWindow().setFocus()
+                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'F2', 'ctrl+a'], check=True)
                 subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '90', '--',
                                 str(action['text'])], check=True)
                 subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Return'], check=True)
+                sleep(0.15)  # let the application's event loop commit the edit before UNO reads it
             elif kind == 'move':
                 x, y = int(action['x']), int(action['y'])
                 if not 0 <= x < self.size[0] or not 0 <= y < self.size[1]:
@@ -224,6 +236,12 @@ class SheetRecorder:
         _, cell = self._range(ref)
         return cell.getString()
 
+    def snapshot(self, out: Path):
+        """Capture actual X11 pixels for review, never a fabricated spreadsheet image."""
+        subprocess.run(['ffmpeg', '-y', '-v', 'error', '-f', 'x11grab', '-video_size',
+                        f'{self.size[0]}x{self.size[1]}', '-i', os.environ['DISPLAY'],
+                        '-frames:v', '1', str(out)], check=True, capture_output=True)
+
     # ---------------- recording ----------------
     def record(self, schedule: Sequence[tuple[float, dict]], total_s: float, out: Path, *,
                evidence_refs: Callable[[dict], list[str]] | None = None) -> RecordingResult:
@@ -248,6 +266,14 @@ class SheetRecorder:
                          'completed_s': round(time.monotonic()-t0, 3), 'action': action}
                 if evidence_refs:
                     entry['observed'] = {ref: self.value(ref) for ref in evidence_refs(action)}
+                if action['do'] == 'type':
+                    _, cell = self._range(action['ref'])
+                    entry['typed_cell'] = {'text':cell.getString(), 'formula':cell.getFormula(),
+                                           'type':str(cell.getType())}
+                if action['do'] in ('type', 'menu'):
+                    snap = self.workdir / f'action_{len(log):02d}.png'
+                    self.snapshot(snap)
+                    entry['screenshot'] = str(snap)
                 log.append(entry)
             remaining = total_s - (time.monotonic() - t0)
             if remaining > 0:
