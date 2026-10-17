@@ -63,7 +63,7 @@ jobs:
           # Chatterbox clones the timbre of a SYNTHETIC reference (Kokoro), never a real person's voice
           ffmpeg -y -hide_banner -loglevel error -i out/kokoro.wav -t 12 -ar 24000 -ac 1 ref.wav || true
           HF_HOME=$RUNNER_TEMP/hf "$RUNNER_TEMP/cb/bin/python" -m scripts.voice_compare synth --engine chatterbox --ref ref.wav --out out/chatterbox.wav > cb.json 2> err_cb.txt \
-            && echo "::notice title=chatterbox::$(cat cb.json)" || echo "::warning title=chatterbox failed::$(tail -c 1500 err_cb.txt | tr '\n' ' ')"
+            && echo "::notice title=chatterbox::$(cat cb.json)" || echo "::warning title=chatterbox failed::$(tr '\r' '\n' < err_cb.txt | grep -v -E 'it/s|s/it|^\s*$' | tail -n 25 | tr '\n' ' ' | tail -c 3000)"
           ls -la out
       - name: Check (ASR round-trip, pitch variation, pauses)
         run: |
