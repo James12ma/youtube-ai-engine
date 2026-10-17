@@ -51,9 +51,8 @@ jobs:
           # Explicit public dummy-data review deliverables only; never secrets/model caches.
           names=['outputs/preservation-screen/LogicScript_Screen_Proof.mp4',
                  'outputs/preservation-screen/report.json','outputs/preservation-junit.xml',
-                 'outputs/preservation-screen/actions.json','outputs/preservation-screen/capture/initial.png',
-                 'outputs/preservation-screen/capture/action_02.png','outputs/preservation-screen/capture/action_03.png',
-                 'outputs/preservation-screen/capture/action_07.png']
+                 'outputs/preservation-screen/actions.json','outputs/preservation-screen/capture/initial.png']
+          names += [str(p) for p in sorted(pathlib.Path('outputs/preservation-screen/capture').glob('action_*.png'))]
           for name in names:
               p=pathlib.Path(name)
               if not p.is_file():

@@ -270,7 +270,7 @@ class SheetRecorder:
                     _, cell = self._range(action['ref'])
                     entry['typed_cell'] = {'text':cell.getString(), 'formula':cell.getFormula(),
                                            'type':str(cell.getType())}
-                if action['do'] in ('type', 'menu'):
+                if action['do'] in ('type', 'set', 'menu'):
                     snap = self.workdir / f'action_{len(log):02d}.png'
                     self.snapshot(snap)
                     entry['screenshot'] = str(snap)

@@ -52,8 +52,9 @@ def screen(out: Path):
     before=hashlib.sha256(template.read_bytes()).hexdigest()
     texts=[
         'This is a real spreadsheet in LibreOffice Calc. The file also opens in Excel. Watch the cursor move and click the sheet.',
-        'I type an amount as text, using an apostrophe first. The live formula detects the mistake. The status becomes ERROR.',
-        'Now I replace that text with the number thirty eight point seventy five. Press Enter. The status becomes OK.',
+        'I type the number forty one point twenty five and press Enter. The sheet accepts a numeric amount.',
+        'Now I import an amount stored as text. Direct imports can bypass input validation. The live formula flags ERROR.',
+        'I fix the imported text by typing thirty eight point seventy five. Press Enter. The status changes back to OK.',
         'Here is a real category menu. I open the list and close it. Next, the Format menu opens above the sheet.',
         'I scroll down through the expense rows, then return to the summary. The workbook calculates the results itself.',
         'The summary says ALL CHECKS PASSED. This proves the workflow. The robotic voice is for engineering review only.'
@@ -63,19 +64,20 @@ def screen(out: Path):
     for seg in narration.segments: starts.append(t);t+=seg.duration_s
     setup=json.loads(Path('content/expense-tracker-lesson/lesson.json').read_text())['demo_setup']
     actions=[
-        (0.7,{'do':'move','x':620,'y':450}),
+        (0.7,{'do':'move','x':850,'y':345}),
         (1.5,{'do':'click'}),
-        (starts[1]+.7,{'do':'type','ref':'Expenses!E9','text':"'$38.75",'expect':{'Expenses!J9':'ERROR','Expenses!K9':'Amount is not a number.'}}),
-        (starts[2]+.7,{'do':'type','ref':'Expenses!E9','text':'38.75','expect':{'Expenses!J9':'OK'}}),
-        (starts[3]+.3,{'do':'select','ref':'Expenses!D9'}),
-        (starts[3]+1,{'do':'key','keys':'alt+Down'}),
-        (starts[3]+3,{'do':'key','keys':'Escape'}),
-        (starts[3]+4,{'do':'menu','keys':'alt+o'}),
-        (starts[3]+6,{'do':'key','keys':'Escape'}),
-        (starts[4]+.4,{'do':'move','x':900,'y':550}),
-        (starts[4]+1,{'do':'scroll','direction':'down','count':9}),
-        (starts[4]+4,{'do':'select','ref':'Summary!A1'}),
-        (starts[5]+.4,{'do':'select','ref':'Summary!B4','expect':{'Summary!B4':'ALL CHECKS PASSED'}})
+        (starts[1]+.7,{'do':'type','ref':'Expenses!E9','text':'41.25','expect':{'Expenses!E9':'41.25','Expenses!J9':'OK'}}),
+        (starts[2]+.7,{'do':'set','ref':'Expenses!E9','value':'$38.75','expect':{'Expenses!E9':'$38.75','Expenses!J9':'ERROR','Expenses!K9':'Amount is not a number.'}}),
+        (starts[3]+.7,{'do':'type','ref':'Expenses!E9','text':'38.75','expect':{'Expenses!E9':'38.75','Expenses!J9':'OK'}}),
+        (starts[4]+.3,{'do':'select','ref':'Expenses!D9'}),
+        (starts[4]+1,{'do':'key','keys':'alt+Down'}),
+        (starts[4]+3,{'do':'key','keys':'Escape'}),
+        (starts[4]+4,{'do':'menu','keys':'alt+o'}),
+        (starts[4]+6,{'do':'key','keys':'Escape'}),
+        (starts[5]+.4,{'do':'move','x':900,'y':550}),
+        (starts[5]+1,{'do':'scroll','direction':'down','count':9}),
+        (starts[5]+4,{'do':'select','ref':'Summary!A1'}),
+        (starts[6]+.4,{'do':'select','ref':'Summary!B4','expect':{'Summary!B4':'ALL CHECKS PASSED'}})
     ]
     with SheetRecorder(template,out/'capture',zoom=110) as rec:
         rec.apply({'do':'clear','ref':setup['clear']},sleep=lambda s:None)
