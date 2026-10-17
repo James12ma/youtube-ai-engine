@@ -1,4 +1,6 @@
-"""Render a sourced lesson with existing Piper, WhisperX, recorder and compositor.
+"""Render a browser-app lesson (the One-Cent lesson) with Piper, WhisperX, recorder and compositor.
+
+Use scripts.render_lesson to dispatch any lesson by its lesson.json "renderer" field.
 
 This is an editorial draft, not a bypass of the owner's release approval gate.
 """
@@ -14,9 +16,10 @@ from production_pro.qc import run_qc
 from scripts.render_showcase import export_srt
 from scripts.build_practice_lab import build_lab,mount_lab
 from scripts.enforce_gates import enforce,measure_loudness
+from production_pro.lesson_narration import narrate_chapters
 
 ROOT=Path(__file__).resolve().parents[1]
-LESSON=ROOT/'content/expense-rule-lesson'
+LESSON=ROOT/'content/expense-rule-lesson'   # default browser-app lesson
 
 
 def concat_wavs(paths,out):
@@ -50,9 +53,11 @@ def install_cursor(page):
     }""")
 
 
-def run(voice,out,reuse=None):
+def run(voice,out,reuse=None,lesson_dir=None):
+    LESSON_DIR=Path(lesson_dir) if lesson_dir else LESSON
     out.mkdir(parents=True,exist_ok=True)
-    lesson=json.loads((LESSON/'lesson.json').read_text());chapters=lesson['chapters']
+    lesson=json.loads((LESSON_DIR/'lesson.json').read_text());chapters=lesson['chapters']
+    if lesson.get('renderer','browser-app')!='browser-app':raise ValueError('render_educational only renders browser-app lessons; use scripts.render_lesson')
     transcript=' '.join(c['narration'] for c in chapters)
     if reuse:
         aligned=AlignmentResult.model_validate_json((reuse/'words.json').read_text())
@@ -67,15 +72,10 @@ def run(voice,out,reuse=None):
     else:
         narrator=PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
         aligner=WhisperXAligner(min_token_coverage=1)
-        words=[];parts=[];timeline=[];offset=0
-        for i,c in enumerate(chapters):
-            path=out/f'voice_{i:02}.wav';narrator.synthesize(c['narration'],path)
-            aligned=aligner.align(path,c['narration'])
-            for word in aligned.words:words.append(WordTimestamp(**{**word.model_dump(),'start_s':word.start_s+offset,'end_s':word.end_s+offset}))
-            timeline.append({'title':c['title'],'start':offset,'end':offset+aligned.duration_s})
-            offset+=aligned.duration_s;parts.append(path)
-            print(f'Chapter {i+1}: real Piper + WhisperX, {aligned.duration_s:.2f}s',flush=True)
-        concat_wavs(parts,out/'vo.wav');normalize_loudness(out/'vo.wav',out/'vo_norm.wav')
+        # Shared, lesson-agnostic narration stage (same per-chapter Piper + WhisperX logic as before).
+        narrated=narrate_chapters(chapters,out,narrator=narrator,aligner=aligner)
+        words,timeline,offset=narrated.words,narrated.timeline,narrated.duration_s
+        normalize_loudness(out/'vo.wav',out/'vo_norm.wav')
         transcript=' '.join(c['narration'] for c in chapters)
         aligned=AlignmentResult(words=words,audio_path=str(out/'vo_norm.wav'),transcript=transcript,language='en',alignment_model='whisperx per-chapter CTC',duration_s=offset,token_coverage=1)
         save_word_timestamps(aligned,out/'words.json')
@@ -198,7 +198,7 @@ def run(voice,out,reuse=None):
     gates=enforce(out,expected_size=(1920,1080));(out/'independent_gates.json').write_text(json.dumps(gates,indent=2))
     (out/'demo_evidence.json').write_text(json.dumps(evidence,indent=2))
     (out/'LogicScript_Practice_Lab.html').write_text(build_lab())
-    for file in ('script.md','sources.md','lesson.json','test-matrix.csv'):shutil.copy2(LESSON/file,out/file)
+    for file in ('script.md','sources.md','lesson.json','test-matrix.csv'):shutil.copy2(LESSON_DIR/file,out/file)
     frames=out/'review_frames';frames.mkdir(exist_ok=True)
     for i,t in enumerate(timeline):
         subprocess.run(['ffmpeg','-y','-loglevel','error','-ss',str(t['start']+min(8,(t['end']-t['start'])/2)),'-i',str(out/'final.mp4'),'-frames:v','1',str(frames/f'{i:02}.jpg')],check=True)
@@ -216,5 +216,5 @@ def run(voice,out,reuse=None):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--voice',type=Path);parser.add_argument('--output-dir',type=Path,default=Path('outputs/educational'))
-    parser.add_argument('--reuse-narration',type=Path)
-    args=parser.parse_args();run(args.voice,args.output_dir,args.reuse_narration)
+    parser.add_argument('--reuse-narration',type=Path);parser.add_argument('--lesson',type=Path,default=LESSON)
+    args=parser.parse_args();run(args.voice,args.output_dir,args.reuse_narration,args.lesson)

@@ -41,6 +41,10 @@ class PiperNarrator:
         if self._voice is not None:
             return self._voice
         try:
+            # Local narration has no reason to emit ONNX Runtime usage events.
+            # Disable telemetry BEFORE Piper creates an inference session.
+            import onnxruntime
+            onnxruntime.disable_telemetry_events()
             from piper import PiperVoice
         except ImportError as exc:
             raise NarrationError("piper-tts==1.8.0 required") from exc
