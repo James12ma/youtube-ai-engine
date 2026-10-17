@@ -2,7 +2,7 @@
 from __future__ import annotations
 import argparse,json,shutil,time,subprocess
 from pathlib import Path
-from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,save_word_timestamps,build_ass_from_words
+from narration_pro import PremadeNarrator,PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,save_word_timestamps,build_ass_from_words
 from narration_pro.aligner import _tokens
 from production_pro.recorder import WorkflowRecorder,focus_element
 from production_pro.editing import compose_scenes,burn_captions
@@ -72,11 +72,12 @@ def paced_steps(boundaries):
     return steps
 
 
-def run(voice:Path,out:Path,formats:list[str],*,allow_edge_fallback=False):
+def run(voice:Path,out:Path,formats:list[str],*,allow_edge_fallback=False,narration_dir:Path|None=None):
     out.mkdir(parents=True,exist_ok=True)
     shared=out/'narration';shared.mkdir(exist_ok=True)
     transcript=' '.join(SENTENCES)
-    narrator=PiperOrEdgeNarrator(voice,length_scale=.96,noise_scale=.55,allow_edge_fallback=allow_edge_fallback)
+    narrator=(PremadeNarrator(narration_dir) if narration_dir else
+              PiperOrEdgeNarrator(voice,length_scale=.96,noise_scale=.55,allow_edge_fallback=allow_edge_fallback))
     speech=narrator.synthesize(transcript,shared/'vo.wav')
     normalize_loudness(Path(speech.wav_path),shared/'vo_norm.wav')
     aligned=WhisperXAligner(min_token_coverage=1).align(shared/'vo_norm.wav',transcript)
@@ -130,9 +131,13 @@ def run(voice:Path,out:Path,formats:list[str],*,allow_edge_fallback=False):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser()
-    p.add_argument('--voice',type=Path,required=True)
+    p.add_argument('--voice',type=Path)
     p.add_argument('--output-dir',type=Path,default=Path('outputs/showcase'))
     p.add_argument('--format',choices=['both',*FORMATS],default='both')
     p.add_argument('--allow-edge-fallback',action='store_true')
+    p.add_argument('--narration-dir',type=Path,help='premade narration (scripts/narrate_texts.py)')
+    p.add_argument('--dump-texts',type=Path,help='write the texts to narrate as JSON and exit')
     a=p.parse_args()
-    print(json.dumps(run(a.voice,a.output_dir,list(FORMATS) if a.format=='both' else [a.format],allow_edge_fallback=a.allow_edge_fallback),indent=2))
+    if a.dump_texts:
+        a.dump_texts.write_text(json.dumps([' '.join(SENTENCES)],ensure_ascii=False));raise SystemExit(0)
+    print(json.dumps(run(a.voice,a.output_dir,list(FORMATS) if a.format=='both' else [a.format],allow_edge_fallback=a.allow_edge_fallback,narration_dir=a.narration_dir),indent=2))

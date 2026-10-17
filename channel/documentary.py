@@ -343,19 +343,19 @@ def search_ambience(client, terms: list[str]) -> dict | None:
 
 
 def _premade_narration(plan: 'DocumentaryPlan', folder: Path | None) -> list:
-    """beat_<i>.wav files written by scripts/narrate_beats.py, checked against the plan text."""
+    """Segment WAVs written by scripts/narrate_texts.py, checked against the plan text."""
     import hashlib
     import wave as _wave
     from types import SimpleNamespace
     if folder is None or not (folder / 'manifest.json').is_file():
-        raise DocumentaryError('voice_engine=chatterbox needs --narration-dir from scripts/narrate_beats.py')
+        raise DocumentaryError('voice_engine=chatterbox needs --narration-dir from scripts/narrate_texts.py')
     man = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))
     out = []
     for i, b in enumerate(plan.beats):
         entry = man['beats'][i] if i < len(man['beats']) else {}
         if entry.get('sha1') != hashlib.sha1(b.narration.encode()).hexdigest():
             raise DocumentaryError(f'narration for beat {i} does not match the plan text')
-        path = folder / f'beat_{i}.wav'
+        path = folder / entry.get('file', f'beat_{i}.wav')
         with _wave.open(str(path)) as w:
             out.append(SimpleNamespace(wav_path=str(path), duration_s=w.getnframes() / w.getframerate()))
     return out
@@ -383,7 +383,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
 
     # 1. narration, one WAV per beat (real Piper voice; no fallback service)
     if plan.voice_engine == 'chatterbox':
-        # beats were narrated beforehand in the Chatterbox environment (scripts/narrate_beats.py)
+        # beats were narrated beforehand in the Chatterbox environment (scripts/narrate_texts.py)
         wavs = _premade_narration(plan, Path(narration_dir) if narration_dir else None)
         backend = 'chatterbox-es-mx-latam'
     else:
@@ -526,7 +526,7 @@ def main() -> None:
     ap.add_argument('--plan', type=Path, required=True)
     ap.add_argument('--voice-model', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
-    ap.add_argument('--narration-dir', type=Path, help='beat WAVs from scripts/narrate_beats.py (chatterbox)')
+    ap.add_argument('--narration-dir', type=Path, help='segment WAVs from scripts/narrate_texts.py (chatterbox)')
     args = ap.parse_args()
     plan = load_plan(args.plan)
     files, infos, ambience, amb_file = {}, {}, None, None

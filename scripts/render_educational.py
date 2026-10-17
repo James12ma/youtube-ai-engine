@@ -5,7 +5,7 @@ This is an editorial draft, not a bypass of the owner's release approval gate.
 from __future__ import annotations
 import argparse, json, shutil, subprocess, time, wave
 from pathlib import Path
-from narration_pro import PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,save_word_timestamps,build_ass_from_words
+from narration_pro import PremadeNarrator,PiperOrEdgeNarrator,WhisperXAligner,normalize_loudness,save_word_timestamps,build_ass_from_words
 from narration_pro.aligner import AlignmentResult, WordTimestamp, _tokens
 from production_pro.recorder import WorkflowRecorder,focus_element
 from production_pro.editing import compose_scenes,burn_captions
@@ -50,7 +50,7 @@ def install_cursor(page):
     }""")
 
 
-def run(voice,out,reuse=None):
+def run(voice,out,reuse=None,narration_dir=None):
     out.mkdir(parents=True,exist_ok=True)
     lesson=json.loads((LESSON/'lesson.json').read_text());chapters=lesson['chapters']
     transcript=' '.join(c['narration'] for c in chapters)
@@ -58,14 +58,17 @@ def run(voice,out,reuse=None):
         aligned=AlignmentResult.model_validate_json((reuse/'words.json').read_text())
         if aligned.transcript!=transcript or aligned.method!='whisperx_ctc':raise ValueError('Reuse transcript/alignment mismatch')
         old_report=json.loads((reuse/'qc_report.json').read_text())
-        if old_report.get('narration_backend')!='piper':raise ValueError('Expected verified Piper narration')
+        if old_report.get('narration_backend') not in ('piper','chatterbox'):raise ValueError('Expected verified Piper or Chatterbox narration')
+        backend=old_report['narration_backend']
         timeline=old_report['chapters'];offset=aligned.duration_s;words=aligned.words
         subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(reuse/'final.mp4'),'-vn','-acodec','pcm_s16le',str(out/'vo.wav')],check=True)
         normalize_loudness(out/'vo.wav',out/'vo_norm.wav')
         save_word_timestamps(aligned,out/'words.json')
         if (reuse/'PIPER_MODEL_CARD.md').exists():shutil.copy2(reuse/'PIPER_MODEL_CARD.md',out/'PIPER_MODEL_CARD.md')
     else:
-        narrator=PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
+        # owner-approved shared voice (Chatterbox) when narrated beforehand; Piper otherwise
+        narrator=PremadeNarrator(narration_dir) if narration_dir else PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
+        backend='chatterbox' if narration_dir else 'piper'
         aligner=WhisperXAligner(min_token_coverage=1)
         words=[];parts=[];timeline=[];offset=0
         for i,c in enumerate(chapters):
@@ -74,7 +77,7 @@ def run(voice,out,reuse=None):
             for word in aligned.words:words.append(WordTimestamp(**{**word.model_dump(),'start_s':word.start_s+offset,'end_s':word.end_s+offset}))
             timeline.append({'title':c['title'],'start':offset,'end':offset+aligned.duration_s})
             offset+=aligned.duration_s;parts.append(path)
-            print(f'Chapter {i+1}: real Piper + WhisperX, {aligned.duration_s:.2f}s',flush=True)
+            print(f'Chapter {i+1}: {backend} + WhisperX, {aligned.duration_s:.2f}s',flush=True)
         concat_wavs(parts,out/'vo.wav');normalize_loudness(out/'vo.wav',out/'vo_norm.wav')
         transcript=' '.join(c['narration'] for c in chapters)
         aligned=AlignmentResult(words=words,audio_path=str(out/'vo_norm.wav'),transcript=transcript,language='en',alignment_model='whisperx per-chapter CTC',duration_s=offset,token_coverage=1)
@@ -193,7 +196,7 @@ def run(voice,out,reuse=None):
     qc=run_qc(out/'final.mp4',out/'captions.ass',min_caption_coverage=.70,forced_alignment_verified=True)
     if not qc.passed:raise RuntimeError('Technical QC failed; inspect report')
     lufs,peak=measure_loudness(out/'final.mp4')
-    report={'title':lesson['title'],'transcript':transcript,'provenance':lesson['provenance'],'aligner_ran':True,'method':'whisperx_ctc','token_coverage':1,'narration_backend':'piper','aligned_word_count':len(words),'caption_count':count,'final_duration_s':qc.duration_s,'alignment_duration_s':offset,'final_lufs':lufs,'final_tp':peak,'technical_qc':qc.model_dump(),'resolution':'1920x1080','ready_for_publication':False,'publishing':'disabled','live_llm_calls':0,'editorial_review':'separate review required','chapters':timeline}
+    report={'title':lesson['title'],'transcript':transcript,'provenance':lesson['provenance'],'aligner_ran':True,'method':'whisperx_ctc','token_coverage':1,'narration_backend':backend,'aligned_word_count':len(words),'caption_count':count,'final_duration_s':qc.duration_s,'alignment_duration_s':offset,'final_lufs':lufs,'final_tp':peak,'technical_qc':qc.model_dump(),'resolution':'1920x1080','ready_for_publication':False,'publishing':'disabled','live_llm_calls':0,'editorial_review':'separate review required','chapters':timeline}
     (out/'qc_report.json').write_text(json.dumps(report,indent=2))
     gates=enforce(out,expected_size=(1920,1080));(out/'independent_gates.json').write_text(json.dumps(gates,indent=2))
     (out/'demo_evidence.json').write_text(json.dumps(evidence,indent=2))
@@ -217,4 +220,9 @@ def run(voice,out,reuse=None):
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--voice',type=Path);parser.add_argument('--output-dir',type=Path,default=Path('outputs/educational'))
     parser.add_argument('--reuse-narration',type=Path)
-    args=parser.parse_args();run(args.voice,args.output_dir,args.reuse_narration)
+    parser.add_argument('--narration-dir',type=Path,help='premade narration (scripts/narrate_texts.py)')
+    parser.add_argument('--dump-texts',type=Path,help='write the texts to narrate as JSON and exit')
+    args=parser.parse_args()
+    if args.dump_texts:
+        args.dump_texts.write_text(json.dumps([c['narration'] for c in json.loads((LESSON/'lesson.json').read_text())['chapters']],ensure_ascii=False));raise SystemExit(0)
+    run(args.voice,args.output_dir,args.reuse_narration,args.narration_dir)

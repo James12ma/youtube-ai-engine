@@ -2,9 +2,18 @@ name: Educational lesson render (no upload)
 
 on:
   workflow_dispatch:
+    inputs:
+      voice:
+        description: 'chatterbox = owner-approved shared voice (same as Alan7), piper = old voice'
+        type: choice
+        options: [chatterbox, piper]
+        default: chatterbox
+      delivery_pubkey:
+        description: Base64 RSA public key (PEM); the video leaves the runner only encrypted
+        required: true
 
 permissions:
-  contents: read
+  contents: write  # only to push an ENCRYPTED review pack to qa/<run id>
 
 concurrency:
   group: educational-render-${{ github.ref }}
@@ -14,7 +23,7 @@ jobs:
   render:
     if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 200
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       PYTHONUNBUFFERED: '1'
@@ -82,25 +91,29 @@ jobs:
           urllib.request.urlretrieve('https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts/high/MODEL_CARD', dest/'PIPER_MODEL_CARD.md')
           PY
           echo 'Voice model and config present; license and dataset terms must be reviewed separately.'
+      - name: Texts to narrate
+        if: inputs.voice == 'chatterbox'
+        shell: bash
+        run: python -m scripts.render_educational --dump-texts narration_texts.json
+      - name: Narrate (owner-approved shared voice, English)
+        if: inputs.voice == 'chatterbox'
+        uses: ./.github/actions/alan7-voice
+        with:
+          texts: narration_texts.json
+          language: en
+          out: outputs/narration
       - name: Render actual action-paced videos with neural voice and animated captions
         shell: bash
         run: |
           set -euo pipefail
+          extra=(); [ "${{ inputs.voice }}" = chatterbox ] && extra=(--narration-dir outputs/narration)
           python -m scripts.render_educational --voice "$VOICE_DIR/${VOICE_NAME}.onnx" \
-            --output-dir outputs/educational
-      - name: Save complete lesson and QA evidence
+            --output-dir outputs/educational "${extra[@]}"
+      - name: Encrypted review pack (public repo -> never plain artifacts)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/encrypted-pack
         with:
-          name: educational-lesson
-          path: |
-            outputs/educational/final.mp4
-            outputs/educational/thumbnail.jpg
-            outputs/educational/*.json
-            outputs/educational/*.md
-            outputs/educational/*.html
-            outputs/educational/*.srt
-            outputs/educational/*.ass
-            outputs/educational/review_frames/
-          retention-days: 7
-          if-no-files-found: warn
+          dir: outputs/educational
+          pubkey_b64: ${{ inputs.delivery_pubkey }}
+          token: ${{ github.token }}
+          label: LogicScript lesson

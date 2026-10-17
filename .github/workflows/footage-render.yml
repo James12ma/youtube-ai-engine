@@ -30,15 +30,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
-        id: py311
-        with:
-          python-version: '3.11'
-      - name: Narrator environment (Chatterbox pins its own torch/transformers)
-        run: |
-          set -euo pipefail
-          ${{ steps.py311.outputs.python-path }} -m venv "$RUNNER_TEMP/cb"
-          "$RUNNER_TEMP/cb/bin/pip" install -q "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" librosa soundfile
-      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Runner-local model directories
@@ -49,31 +40,26 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 fonts-dejavu-core espeak-ng
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 fonts-dejavu-core
           python -m pip install --index-url https://download.pytorch.org/whl/cpu \
             'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
-          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt 'kokoro>=0.9.4' librosa soundfile
+          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
           python - <<'PY'
           import nltk, os
           nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'], raise_on_error=True)
           PY
           mkdir -p "$VOICE_DIR"
           python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
-      - name: Narrate beats (owner-approved voice - Chatterbox Latin-American Spanish)
+      - name: Which narrator
         env:
           PLAN: ${{ inputs.plan }}
-        run: |
-          set -euo pipefail
-          engine=$(python -c "import json,os;print(json.load(open(os.environ['PLAN'])).get('voice_engine','chatterbox'))")
-          echo "engine=$engine" >> "$GITHUB_ENV"
-          if [ "$engine" = chatterbox ]; then
-            # same synthetic reference as the approved sample (Kokoro em_alex, first 12 s) -> same timbre every episode
-            KOKORO_VOICE=em_alex python -m scripts.voice_compare synth --engine kokoro --out "$RUNNER_TEMP/ref_full.wav"
-            ffmpeg -y -hide_banner -loglevel error -i "$RUNNER_TEMP/ref_full.wav" -t 12 -ar 24000 -ac 1 "$RUNNER_TEMP/ref.wav"
-            "$RUNNER_TEMP/cb/bin/python" -m scripts.narrate_beats --plan "$PLAN" --ref "$RUNNER_TEMP/ref.wav" \
-              --out outputs/doc/narration 2> narr_err.txt | tail -n 3 || { tr '\r' '\n' < narr_err.txt | grep -v -E 'it/s|s/it' | tail -n 20; exit 1; }
-            echo "::notice title=narration::$(cat outputs/doc/narration/manifest.json | tr -d '\n ' | head -c 600)"
-          fi
+        run: echo "engine=$(python -c "import json,os;print(json.load(open(os.environ['PLAN'])).get('voice_engine','chatterbox'))")" >> "$GITHUB_ENV"
+      - name: Narrate beats (owner-approved voice - Chatterbox Latin-American Spanish)
+        if: env.engine == 'chatterbox'
+        uses: ./.github/actions/alan7-voice
+        with:
+          plan: ${{ inputs.plan }}
+          out: outputs/doc/narration
       - name: Render sample
         env:
           PLAN: ${{ inputs.plan }}
@@ -119,6 +105,16 @@ jobs:
           keep['ambience'] = (r.get('ambience') or {}).get('title')
           keep['freezes'] = open('outputs/qa/freeze_events.txt').read().count('freeze_start')
           keep['license_gate'] = r.get('license_gate')
+          # words the independent ASR heard differently from the script (pronunciation check)
+          import difflib, re, unicodedata
+          def toks(t):
+              t = unicodedata.normalize('NFKD', t.casefold())
+              return re.findall(r'[a-z]+', ''.join(c for c in t if not unicodedata.combining(c)))
+          import os
+          plan_words = toks(' '.join(b['narration'] for b in json.load(open(os.environ['PLAN']))['beats']))
+          heard = toks(open('outputs/qa/asr_transcript.txt').read()) if os.path.exists('outputs/qa/asr_transcript.txt') else []
+          sm = difflib.SequenceMatcher(a=plan_words, b=heard, autojunk=False)
+          keep['misheard'] = [(' '.join(plan_words[i1:i2]), ' '.join(heard[j1:j2])) for op, i1, i2, j1, j2 in sm.get_opcodes() if op != 'equal'][:25]
           print('::notice title=sample::' + json.dumps(keep, ensure_ascii=False)[:3800])
           for c in r['clips'].values():
               print('::notice title=clip::' + json.dumps({k: c.get(k) for k in ('title', 'license', 'author', 'has_audio', 'license_review_pending')}, ensure_ascii=False))

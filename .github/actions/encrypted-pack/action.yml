@@ -1,0 +1,44 @@
+name: Encrypted review pack (shared by Alan7 and LogicScript)
+description: >-
+  Tars a folder, encrypts it for the owner's RSA public key (AES-256 + RSA-OAEP) and pushes ONLY the
+  ciphertext to qa/<run id>. Nothing readable leaves the runner (this repo is public, so plain workflow
+  artifacts would be downloadable by anyone with a GitHub account). Decrypt: scripts/review_keys.sh.
+inputs:
+  dir:
+    required: true
+  pubkey_b64:
+    required: true
+  token:
+    required: true
+  label:
+    default: review pack
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PUBKEY_B64: ${{ inputs.pubkey_b64 }}
+        SRC: ${{ inputs.dir }}
+        LABEL: ${{ inputs.label }}
+      run: |
+        set -euo pipefail
+        umask 077
+        tar -C "$SRC" -cf "$RUNNER_TEMP/pack.tar" .
+        echo "$PUBKEY_B64" | base64 -d > "$RUNNER_TEMP/pub.pem"
+        out=$RUNNER_TEMP/enc; mkdir -p "$out"
+        openssl rand -hex 32 > "$RUNNER_TEMP/k"
+        openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/pub.pem" -pkeyopt rsa_padding_mode:oaep \
+          -pkeyopt rsa_oaep_md:sha256 -in "$RUNNER_TEMP/k" -out "$out/key.enc"
+        openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/k" \
+          -in "$RUNNER_TEMP/pack.tar" -out "$RUNNER_TEMP/pack.enc"
+        shred -u "$RUNNER_TEMP/k" "$RUNNER_TEMP/pack.tar"
+        split -b 90m -d -a 2 "$RUNNER_TEMP/pack.enc" "$out/pack.enc.part"
+        rm -f "$RUNNER_TEMP/pack.enc"
+        (cd "$out" && sha256sum * > SHA256SUMS)
+        cd "$out"
+        git init -q -b "qa/${{ github.run_id }}"
+        git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+        git add -A && git commit -q -m "Encrypted $LABEL ${{ github.run_id }}"
+        git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
+        echo "::notice title=qa-branch::qa/${{ github.run_id }} (encrypted only)"

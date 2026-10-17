@@ -1,0 +1,42 @@
+name: Alan7 / LogicScript narrator (owner-approved Chatterbox voice)
+description: >-
+  Narrates a documentary plan or a JSON list of texts with the approved voice, in its own Python 3.11
+  environment (Chatterbox pins torch/transformers). Same synthetic reference clip everywhere, so
+  Alan7 and LogicScript share one timbre. Free and local; output carries Resemble's Perth watermark.
+inputs:
+  plan:
+    description: Documentary plan JSON (one segment per beat)
+    default: ''
+  texts:
+    description: JSON file with a list of texts (used when plan is empty)
+    default: ''
+  language:
+    default: es
+  out:
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        IN_PLAN: ${{ inputs.plan }}
+        IN_TEXTS: ${{ inputs.texts }}
+        IN_LANG: ${{ inputs.language }}
+        IN_OUT: ${{ inputs.out }}
+      run: |
+        set -euo pipefail
+        sudo apt-get install -y --no-install-recommends espeak-ng ffmpeg libsndfile1 >/dev/null
+        python -m pip install -q uv
+        uv venv -q -p 3.11 "$RUNNER_TEMP/cb"
+        uv pip install -q --python "$RUNNER_TEMP/cb/bin/python" \
+          "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" 'kokoro>=0.9.4' librosa soundfile
+        # identical synthetic reference every time: Kokoro em_alex reading the approved sample text
+        KOKORO_VOICE=em_alex "$RUNNER_TEMP/cb/bin/python" -m scripts.voice_compare synth --engine kokoro --out "$RUNNER_TEMP/ref_full.wav"
+        ffmpeg -y -hide_banner -loglevel error -i "$RUNNER_TEMP/ref_full.wav" -t 12 -ar 24000 -ac 1 "$RUNNER_TEMP/voice_ref.wav"
+        args=(--ref "$RUNNER_TEMP/voice_ref.wav" --out "$IN_OUT" --language "$IN_LANG")
+        if [ -n "$IN_PLAN" ]; then args+=(--plan "$IN_PLAN"); else args+=(--texts "$IN_TEXTS"); fi
+        if ! "$RUNNER_TEMP/cb/bin/python" -m scripts.narrate_texts "${args[@]}" 2> "$RUNNER_TEMP/narr_err.txt" | tail -n 2; then
+          echo "::error title=narration::$(tr '\r' '\n' < "$RUNNER_TEMP/narr_err.txt" | grep -v -E 'it/s|s/it|^\s*$' | tail -n 25 | tr '\n' ' ' | tail -c 3000)"
+          exit 1
+        fi
+        echo "::notice title=narration::$(tr -d '\n ' < "$IN_OUT/manifest.json" | head -c 500)"

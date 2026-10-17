@@ -131,8 +131,8 @@ class ChatterboxEngine:
                 s3 = hf_hub_download('ResembleAI/Chatterbox-Multilingual-es-mx-latam', 's3gen_v3.pt')
                 shutil.copy(s3, work / 's3gen.pt')
                 self.loaded = 'es-mx-latam (t3 + s3gen_v3)'
-            except Exception:
-                self.loaded = 'es-mx-latam (t3) + base s3gen'
+            except Exception as exc:   # keep the reason: it may affect pronunciation quality
+                self.loaded = f'es-mx-latam (t3) + base s3gen [s3gen_v3 unavailable: {type(exc).__name__}: {str(exc)[:120]}]'
             self.model = ChatterboxMultilingualTTS.from_local(work, device, t3_model='t3_es_mx_latam.safetensors')
         else:
             self.model = ChatterboxMultilingualTTS.from_pretrained(device=device, t3_model='v3')

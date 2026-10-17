@@ -3,6 +3,14 @@ name: Final video — animated landscape and portrait
 on:
   workflow_dispatch:
     inputs:
+      voice:
+        description: 'chatterbox = owner-approved shared voice (same as Alan7), piper = old voice'
+        type: choice
+        options: [chatterbox, piper]
+        default: chatterbox
+      delivery_pubkey:
+        description: Base64 RSA public key (PEM); the video leaves the runner only encrypted
+        required: true
       format:
         description: Output format
         type: choice
@@ -10,7 +18,7 @@ on:
         default: both
 
 permissions:
-  contents: read
+  contents: write  # only to push an ENCRYPTED review pack to qa/<run id>
 
 concurrency:
   group: showcase-render-${{ github.ref }}
@@ -20,7 +28,7 @@ jobs:
   render:
     if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 200
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       PYTHONUNBUFFERED: '1'
@@ -83,29 +91,29 @@ jobs:
           test -s "$VOICE_DIR/${VOICE_NAME}.onnx"
           test -s "$VOICE_DIR/${VOICE_NAME}.onnx.json"
           echo 'Voice model and config present; license and dataset terms must be reviewed separately.'
+      - name: Texts to narrate
+        if: inputs.voice == 'chatterbox'
+        shell: bash
+        run: python -m scripts.render_showcase --dump-texts narration_texts.json
+      - name: Narrate (owner-approved shared voice, English)
+        if: inputs.voice == 'chatterbox'
+        uses: ./.github/actions/alan7-voice
+        with:
+          texts: narration_texts.json
+          language: en
+          out: outputs/narration
       - name: Render actual action-paced videos with neural voice and animated captions
         shell: bash
         run: |
           set -euo pipefail
+          extra=(); [ "${{ inputs.voice }}" = chatterbox ] && extra=(--narration-dir outputs/narration)
           python -m scripts.render_showcase --voice "$VOICE_DIR/${VOICE_NAME}.onnx" \
-            --format "$VIDEO_FORMAT" --output-dir outputs/showcase
-      - name: Save videos, audio, exact word timestamps, captions and independent QA
+            --format "$VIDEO_FORMAT" --output-dir outputs/showcase "${extra[@]}"
+      - name: Encrypted review pack (public repo -> never plain artifacts)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/encrypted-pack
         with:
-          name: final-videos-${{ github.run_id }}
-          path: |
-            outputs/showcase/REPORT.json
-            outputs/showcase/thumbnail.jpg
-            outputs/showcase/metadata_draft.json
-            outputs/showcase/*/final.mp4
-            outputs/showcase/*/vo.wav
-            outputs/showcase/*/vo_norm.wav
-            outputs/showcase/*/words.json
-            outputs/showcase/*/captions.ass
-            outputs/showcase/*/captions.srt
-            outputs/showcase/*/qc_report.json
-            outputs/showcase/*/independent_gates.json
-            outputs/showcase/*/*.jpg
-          retention-days: 7
-          if-no-files-found: warn
+          dir: outputs/showcase
+          pubkey_b64: ${{ inputs.delivery_pubkey }}
+          token: ${{ github.token }}
+          label: LogicScript showcase
