@@ -104,7 +104,7 @@ class ChatterboxEngine:
 
     def __init__(self, reference_wav: Path | None, *, latam: bool = True, exaggeration: float = 0.6,
                  cfg_weight: float = 0.4, temperature: float = 0.8, device: str = 'cpu', seed: int = 7,
-                 language: str = 'es', english_model: bool = False):
+                 language: str = 'es', english_model: bool = False, use_v3_decoder: bool = False):
         import shutil
         import torch
         from huggingface_hub import hf_hub_download, snapshot_download
@@ -124,12 +124,17 @@ class ChatterboxEngine:
             work.mkdir(exist_ok=True)
             for f in base.iterdir():
                 if not (work / f.name).exists():
-                    shutil.copy(f, work / f.name)
+                    shutil.copyfile(f, work / f.name)
             t3 = hf_hub_download('ResembleAI/Chatterbox-Multilingual-es-mx-latam', 't3_es_mx_latam.safetensors')
-            shutil.copy(t3, work / 't3_es_mx_latam.safetensors')
-            try:   # the fine-tune ships its own V3 speech decoder
+            shutil.copyfile(t3, work / 't3_es_mx_latam.safetensors')
+            # The owner approved the voice made with the BASE decoder (Oct 2026). The fine-tune's own V3 decoder
+            # is only tried when asked (it changes the sound; needs a new listening test before it is used).
+            try:
+                if not use_v3_decoder:
+                    raise RuntimeError('base decoder kept (approved voice)')
                 s3 = hf_hub_download('ResembleAI/Chatterbox-Multilingual-es-mx-latam', 's3gen_v3.pt')
-                shutil.copy(s3, work / 's3gen.pt')
+                (work / 's3gen.pt').unlink(missing_ok=True)   # cache copies are read-only
+                shutil.copyfile(s3, work / 's3gen.pt')
                 self.loaded = 'es-mx-latam (t3 + s3gen_v3)'
             except Exception as exc:   # keep the reason: it may affect pronunciation quality
                 self.loaded = f'es-mx-latam (t3) + base s3gen [s3gen_v3 unavailable: {type(exc).__name__}: {str(exc)[:120]}]'
