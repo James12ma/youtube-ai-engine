@@ -17,7 +17,7 @@ concurrency:
 jobs:
   render:
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 330
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       PYTHONUNBUFFERED: '1'
@@ -30,6 +30,15 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
+        id: py311
+        with:
+          python-version: '3.11'
+      - name: Narrator environment (Chatterbox pins its own torch/transformers)
+        run: |
+          set -euo pipefail
+          ${{ steps.py311.outputs.python-path }} -m venv "$RUNNER_TEMP/cb"
+          "$RUNNER_TEMP/cb/bin/pip" install -q "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" librosa soundfile
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Runner-local model directories
@@ -40,24 +49,41 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 fonts-dejavu-core
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 fonts-dejavu-core espeak-ng
           python -m pip install --index-url https://download.pytorch.org/whl/cpu \
             'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
-          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt 'kokoro>=0.9.4' librosa soundfile
           python - <<'PY'
           import nltk, os
           nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'], raise_on_error=True)
           PY
           mkdir -p "$VOICE_DIR"
           python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
+      - name: Narrate beats (owner-approved voice: Chatterbox Latin-American Spanish)
+        env:
+          PLAN: ${{ inputs.plan }}
+        run: |
+          set -euo pipefail
+          engine=$(python -c "import json,os;print(json.load(open(os.environ['PLAN'])).get('voice_engine','chatterbox'))")
+          echo "engine=$engine" >> "$GITHUB_ENV"
+          if [ "$engine" = chatterbox ]; then
+            # same synthetic reference as the approved sample (Kokoro em_alex, first 12 s) -> same timbre every episode
+            KOKORO_VOICE=em_alex python -m scripts.voice_compare synth --engine kokoro --out "$RUNNER_TEMP/ref_full.wav"
+            ffmpeg -y -hide_banner -loglevel error -i "$RUNNER_TEMP/ref_full.wav" -t 12 -ar 24000 -ac 1 "$RUNNER_TEMP/ref.wav"
+            "$RUNNER_TEMP/cb/bin/python" -m scripts.narrate_beats --plan "$PLAN" --ref "$RUNNER_TEMP/ref.wav" \
+              --out outputs/doc/narration 2> narr_err.txt | tail -n 3 || { tr '\r' '\n' < narr_err.txt | grep -v -E 'it/s|s/it' | tail -n 20; exit 1; }
+            echo "::notice title=narration::$(cat outputs/doc/narration/manifest.json | tr -d '\n ' | head -c 600)"
+          fi
       - name: Render sample
         env:
           PLAN: ${{ inputs.plan }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
         run: |
           set -euo pipefail
+          extra=()
+          [ "$engine" = chatterbox ] && extra=(--narration-dir outputs/doc/narration)
           python -m channel.documentary --plan "$PLAN" --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
-            --out outputs/doc/sample.mp4
+            --out outputs/doc/sample.mp4 "${extra[@]}"
       - name: QA (frames, loudness, speech round-trip, frozen picture, clip audio check)
         env:
           PLAN: ${{ inputs.plan }}

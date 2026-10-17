@@ -1,189 +1,190 @@
 {
-  "series": "Historias Salvajes",
-  "title": "El primer viaje (muestra 2)",
-  "subtitle": "El primer viaje",
-  "language": "es",
-  "preroll_s": 0.8,
-  "title_start_s": 4.2,
-  "pronunciations": {
-    "frías": "fɾˈias",
-    "crías": "kɾˈias",
-    "cría": "kɾˈia"
+ "series": "Historias Salvajes",
+ "title": "El primer viaje (muestra 2)",
+ "subtitle": "El primer viaje",
+ "language": "es",
+ "preroll_s": 0.8,
+ "title_start_s": 4.2,
+ "pronunciations": {
+  "frías": "fɾˈias",
+  "crías": "kɾˈias",
+  "cría": "kɾˈia"
+ },
+ "clips": {
+  "gordons": {
+   "title": "File:Aerial view of a humpback whale near Gordon's Bay, Sydney, Australia at 24 August 2020.webm",
+   "location": "Gordon's Bay, Sydney, Australia"
   },
-  "clips": {
-    "gordons": {
-      "title": "File:Aerial view of a humpback whale near Gordon's Bay, Sydney, Australia at 24 August 2020.webm",
-      "location": "Gordon's Bay, Sydney, Australia"
-    },
-    "clovelly": {
-      "title": "File:Humpback Whale by Drone Clovelly and Coogee beaches, Sydney, Australia, August 21, 2020.webm",
-      "location": "Clovelly and Coogee, Sydney, Australia"
-    },
-    "gerringong": {
-      "title": "File:Humpback whale mother and calf south of Gerringong Boat Harbour, NSW, Australia.webm",
-      "location": "Gerringong, NSW, Australia"
-    },
-    "shellharbour": {
-      "title": "File:Humpback whales off The Shallows and Bass Point Quarry, Shellharbour, NSW, Australia.webm",
-      "location": "Shellharbour, NSW, Australia"
-    },
-    "boat": {
-      "title": "File:Mar adentro - Avistamiento de ballenas.webm",
-      "location": "Peru (offshore)"
-    },
-    "cuverville": {
-      "title": "File:Cuverville Island, Antarctica.webm",
-      "location": "Cuverville Island, Antarctica"
-    }
+  "clovelly": {
+   "title": "File:Humpback Whale by Drone Clovelly and Coogee beaches, Sydney, Australia, August 21, 2020.webm",
+   "location": "Clovelly and Coogee, Sydney, Australia"
   },
-  "beats": [
+  "gerringong": {
+   "title": "File:Humpback whale mother and calf south of Gerringong Boat Harbour, NSW, Australia.webm",
+   "location": "Gerringong, NSW, Australia"
+  },
+  "shellharbour": {
+   "title": "File:Humpback whales off The Shallows and Bass Point Quarry, Shellharbour, NSW, Australia.webm",
+   "location": "Shellharbour, NSW, Australia"
+  },
+  "boat": {
+   "title": "File:Mar adentro - Avistamiento de ballenas.webm",
+   "location": "Peru (offshore)"
+  },
+  "cuverville": {
+   "title": "File:Cuverville Island, Antarctica.webm",
+   "location": "Cuverville Island, Antarctica"
+  }
+ },
+ "beats": [
+  {
+   "narration": "Un estallido de espuma frente a Sídney. Las ballenas jorobadas están de paso.",
+   "shots": [
     {
-      "narration": "Un estallido de espuma frente a Sídney. Las ballenas jorobadas están de paso.",
-      "shots": [
-        {
-          "clip": "gordons",
-          "in_s": 76.0,
-          "out_s": 84.5,
-          "key_s": 79.5,
-          "label": "Sídney, Australia",
-          "note": "salto (categoría Commons: Megaptera novaeangliae breaching)"
-        },
-        {
-          "clip": "clovelly",
-          "in_s": 44.0,
-          "out_s": 60.0,
-          "key_s": 50.0,
-          "label": "Sídney, Australia",
-          "note": "ballena salpica en la superficie"
-        }
-      ]
+     "clip": "gordons",
+     "in_s": 76.0,
+     "out_s": 84.5,
+     "key_s": 79.5,
+     "label": "Sídney, Australia",
+     "note": "salto (categoría Commons: Megaptera novaeangliae breaching)"
     },
     {
-      "narration": "Cada año, desde agosto, las madres recorren esta costa hacia el sur con sus crías recién nacidas.",
-      "sources": [
-        "https://www.scu.edu.au/news/2003/be-careful-of-baby-whales-heading-south.php"
-      ],
-      "shots": [
-        {
-          "clip": "gerringong",
-          "in_s": 51.5,
-          "out_s": 62.0,
-          "key_s": 56.0,
-          "label": "Gerringong, Australia",
-          "note": "madre y cría (título del archivo)"
-        },
-        {
-          "clip": "gerringong",
-          "in_s": 66.0,
-          "out_s": 76.0,
-          "key_s": 70.0,
-          "label": "Gerringong, Australia",
-          "note": "madre y cría (título del archivo)"
-        }
-      ]
-    },
-    {
-      "narration": "Al nacer, una cría mide entre cuatro y cinco metros, y seguirá al lado de su madre hasta un año.",
-      "sources": [
-        "https://www.fisheries.noaa.gov/species/humpback-whale"
-      ],
-      "shots": [
-        {
-          "clip": "clovelly",
-          "in_s": 30.0,
-          "out_s": 44.0,
-          "key_s": 34.0,
-          "label": "Sídney, Australia",
-          "note": "ballena sale a respirar"
-        },
-        {
-          "clip": "clovelly",
-          "in_s": 66.0,
-          "out_s": 82.0,
-          "key_s": 74.0,
-          "label": "Sídney, Australia",
-          "note": "ballena gira en la superficie"
-        }
-      ]
-    },
-    {
-      "narration": "Pero el camino es peligroso. Estas aguas son rutas de barcos, y una cría puede chocar con una embarcación o enredarse en redes.",
-      "sources": [
-        "https://australian.museum/aap/young-humpbacks-exposed-to-danger-with-shifting-births/"
-      ],
-      "shots": [
-        {
-          "clip": "boat",
-          "in_s": 22.0,
-          "out_s": 31.0,
-          "label": "Perú · desde un barco",
-          "note": "estela de un barco en mar abierto",
-          "key_s": 24.0
-        },
-        {
-          "clip": "shellharbour",
-          "in_s": 104.0,
-          "out_s": 118.0,
-          "label": "Shellharbour, Australia",
-          "note": "ballenas agitan el agua",
-          "key_s": 110.0
-        }
-      ]
-    },
-    {
-      "narration": "Su destino son las aguas heladas del sur. Allí, tras el largo viaje, las jorobadas vuelven a alimentarse.",
-      "overlay": "Otras ballenas, otra población",
-      "sources": [
-        "https://www.scu.edu.au/news/2003/be-careful-of-baby-whales-heading-south.php",
-        "https://www.fisheries.noaa.gov/species/humpback-whale"
-      ],
-      "shots": [
-        {
-          "clip": "cuverville",
-          "in_s": 46.0,
-          "out_s": 60.0,
-          "label": "Península Antártica",
-          "note": "glaciares y montañas"
-        },
-        {
-          "clip": "cuverville",
-          "in_s": 136.0,
-          "out_s": 150.0,
-          "label": "Isla Cuverville, Antártida",
-          "note": "ballena se sumerge mostrando la cola junto a un iceberg",
-          "key_s": 146.0
-        }
-      ]
-    },
-    {
-      "narration": "Y algún día, esa cría hará este viaje por su cuenta.",
-      "sources": [
-        "https://www.fisheries.noaa.gov/species/humpback-whale"
-      ],
-      "shots": [
-        {
-          "clip": "cuverville",
-          "in_s": 196.0,
-          "out_s": 206.0,
-          "label": "Isla Cuverville, Antártida",
-          "note": "soplo de una ballena",
-          "key_s": 200.0
-        },
-        {
-          "clip": "cuverville",
-          "in_s": 236.0,
-          "out_s": 252.0,
-          "label": "Isla Cuverville, Antártida",
-          "note": "dos ballenas salen a respirar",
-          "key_s": 244.0
-        }
-      ]
+     "clip": "clovelly",
+     "in_s": 44.0,
+     "out_s": 60.0,
+     "key_s": 50.0,
+     "label": "Sídney, Australia",
+     "note": "ballena salpica en la superficie"
     }
-  ],
-  "ambience": [
-    "ocean waves",
-    "sea waves",
-    "waves beach"
-  ],
-  "credits_note": "Narración: voz sintética Piper (es_MX, texto a voz). Datos: NOAA Fisheries; Southern Cross University; Australian Museum. Muestra de revisión de Alan7 — no publicada."
+   ]
+  },
+  {
+   "narration": "Cada año, desde agosto, las madres recorren esta costa hacia el sur con sus crías recién nacidas.",
+   "sources": [
+    "https://www.scu.edu.au/news/2003/be-careful-of-baby-whales-heading-south.php"
+   ],
+   "shots": [
+    {
+     "clip": "gerringong",
+     "in_s": 51.5,
+     "out_s": 62.0,
+     "key_s": 56.0,
+     "label": "Gerringong, Australia",
+     "note": "madre y cría (título del archivo)"
+    },
+    {
+     "clip": "gerringong",
+     "in_s": 66.0,
+     "out_s": 76.0,
+     "key_s": 70.0,
+     "label": "Gerringong, Australia",
+     "note": "madre y cría (título del archivo)"
+    }
+   ]
+  },
+  {
+   "narration": "Al nacer, una cría mide entre cuatro y cinco metros, y seguirá al lado de su madre hasta un año.",
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ],
+   "shots": [
+    {
+     "clip": "clovelly",
+     "in_s": 30.0,
+     "out_s": 44.0,
+     "key_s": 34.0,
+     "label": "Sídney, Australia",
+     "note": "ballena sale a respirar"
+    },
+    {
+     "clip": "clovelly",
+     "in_s": 66.0,
+     "out_s": 82.0,
+     "key_s": 74.0,
+     "label": "Sídney, Australia",
+     "note": "ballena gira en la superficie"
+    }
+   ]
+  },
+  {
+   "narration": "Pero el camino es peligroso. Estas aguas son rutas de barcos, y una cría puede chocar con una embarcación o enredarse en redes.",
+   "sources": [
+    "https://australian.museum/aap/young-humpbacks-exposed-to-danger-with-shifting-births/"
+   ],
+   "shots": [
+    {
+     "clip": "boat",
+     "in_s": 22.0,
+     "out_s": 31.0,
+     "label": "Perú · desde un barco",
+     "note": "estela de un barco en mar abierto",
+     "key_s": 24.0
+    },
+    {
+     "clip": "shellharbour",
+     "in_s": 104.0,
+     "out_s": 118.0,
+     "label": "Shellharbour, Australia",
+     "note": "ballenas agitan el agua",
+     "key_s": 110.0
+    }
+   ]
+  },
+  {
+   "narration": "Su destino son las aguas heladas del sur. Allí, tras el largo viaje, las jorobadas vuelven a alimentarse.",
+   "overlay": "Otras ballenas, otra población",
+   "sources": [
+    "https://www.scu.edu.au/news/2003/be-careful-of-baby-whales-heading-south.php",
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ],
+   "shots": [
+    {
+     "clip": "cuverville",
+     "in_s": 46.0,
+     "out_s": 60.0,
+     "label": "Península Antártica",
+     "note": "glaciares y montañas"
+    },
+    {
+     "clip": "cuverville",
+     "in_s": 136.0,
+     "out_s": 150.0,
+     "label": "Isla Cuverville, Antártida",
+     "note": "ballena se sumerge mostrando la cola junto a un iceberg",
+     "key_s": 146.0
+    }
+   ]
+  },
+  {
+   "narration": "Y algún día, esa cría hará este viaje por su cuenta.",
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ],
+   "shots": [
+    {
+     "clip": "cuverville",
+     "in_s": 196.0,
+     "out_s": 206.0,
+     "label": "Isla Cuverville, Antártida",
+     "note": "soplo de una ballena",
+     "key_s": 200.0
+    },
+    {
+     "clip": "cuverville",
+     "in_s": 236.0,
+     "out_s": 252.0,
+     "label": "Isla Cuverville, Antártida",
+     "note": "dos ballenas salen a respirar",
+     "key_s": 244.0
+    }
+   ]
+  }
+ ],
+ "ambience": [
+  "ocean waves",
+  "sea waves",
+  "waves beach"
+ ],
+ "credits_note": "Narración: voz sintética Piper (es_MX, texto a voz). Datos: NOAA Fisheries; Southern Cross University; Australian Museum. Muestra de revisión de Alan7 — no publicada.",
+ "voice_engine": "piper"
 }

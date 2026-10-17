@@ -23,7 +23,7 @@
   "humpback whale",
   "sea turtle"
  ],
- "credits_note": "Narración: voz sintética Piper (es_MX). Datos: NOAA Fisheries. Avance de revisión de Alan7 — no publicado.",
+ "credits_note": "Datos: NOAA Fisheries. Avance de revisión de Alan7 — no publicado.",
  "clips": {
   "whales": {
    "kind": "noaa",

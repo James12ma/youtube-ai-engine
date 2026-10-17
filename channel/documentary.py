@@ -124,7 +124,12 @@ class DocumentaryPlan(BaseModel):
     # Spoken-only phonetic fixes (Piper [[ IPA ]] syntax); subtitles keep the normal spelling.
     subjects: list[str] = Field(default_factory=list)       # animals the visual QA looks for ("humpback whale", ...)
     visual_targets: dict[str, float | bool] = Field(default_factory=dict)  # overrides of visual_qa.VISUAL_STANDARD
-    pronunciations: dict[str, str] = Field(default_factory=dict)     # voice / fact sources line for the credits card
+    pronunciations: dict[str, str] = Field(default_factory=dict)
+    # Narrator. Owner-approved Oct 2026: Chatterbox Latin-American Spanish (MIT), expressive.
+    # 'piper' keeps the old voice (pronunciations / voice_length_scale apply to Piper only).
+    voice_engine: Literal['chatterbox', 'piper'] = 'chatterbox'
+    voice_exaggeration: float = Field(default=0.6, ge=0.25, le=1.0)
+    voice_cfg: float = Field(default=0.4, ge=0.0, le=1.0)     # voice / fact sources line for the credits card
 
     @model_validator(mode='after')
     def _refs(self):
@@ -337,10 +342,29 @@ def search_ambience(client, terms: list[str]) -> dict | None:
     return None
 
 
+def _premade_narration(plan: 'DocumentaryPlan', folder: Path | None) -> list:
+    """beat_<i>.wav files written by scripts/narrate_beats.py, checked against the plan text."""
+    import hashlib
+    import wave as _wave
+    from types import SimpleNamespace
+    if folder is None or not (folder / 'manifest.json').is_file():
+        raise DocumentaryError('voice_engine=chatterbox needs --narration-dir from scripts/narrate_beats.py')
+    man = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))
+    out = []
+    for i, b in enumerate(plan.beats):
+        entry = man['beats'][i] if i < len(man['beats']) else {}
+        if entry.get('sha1') != hashlib.sha1(b.narration.encode()).hexdigest():
+            raise DocumentaryError(f'narration for beat {i} does not match the plan text')
+        path = folder / f'beat_{i}.wav'
+        with _wave.open(str(path)) as w:
+            out.append(SimpleNamespace(wav_path=str(path), duration_s=w.getnframes() / w.getframerate()))
+    return out
+
+
 def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, width: int = 1920,
                        height: int = 1080, fps: int = 24, clip_files: dict[str, Path] | None = None,
                        clip_info: dict[str, dict] | None = None, ambience: dict | None = None,
-                       ambience_file: Path | None = None) -> dict:
+                       ambience_file: Path | None = None, narration_dir: Path | None = None) -> dict:
     """Render the sample. ``clip_files``/``clip_info`` come from the Commons download step."""
     from narration_pro import (PiperOrEdgeNarrator, WhisperXAligner, normalize_loudness, build_ass_from_words,
                                assess_caption_quality, save_word_timestamps, save_srt_from_blocks)
@@ -358,9 +382,15 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
             raise DocumentaryError('missing footage for clip ' + cid)
 
     # 1. narration, one WAV per beat (real Piper voice; no fallback service)
-    narrator = PiperOrEdgeNarrator(voice_model, allow_edge_fallback=False, length_scale=plan.voice_length_scale)
-    wavs = [narrator.synthesize(spoken_text(b.narration, plan.pronunciations), work / f'beat_{i}.wav')
-            for i, b in enumerate(plan.beats)]
+    if plan.voice_engine == 'chatterbox':
+        # beats were narrated beforehand in the Chatterbox environment (scripts/narrate_beats.py)
+        wavs = _premade_narration(plan, Path(narration_dir) if narration_dir else None)
+        backend = 'chatterbox-es-mx-latam'
+    else:
+        narrator = PiperOrEdgeNarrator(voice_model, allow_edge_fallback=False, length_scale=plan.voice_length_scale)
+        wavs = [narrator.synthesize(spoken_text(b.narration, plan.pronunciations), work / f'beat_{i}.wav')
+                for i, b in enumerate(plan.beats)]
+        backend = '+'.join(sorted(narrator.actual_backends))
     tl = timeline(plan, [w.duration_s for w in wavs])
     total = tl['total_s']
 
@@ -411,7 +441,9 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
                             'source_in_s': shot.in_s, 'source_out_s': round(shot.in_s + d, 2),
                             'seconds': round(d, 2), 'label': shot.label, 'note': shot.note, 'expect': shot.expect,
                             'ai_generated': src.kind == 'ai'})
-    voice_note = plan.credits_note or 'Narración: voz sintética (Piper). Muestra de revisión — no publicada.'
+    engine_note = ('Narración: voz sintética generada con IA (Chatterbox, Resemble AI, licencia MIT).'
+                   if plan.voice_engine == 'chatterbox' else 'Narración: voz sintética (Piper).')
+    voice_note = engine_note + ' ' + (plan.credits_note or 'Muestra de revisión — no publicada.')
     credits = work / 'credits.png'
     lines = credit_lines({c: clip_info[c] for c in plan.clips}, ambience, voice_note)
     _credits_card(lines, plan.series, credits, width=width, height=height)
@@ -473,7 +505,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
 
     report = {'output_path': str(out), 'mode': 'footage', 'duration_s': round(_duration(out), 2),
               'planned_total_s': round(total, 2), 'resolution': f'{width}x{height}', 'fps': fps,
-              'narration_backend': '+'.join(sorted(narrator.actual_backends)), 'voice_loudness': loud.model_dump(),
+              'narration_backend': backend, 'voice_loudness': loud.model_dump(),
               'alignment': {'method': aligned.method, 'token_coverage': aligned.token_coverage, 'words': len(aligned.words)},
               'captions': count, 'caption_qc': caption_qc.model_dump(), 'srt_path': str(srt),
               'narration_starts_s': [round(s, 2) for s in tl['narration_starts']],
@@ -494,6 +526,7 @@ def main() -> None:
     ap.add_argument('--plan', type=Path, required=True)
     ap.add_argument('--voice-model', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
+    ap.add_argument('--narration-dir', type=Path, help='beat WAVs from scripts/narrate_beats.py (chatterbox)')
     args = ap.parse_args()
     plan = load_plan(args.plan)
     files, infos, ambience, amb_file = {}, {}, None, None
@@ -530,7 +563,7 @@ def main() -> None:
                 suffix = Path(urlparse(ambience['download']).path).suffix or '.ogg'
                 amb_file = download_clip(client, ambience['download'], dl / f'ambience{suffix}')
     report = render_documentary(plan, args.voice_model, args.out, clip_files=files, clip_info=infos,
-                                ambience=ambience, ambience_file=amb_file)
+                                ambience=ambience, ambience_file=amb_file, narration_dir=args.narration_dir)
     print(json.dumps({k: report[k] for k in ('duration_s', 'captions', 'ai_generated_shots')} |
                      {'ambience': (report['ambience'] or {}).get('title')}, ensure_ascii=False))
 
