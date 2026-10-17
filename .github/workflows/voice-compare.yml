@@ -33,10 +33,12 @@ jobs:
           python-version: '3.11'
       - name: Chatterbox in its own environment (it pins its own torch/transformers)
         run: |
-          set -euo pipefail
+          set -uo pipefail
           ${{ steps.py311.outputs.python-path }} -m venv "$RUNNER_TEMP/cb"
-          "$RUNNER_TEMP/cb/bin/pip" install -q "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" librosa soundfile
-          "$RUNNER_TEMP/cb/bin/pip" show chatterbox-tts | head -3
+          if ! "$RUNNER_TEMP/cb/bin/pip" install "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" librosa soundfile > cbi.txt 2>&1; then
+            echo "::warning title=chatterbox install::$(grep -v -E '^\s*$|Downloading|Collecting|Using cached|━' cbi.txt | tail -n 30 | tr '\n' ' ' | tail -c 3500)"
+          fi
+          "$RUNNER_TEMP/cb/bin/pip" show chatterbox-tts | head -3 || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
