@@ -110,6 +110,7 @@ class ChatterboxEngine:
         from huggingface_hub import hf_hub_download, snapshot_download
         from chatterbox.mtl_tts import ChatterboxMultilingualTTS
         torch.manual_seed(seed)
+        self.seed = seed
         self.loaded = 'multilingual-v3'
         self.language = language
         self.english = None
@@ -145,6 +146,10 @@ class ChatterboxEngine:
         self.kw = dict(exaggeration=exaggeration, cfg_weight=cfg_weight, temperature=temperature)
         self.sr = self.model.sr
 
+    def reseed(self, attempt: int) -> None:
+        import torch
+        torch.manual_seed(self.seed + 1000 * attempt)
+
     def say(self, text: str) -> np.ndarray:
         if self.english is not None:
             wav = self.model.generate(text, audio_prompt_path=self.ref, **self.kw)
@@ -153,16 +158,70 @@ class ChatterboxEngine:
         return wav.squeeze().cpu().numpy().astype(np.float32)
 
 
-def narrate(engine, text: str, out: Path, *, sentence_level: bool = True) -> dict:
-    """Synthesise ``text`` and write a 24 kHz mono WAV. Returns timing info."""
+def words(text: str) -> list[str]:
+    import unicodedata
+    t = unicodedata.normalize('NFKD', text.casefold())
+    return re.findall(r"[a-z0-9]+", ''.join(c for c in t if not unicodedata.combining(c)))
+
+
+# Spellings an ASR model may legitimately write differently from the script (not pronunciation errors).
+EQUIVALENT = {'hawaii': 'hawai', 'jorobadas': 'jorobadas'}
+
+
+def mismatches(expected: str, heard: str) -> list[tuple[str, str]]:
+    import difflib
+    a = [EQUIVALENT.get(w, w) for w in words(expected)]
+    b = [EQUIVALENT.get(w, w) for w in words(heard)]
+    sm = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
+    return [(' '.join(a[i1:i2]), ' '.join(b[j1:j2])) for op, i1, i2, j1, j2 in sm.get_opcodes() if op != 'equal']
+
+
+class SpeechChecker:
+    """Independent ASR (faster-whisper small, CPU) used to catch mispronounced sentences."""
+
+    def __init__(self, language: str, model: str = 'small'):
+        from faster_whisper import WhisperModel
+        self.model = WhisperModel(model, device='cpu', compute_type='int8')
+        self.language = language
+
+    def __call__(self, text: str, audio24k: np.ndarray) -> tuple[str, list]:
+        x = _resample(audio24k, SR_OUT, 16000)
+        segs, _ = self.model.transcribe(x, language=self.language, beam_size=5, vad_filter=False,
+                                        initial_prompt=None, condition_on_previous_text=False)
+        heard = ' '.join(s.text for s in segs)
+        return heard, mismatches(text, heard)
+
+
+def narrate(engine, text: str, out: Path, *, sentence_level: bool = True, checker=None, max_tries: int = 4) -> dict:
+    """Synthesise ``text`` and write a 24 kHz mono WAV. Returns timing info.
+
+    With a ``checker``, every sentence is listened to by an independent ASR model; a sentence with
+    misheard words is generated again (new random draw) up to ``max_tries`` times and the take with
+    the fewest mismatches is kept. Remaining mismatches are reported, never hidden.
+    """
     pieces, timeline = [], []
     t = 0.0
     sents = split_story(text) if sentence_level else [Sentence(' '.join(text.split()), 0.0)]
     for s in sents:
-        x = _trim(_resample(engine.say(s.text), engine.sr), SR_OUT)
+        best = None
+        for attempt in range(max_tries if checker else 1):
+            if attempt and hasattr(engine, 'reseed'):
+                engine.reseed(attempt)
+            x = _trim(_resample(engine.say(s.text), engine.sr), SR_OUT)
+            if not checker:
+                best = (x, '', [], 1)
+                break
+            heard, bad = checker(s.text, x)
+            if best is None or len(bad) < len(best[2]):
+                best = (x, heard, bad, attempt + 1)
+            if not bad:
+                break
+        x, heard, bad, tries = best
         pieces += [x, np.zeros(int(s.pause_after * SR_OUT), np.float32)]
-        timeline.append({'text': s.text, 'start_s': round(t, 2), 'seconds': round(len(x) / SR_OUT, 2),
-                         'pause_after': s.pause_after})
+        row = {'text': s.text, 'start_s': round(t, 2), 'seconds': round(len(x) / SR_OUT, 2), 'pause_after': s.pause_after}
+        if checker:
+            row.update(tries=tries, misheard=bad, heard=heard)
+        timeline.append(row)
         t += len(x) / SR_OUT + s.pause_after
     audio = np.concatenate(pieces) if pieces else np.zeros(1, np.float32)
     peak = float(np.max(np.abs(audio)) or 1.0)

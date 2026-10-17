@@ -43,17 +43,24 @@ def main() -> None:
     # and more pitch variation) with the same synthetic reference -> same timbre as Alan7.
     eng = v.ChatterboxEngine(a.ref, latam=a.language == 'es', language=a.language,
                              english_model=False, exaggeration=exag, cfg_weight=cfg, seed=a.seed)
+    checker = v.SpeechChecker(a.language)   # pronunciation check: misheard sentences are generated again
     a.out.mkdir(parents=True, exist_ok=True)
     items, t0 = [], time.time()
+    report = []
     for i, text in enumerate(texts):
         text = ' '.join(text.split())
         f = f'seg_{i:03d}.wav'
-        r = v.narrate(eng, text, a.out / f)
-        items.append({'index': i, 'sha1': text_key(text), 'file': f, 'seconds': r['seconds']})
+        r = v.narrate(eng, text, a.out / f, checker=checker)
+        left = [m for x in r['sentences'] for m in x.get('misheard', [])]
+        retried = sum(1 for x in r['sentences'] if x.get('tries', 1) > 1)
+        items.append({'index': i, 'sha1': text_key(text), 'file': f, 'seconds': r['seconds'],
+                      'retried_sentences': retried, 'misheard_left': left})
+        report.append(r['sentences'])
         print(json.dumps({'segment': i, 'seconds': r['seconds'], 'elapsed_s': round(time.time() - t0)}), flush=True)
     (a.out / 'manifest.json').write_text(json.dumps({
         'engine': 'chatterbox', 'model': eng.loaded, 'language': a.language, 'seed': a.seed,
-        'exaggeration': exag, 'cfg_weight': cfg, 'beats': items}, indent=1), encoding='utf-8')
+        'exaggeration': exag, 'cfg_weight': cfg, 'beats': items}, indent=1, ensure_ascii=False), encoding='utf-8')
+    (a.out / 'pronunciation.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
 
 
 if __name__ == '__main__':

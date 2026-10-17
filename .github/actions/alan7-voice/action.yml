@@ -29,7 +29,7 @@ runs:
         python -m pip install -q uv
         uv venv -q -p 3.11 "$RUNNER_TEMP/cb"
         uv pip install -q --python "$RUNNER_TEMP/cb/bin/python" \
-          "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" 'kokoro>=0.9.4' librosa soundfile
+          "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" 'kokoro>=0.9.4' librosa soundfile faster-whisper
         # identical synthetic reference every time: Kokoro em_alex reading the approved sample text
         KOKORO_VOICE=em_alex "$RUNNER_TEMP/cb/bin/python" -m scripts.voice_compare synth --engine kokoro --out "$RUNNER_TEMP/ref_full.wav"
         ffmpeg -y -hide_banner -loglevel error -i "$RUNNER_TEMP/ref_full.wav" -t 12 -ar 24000 -ac 1 "$RUNNER_TEMP/voice_ref.wav"
