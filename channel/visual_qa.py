@@ -5,7 +5,7 @@ especially under water; few empty-sea or landscape shots; every shot must show
 what the narration talks about; open on a shot that creates curiosity.
 
 How it measures (free, CPU, open models, nothing leaves the runner):
-- CLIP (openai/clip-vit-base-patch16) zero-shot on one frame per second:
+- CLIP (openai/clip-vit-large-patch14, calibrated) zero-shot on one frame per second:
   scene = underwater / surface / land / card, and "is the subject in frame".
 - OWL-ViT (google/owlvit-base-patch32) open-vocabulary boxes for the subject:
   the biggest box's share of the frame gives close / medium / far.
@@ -38,14 +38,14 @@ VISUAL_STANDARD = {
     'hook_close_or_underwater': True,  # ... and either close or under water
 }
 
+# Calibrated Oct 2026 on hand-labelled NOAA footage (scripts/visual_calibrate.py, 202 frames):
+# CLIP ViT-L/14 + these prompts + max-per-group = 87 % scene accuracy (underwater recall 96 %);
+# the main remaining error is beaches read as "surface". ViT-B/16 reached only 69 %.
 SCENES = {
-    # Underwater footage is often murky green or deep blue; the prompts cover both (NOAA turtle B-roll test).
     'underwater': ['an underwater photo in the ocean', 'an underwater photo of a coral reef',
-                   'an underwater photo of a large animal swimming in blue water',
-                   'a murky green underwater photo of an animal swimming over rocks',
-                   'a scuba diver photo of a sea animal close up'],
-    'surface': ['a photo of the ocean surface with waves', 'an aerial drone photo of the sea from above',
-                "a photo of a whale's back and fin above the waves"],
+                   'an underwater photo of a large animal swimming in blue water'],
+    'surface': ['a photo of the ocean surface', 'an aerial drone photo of the sea from above',
+                'a photo of an animal at the surface of the sea seen from a boat'],
     'land': ['a photo of a sandy beach', 'a photo of a rocky coastline', 'a photo of snowy mountains and icebergs',
              'a photo of a forest or green hills', 'an aerial photo of an island'],
     'card': ['white text on a plain black background'],
@@ -71,7 +71,7 @@ def closeness(area: float, present: bool) -> str:
 class ModelScorer:
     """CLIP + OWL-ViT on CPU. Loaded once; ~0.8 s per frame on a GitHub runner."""
 
-    def __init__(self, clip_id: str = 'openai/clip-vit-base-patch16', owl_id: str = 'google/owlvit-base-patch32'):
+    def __init__(self, clip_id: str = 'openai/clip-vit-large-patch14', owl_id: str = 'google/owlvit-base-patch32'):
         import torch
         from transformers import CLIPModel, CLIPProcessor, OwlViTForObjectDetection, OwlViTProcessor
         self.torch = torch
@@ -103,7 +103,7 @@ class ModelScorer:
             for j, im in enumerate(batch):
                 scene = {g: 0.0 for g in SCENES}
                 for g, p in zip(groups, sp[j].tolist()):
-                    scene[g] += p
+                    scene[g] = max(scene[g], p)   # max per group (calibrated)
                 presence = pp[j].tolist()
                 per_subject = dict(zip(subjects, presence[:len(subjects)]))
                 best_area, best_label = 0.0, ''
