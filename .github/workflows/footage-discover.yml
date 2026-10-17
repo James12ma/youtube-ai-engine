@@ -1,0 +1,96 @@
+name: Footage discovery (find + rank real clips by what is on screen; encrypted review pack)
+on:
+  workflow_dispatch:
+    inputs:
+      categories:
+        description: '";"-separated Commons categories (walked 2 levels deep)'
+        default: ''
+      searches:
+        description: '";"-separated Commons searches'
+        default: ''
+      pixabay:
+        description: '";"-separated Pixabay searches'
+        default: ''
+      pixabay_tags:
+        description: Regex Pixabay tags must match
+        default: ''
+      subjects:
+        description: '";"-separated subjects for the vision models'
+        required: true
+      exclude:
+        description: Regex on title/description to drop
+        default: 'aquarium|marineland|sea ?world|captive|zoo|skeleton|model|museum'
+      max_clips:
+        default: '60'
+      delivery_pubkey:
+        description: Base64 RSA public key (PEM)
+        required: true
+permissions:
+  contents: write  # only to push the ENCRYPTED review pack to qa/<run id>
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          set -euo pipefail
+          echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0' 'torchvision==0.23.0'
+          python -m pip install -r requirements.txt -r requirements-production.txt 'transformers>=4.44,<5' 'Pillow>=10'
+      - name: Discover and rank
+        env:
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          CATS: ${{ inputs.categories }}
+          SEARCHES: ${{ inputs.searches }}
+          PXQ: ${{ inputs.pixabay }}
+          PXT: ${{ inputs.pixabay_tags }}
+          SUBJ: ${{ inputs.subjects }}
+          EXCL: ${{ inputs.exclude }}
+          MAXC: ${{ inputs.max_clips }}
+        run: |
+          set -uo pipefail
+          python -m scripts.footage_discover --categories "$CATS" --searches "$SEARCHES" --pixabay "$PXQ" \
+            --pixabay-tags "$PXT" --subjects "$SUBJ" --exclude "$EXCL" --max-clips "$MAXC" --out outputs/discover \
+            > lines.jsonl 2> err.txt; rc=$?
+          [ $rc -eq 0 ] || { echo "::error title=discover::$(tail -c 2000 err.txt | tr '\n' ' ' | sed "s/${PIXABAY_API_KEY:-none}/***/g")"; exit $rc; }
+          python - <<'PY'
+          import json
+          r = json.load(open('outputs/discover/discover.json'))
+          print('::notice title=summary::' + json.dumps({k: r.get(k) for k in ('candidates', 'categories', 'rejects')}, ensure_ascii=False)[:3800])
+          rows = [f"{c['tag']}|{c['title'][5:60] if c['title'].startswith('File:') else c['title']}|{c.get('license')}|rev={int(c.get('license_review_pending', False))}|sub={c.get('subject_s')} close={c.get('close_s')} med={c.get('medium_s')} uw={c.get('underwater_subject_s')}|{[(w['start_s'], w['value']) for w in c.get('windows', [])]}" + (f"|ERR {c['error'][:60]}" if c.get('error') else '') for c in r['clips']]
+          for i in range(0, len(rows), 12):
+              print(f'::notice title=ranked {i//12}::' + json.dumps(rows[i:i+12], ensure_ascii=False)[:3900])
+          PY
+      - name: Encrypted pack to qa/${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBKEY_B64: ${{ inputs.delivery_pubkey }}
+        run: |
+          set -euo pipefail
+          umask 077
+          tar -C outputs/discover -cf "$RUNNER_TEMP/pack.tar" $(cd outputs/discover && ls *.jpg discover.json 2>/dev/null)
+          echo "$PUBKEY_B64" | base64 -d > "$RUNNER_TEMP/pub.pem"
+          out=$RUNNER_TEMP/enc; mkdir -p "$out"
+          openssl rand -hex 32 > "$RUNNER_TEMP/k"
+          openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/pub.pem" -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$RUNNER_TEMP/k" -out "$out/key.enc"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/k" \
+            -in "$RUNNER_TEMP/pack.tar" -out "$RUNNER_TEMP/pack.enc"
+          shred -u "$RUNNER_TEMP/k" "$RUNNER_TEMP/pack.tar"
+          split -b 90m -d -a 2 "$RUNNER_TEMP/pack.enc" "$out/pack.enc.part"
+          (cd "$out" && sha256sum * > SHA256SUMS)
+          cd "$out"; git init -q -b "qa/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Encrypted discovery pack ${{ github.run_id }}"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "qa/${{ github.run_id }}"
+          echo "::notice title=qa-branch::qa/${{ github.run_id }} (encrypted only)"

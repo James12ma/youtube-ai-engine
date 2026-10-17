@@ -66,6 +66,7 @@ class Shot(BaseModel):
     label: str = ''            # usually the filming location
     note: str = ''             # what the shot shows (for the QA report)
     key_s: float | None = None  # moment of the key action; the used segment is placed around it
+    expect: str = ''           # subject the narration talks about here (one of plan.subjects); checked by visual QA
 
     @model_validator(mode='after')
     def _order(self):
@@ -116,6 +117,8 @@ class DocumentaryPlan(BaseModel):
     show_title: bool = True
     voice_length_scale: float = Field(default=1.0, ge=0.8, le=1.4)  # >1 = slower, calmer narration
     # Spoken-only phonetic fixes (Piper [[ IPA ]] syntax); subtitles keep the normal spelling.
+    subjects: list[str] = Field(default_factory=list)       # animals the visual QA looks for ("humpback whale", ...)
+    visual_targets: dict[str, float | bool] = Field(default_factory=dict)  # overrides of visual_qa.VISUAL_STANDARD
     pronunciations: dict[str, str] = Field(default_factory=dict)     # voice / fact sources line for the credits card
 
     @model_validator(mode='after')
@@ -395,7 +398,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
         shot_report.append({'index': i, 'beat': item['beat'], 'clip': shot.clip,
                             'source_title': clip_info.get(shot.clip, {}).get('title'),
                             'source_in_s': shot.in_s, 'source_out_s': round(shot.in_s + d, 2),
-                            'seconds': round(d, 2), 'label': shot.label, 'note': shot.note,
+                            'seconds': round(d, 2), 'label': shot.label, 'note': shot.note, 'expect': shot.expect,
                             'ai_generated': src.kind == 'ai'})
     voice_note = plan.credits_note or 'Narración: voz sintética (Piper). Muestra de revisión — no publicada.'
     credits = work / 'credits.png'

@@ -97,6 +97,19 @@ jobs:
           for c in r['clips'].values():
               print('::notice title=clip::' + json.dumps({k: c.get(k) for k in ('title', 'license', 'author', 'has_audio', 'license_review_pending')}, ensure_ascii=False))
           PY
+      - name: Visual QA (animal on screen, distance, under water, shot variety, narration match)
+        env:
+          PLAN: ${{ inputs.plan }}
+        run: |
+          set -uo pipefail
+          python -m pip install -q 'transformers>=4.44,<5' >/dev/null 2>&1 || true
+          python -m channel.visual_qa --video outputs/doc/sample.mp4 --report outputs/doc/sample_work/render_report.json \
+            --plan "$PLAN" --out outputs/qa > outputs/qa/visual_summary.json 2> outputs/qa/visual_err.txt; rc=$?
+          if [ $rc -eq 0 ]; then
+            echo "::notice title=visual-qa::$(head -c 3500 outputs/qa/visual_summary.json)"
+          else
+            echo "::warning title=visual-qa failed::$(tail -c 1500 outputs/qa/visual_err.txt | tr '\n' ' ')"
+          fi
       - name: Encrypted pack to qa/${{ github.run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -107,7 +120,7 @@ jobs:
           pack=$RUNNER_TEMP/pack; mkdir -p "$pack"
           cp outputs/doc/sample.mp4 outputs/doc/sample.srt outputs/doc/sample_work/render_report.json "$pack/"
           cp outputs/doc/sample_work/credits.png outputs/doc/sample_work/words.json "$pack/"
-          cp outputs/qa/*.jpg outputs/qa/*.png outputs/qa/*.txt outputs/qa/qa_report.json "$pack/" 2>/dev/null || true
+          cp outputs/qa/*.jpg outputs/qa/*.png outputs/qa/*.txt outputs/qa/*.json "$pack/" 2>/dev/null || true
           tar -C "$pack" -cf "$RUNNER_TEMP/pack.tar" .
           rm -rf "$pack"
           echo "$PUBKEY_B64" | base64 -d > "$RUNNER_TEMP/pub.pem"
