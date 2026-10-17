@@ -59,7 +59,7 @@ jobs:
           PY
           mkdir -p "$VOICE_DIR"
           python -m piper.download_voices --data-dir "$VOICE_DIR" "$VOICE_NAME"
-      - name: Narrate beats (owner-approved voice: Chatterbox Latin-American Spanish)
+      - name: Narrate beats (owner-approved voice - Chatterbox Latin-American Spanish)
         env:
           PLAN: ${{ inputs.plan }}
         run: |
