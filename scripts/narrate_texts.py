@@ -5,7 +5,7 @@ plan (--plan: one text per beat) or a JSON list of texts (--texts). Output: seg_
 + manifest.json with a text hash per segment, so a renderer can refuse audio that does not match.
 
 Timbre: a SYNTHETIC reference clip (Kokoro em_alex, first 12 s of the approved sample text) — never a
-real person's voice. Spanish uses the Latin-American fine-tune; English uses Chatterbox's English model.
+real person's voice. Spanish uses the Latin-American fine-tune; English uses the multilingual V3 model.
 """
 from __future__ import annotations
 import argparse
@@ -39,8 +39,10 @@ def main() -> None:
     else:
         texts = json.loads(a.texts.read_text(encoding='utf-8'))
     v = _voices()
+    # English: Chatterbox multilingual V3 (sample C, Oct 2026: 1.7 % ASR error vs 6.9 % for the English-only model,
+    # and more pitch variation) with the same synthetic reference -> same timbre as Alan7.
     eng = v.ChatterboxEngine(a.ref, latam=a.language == 'es', language=a.language,
-                             english_model=a.language == 'en', exaggeration=exag, cfg_weight=cfg, seed=a.seed)
+                             english_model=False, exaggeration=exag, cfg_weight=cfg, seed=a.seed)
     a.out.mkdir(parents=True, exist_ok=True)
     items, t0 = [], time.time()
     for i, text in enumerate(texts):
