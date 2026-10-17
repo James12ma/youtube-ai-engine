@@ -39,6 +39,12 @@ VARIANTS = {
                        'a photo of waves on the ocean'],
            'land': ['a photo of an animal resting on a beach', 'a photo of a sandy or rocky beach',
                     'a photo of a coastline or mountains']},
+    'v4': {'underwater': ['a photo taken underwater', 'an underwater photo with light rays from the surface above',
+                          'an underwater photo of an animal swimming in the water column'],
+           'surface': ['a photo of the ocean surface', 'an aerial drone photo of the sea from above',
+                       'a photo of a whale at the surface of the sea seen from a boat', 'a photo of waves on the ocean'],
+           'land': ['a photo of an animal resting on a beach', 'a photo of a sandy or rocky beach',
+                    'a photo of a coastline or mountains']},
 }
 for v in list(VARIANTS):
     VARIANTS[v]['card'] = ['white text on a plain black background']
@@ -98,7 +104,11 @@ def main() -> None:
                     conf[f'{truth}->{pred}'] = conf.get(f'{truth}->{pred}', 0) + 1
                 key = f'{model_id.split("/")[1]}|{vname}|{agg}'
                 results[key] = {'accuracy': round(ok / len(samples), 3), 'confusion': conf}
-                print(f'::notice title={key}::' + json.dumps(results[key]))
+                print(key, json.dumps(results[key]))
+    table = sorted(((r['accuracy'], k) for k, r in results.items()), reverse=True)
+    print('::notice title=ranking::' + json.dumps(table)[:3900])
+    for acc, k in table[:3]:
+        print(f'::notice title={k}::' + json.dumps(results[k]))
     (work / 'calibration.json').write_text(json.dumps({'n': len(samples), 'results': results}, indent=1))
 
 
