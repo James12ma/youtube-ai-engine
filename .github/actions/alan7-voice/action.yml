@@ -17,6 +17,11 @@ inputs:
 runs:
   using: composite
   steps:
+    - uses: actions/cache/restore@v4
+      with:
+        path: .narration-cache
+        key: alan7-voice-v1-${{ github.run_id }}
+        restore-keys: alan7-voice-v1-
     - shell: bash
       env:
         IN_PLAN: ${{ inputs.plan }}
@@ -33,10 +38,15 @@ runs:
         # identical synthetic reference every time: Kokoro em_alex reading the approved sample text
         KOKORO_VOICE=em_alex "$RUNNER_TEMP/cb/bin/python" -m scripts.voice_compare synth --engine kokoro --out "$RUNNER_TEMP/ref_full.wav"
         ffmpeg -y -hide_banner -loglevel error -i "$RUNNER_TEMP/ref_full.wav" -t 12 -ar 24000 -ac 1 "$RUNNER_TEMP/voice_ref.wav"
-        args=(--ref "$RUNNER_TEMP/voice_ref.wav" --out "$IN_OUT" --language "$IN_LANG")
+        args=(--ref "$RUNNER_TEMP/voice_ref.wav" --out "$IN_OUT" --language "$IN_LANG" --cache .narration-cache)
         if [ -n "$IN_PLAN" ]; then args+=(--plan "$IN_PLAN"); else args+=(--texts "$IN_TEXTS"); fi
         if ! "$RUNNER_TEMP/cb/bin/python" -m scripts.narrate_texts "${args[@]}" 2> "$RUNNER_TEMP/narr_err.txt" | tail -n 2; then
           echo "::error title=narration::$(tr '\r' '\n' < "$RUNNER_TEMP/narr_err.txt" | grep -v -E 'it/s|s/it|^\s*$' | tail -n 25 | tr '\n' ' ' | tail -c 3000)"
           exit 1
         fi
         echo "::notice title=narration::$(tr -d '\n ' < "$IN_OUT/manifest.json" | head -c 500)"
+    - uses: actions/cache/save@v4
+      if: always()
+      with:
+        path: .narration-cache
+        key: alan7-voice-v1-${{ github.run_id }}

@@ -375,6 +375,11 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
     clip_files = dict(clip_files or {})
     clip_info = dict(clip_info or {})
     for cid, src in plan.clips.items():
+        if src.kind == 'noaa':   # never let a NOAA title card slip into the cut
+            from channel import noaa
+            bad = noaa.slate_conflicts(src.noaa_id, [(s.in_s, s.out_s) for bt in plan.beats for s in bt.shots if s.clip == cid])
+            if bad:
+                raise DocumentaryError(f'clip {cid}: ' + '; '.join(bad))
         if src.kind == 'ai':
             clip_files[cid] = Path(src.path)
             clip_info[cid] = {'title': src.path, 'ai_generated': True}

@@ -29,6 +29,7 @@ def main() -> None:
     ap.add_argument('--ref', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
     ap.add_argument('--seed', type=int, default=7)
+    ap.add_argument('--cache', type=Path, help='reuse identical segments narrated earlier (same text + settings)')
     a = ap.parse_args()
     exag, cfg = 0.6, (0.4 if a.language == 'es' else 0.3)
     if a.plan:
@@ -50,10 +51,23 @@ def main() -> None:
     for i, text in enumerate(texts):
         text = ' '.join(text.split())
         f = f'seg_{i:03d}.wav'
-        r = v.narrate(eng, text, a.out / f, checker=checker)
+        key = hashlib.sha1(json.dumps([text, a.language, exag, cfg, a.seed, eng.loaded, 'checker-v1']).encode()).hexdigest()
+        hit = a.cache / f'{key}.wav' if a.cache else None
+        if hit and hit.is_file() and (a.cache / f'{key}.json').is_file():
+            import shutil
+            shutil.copyfile(hit, a.out / f)
+            r = json.loads((a.cache / f'{key}.json').read_text(encoding='utf-8'))
+            r['cached'] = True
+        else:
+            r = v.narrate(eng, text, a.out / f, checker=checker)
+            if a.cache:
+                import shutil
+                a.cache.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(a.out / f, a.cache / f'{key}.wav')
+                (a.cache / f'{key}.json').write_text(json.dumps(r, ensure_ascii=False), encoding='utf-8')
         left = [m for x in r['sentences'] for m in x.get('misheard', [])]
         retried = sum(1 for x in r['sentences'] if x.get('tries', 1) > 1)
-        items.append({'index': i, 'sha1': text_key(text), 'file': f, 'seconds': r['seconds'],
+        items.append({'index': i, 'sha1': text_key(text), 'file': f, 'seconds': r['seconds'], 'cached': r.get('cached', False),
                       'retried_sentences': retried, 'misheard_left': left})
         report.append(r['sentences'])
         print(json.dumps({'segment': i, 'seconds': r['seconds'], 'elapsed_s': round(time.time() - t0)}), flush=True)

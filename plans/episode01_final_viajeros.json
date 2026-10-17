@@ -64,9 +64,9 @@
     {
      "clip": "whales",
      "in_s": 76.0,
-     "out_s": 88.0,
+     "out_s": 80.5,
      "label": "Banco de la Plata, Rep. Dominicana",
-     "note": "wide: two whales far below in deep blue",
+     "note": "wide: two whales below in deep blue",
      "expect": "humpback whale"
     },
     {
@@ -88,9 +88,17 @@
     {
      "clip": "whales",
      "in_s": 143.0,
+     "out_s": 148.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "topside: whale backs at the surface",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 149.0,
      "out_s": 154.5,
      "label": "Banco de la Plata, Rep. Dominicana",
-     "note": "topside: whale backs at the surface, Silver Bank",
+     "note": "topside: whale breathes at the surface",
      "expect": "humpback whale"
     }
    ],
@@ -112,9 +120,17 @@
     {
      "clip": "whales",
      "in_s": 10.0,
-     "out_s": 22.5,
+     "out_s": 16.0,
      "label": "Banco de la Plata, Rep. Dominicana",
      "note": "whale descends, long white pectoral fin",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 16.5,
+     "out_s": 22.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "whale descends, pectoral fin",
      "expect": "humpback whale"
     }
    ],
@@ -128,17 +144,33 @@
     {
      "clip": "whales",
      "in_s": 88.0,
-     "out_s": 104.0,
+     "out_s": 95.5,
      "label": "Banco de la Plata, Rep. Dominicana",
-     "note": "mother below, calf above in turquoise water",
+     "note": "mother below, calf above",
      "expect": "humpback whale"
     },
     {
      "clip": "whales",
-     "in_s": 104.0,
+     "in_s": 97.0,
+     "out_s": 104.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "calf near the surface above its mother",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 106.0,
+     "out_s": 112.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "calf beside its mother",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 113.0,
      "out_s": 118.5,
      "label": "Banco de la Plata, Rep. Dominicana",
-     "note": "calf swims beside its mother",
+     "note": "mother and calf swim away",
      "expect": "humpback whale"
     }
    ],
@@ -153,17 +185,17 @@
     {
      "clip": "whales",
      "in_s": 58.0,
-     "out_s": 75.5,
+     "out_s": 65.0,
      "label": "Banco de la Plata, Rep. Dominicana",
      "note": "adult glides past the camera",
      "expect": "humpback whale"
     },
     {
      "clip": "whales",
-     "in_s": 54.5,
-     "out_s": 58.0,
+     "in_s": 66.5,
+     "out_s": 75.5,
      "label": "Banco de la Plata, Rep. Dominicana",
-     "note": "whale passes, deep blue",
+     "note": "adult turns, pectoral fin",
      "expect": "humpback whale"
     }
    ],
@@ -185,9 +217,17 @@
     {
      "clip": "whales",
      "in_s": 40.0,
-     "out_s": 54.5,
+     "out_s": 47.0,
      "label": "Banco de la Plata, Rep. Dominicana",
      "note": "underwater: long white pectoral fin",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 48.0,
+     "out_s": 54.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "pectoral fin, close",
      "expect": "humpback whale"
     }
    ],
@@ -201,7 +241,7 @@
    "shots": [
     {
      "clip": "whales",
-     "in_s": 188.0,
+     "in_s": 193.0,
      "out_s": 198.5,
      "label": "Banco de la Plata, Rep. Dominicana",
      "note": "pectoral fins raised at the surface",
@@ -225,7 +265,7 @@
    "shots": [
     {
      "clip": "whales",
-     "in_s": 240.0,
+     "in_s": 241.0,
      "out_s": 252.5,
      "label": "Hawái",
      "note": "tail slapping, Hawaii",
@@ -266,9 +306,17 @@
     {
      "clip": "whales",
      "in_s": 277.0,
-     "out_s": 287.0,
+     "out_s": 280.5,
      "label": "Hawái",
-     "note": "whale backs offshore Hawaii",
+     "note": "whale back offshore Hawaii",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 283.5,
+     "out_s": 287.5,
+     "label": "Hawái",
+     "note": "whale back offshore Hawaii",
      "expect": "humpback whale"
     }
    ],
@@ -290,9 +338,25 @@
     {
      "clip": "turtle",
      "in_s": 23.0,
+     "out_s": 31.0,
+     "label": "Hawái",
+     "note": "turtle glides close",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 33.0,
+     "out_s": 40.0,
+     "label": "Hawái",
+     "note": "turtle over the reef, close",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 41.0,
      "out_s": 46.5,
      "label": "Hawái",
-     "note": "turtle glides close, shell and flippers",
+     "note": "turtle swims past",
      "expect": "sea turtle"
     }
    ],
@@ -301,7 +365,7 @@
    ]
   },
   {
-   "narration": "De adulta se alimenta sobre todo de algas y pastos marinos, que encuentra en arrecifes como este. Y puede vivir setenta años o más.",
+   "narration": "De adulta se alimenta sobre todo de algas y pastos marinos, que encuentra entre las rocas y los corales. Y puede vivir setenta años o más.",
    "shots": [
     {
      "clip": "turtle",
@@ -362,9 +426,17 @@
     {
      "clip": "turtle",
      "in_s": 115.0,
-     "out_s": 130.5,
+     "out_s": 122.0,
      "label": "Isla Grande de Hawái",
      "note": "turtle resting on black sand",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 124.0,
+     "out_s": 130.5,
+     "label": "Isla Grande de Hawái",
+     "note": "turtle resting, closer",
      "expect": "sea turtle"
     },
     {

@@ -26,11 +26,14 @@ MAX_BYTES = 1_500_000_000
 KNOWN = {
     3911325489001: {'title': 'B-Roll: Humpback Whales and Behavior',
                     'description': 'Underwater and topside footage of humpback whales near the surface. Filmed in Silver Bank, '
-                                   'Dominican Republic, offshore of New England, and in Hawaii.'},
+                                   'Dominican Republic, offshore of New England, and in Hawaii.',
+                    # title cards (read 2026-10-17); 240.x still shows the card fading out
+                    'slates': [(0, 9.0), (140.0, 143.0), (222.0, 225.2), (237.0, 240.9)]},
     2221891724001: {'title': 'B-Roll: Humpback Whale Research in the North Pacific', 'description': ''},
     4084488077001: {'title': 'B-Roll: Green Sea Turtle',
                     'description': 'Northwestern Hawaiian Islands, Papahānaumokuākea Marine National Monument. Underwater '
-                                   'and topside beach footage of the endangered green sea turtle.'},
+                                   'and topside beach footage of the endangered green sea turtle.',
+                    'slates': [(0, 10.0), (103.0, 107.0), (164.0, 999.0)]},
 }
 
 
@@ -41,6 +44,16 @@ class NoaaError(RuntimeError):
 def _host_ok(url: str) -> bool:
     u = urlparse(url)
     return u.scheme == 'https' and any((u.hostname or '').endswith(s) for s in ALLOWED_SUFFIXES)
+
+
+def slate_conflicts(video_id: int, windows: list[tuple[float, float]], borrow: float = 0.6) -> list[str]:
+    """Shot windows that would show a title card (a dissolve may borrow ``borrow`` s past the window)."""
+    out = []
+    for a, b in windows:
+        for s0, s1 in KNOWN.get(int(video_id), {}).get('slates', []):
+            if a < s1 and b + borrow > s0:
+                out.append(f'{a}-{b} touches title card {s0}-{s1}')
+    return out
 
 
 def info(video_id: int) -> dict:
