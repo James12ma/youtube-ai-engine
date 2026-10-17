@@ -173,12 +173,21 @@ def score_clip(path: Path, scorer, subjects: list[str], out_dir: Path, tag: str,
             'windows': best_windows(per), 'per_second': per, 'sheet': f'sheet_{tag}.jpg'}
 
 
+def slate(path: Path, out: Path, tag: str) -> None:
+    """Readable frames of the opening slate (credits, permit numbers) — first 12 s."""
+    import subprocess
+    vf = ("fps=1/1.5,scale=640:-2,tile=4x2:padding=4:margin=4")
+    subprocess.run(['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-t', '12', '-i', str(path), '-vf', vf,
+                    '-frames:v', '1', '-q:v', '3', str(out / f'slate_{tag}.jpg')], check=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument('--categories', default='', help='";"-separated Commons categories')
     ap.add_argument('--searches', default='', help='";"-separated Commons searches')
     ap.add_argument('--titles', default='', help='"|"-separated exact Commons titles to include')
     ap.add_argument('--pixabay', default='', help='";"-separated Pixabay searches (needs PIXABAY_API_KEY)')
+    ap.add_argument('--noaa', default='', help='";"-separated NOAA Fisheries B-roll video ids')
     ap.add_argument('--pixabay-tags', default='', help='regex the Pixabay tags must match')
     ap.add_argument('--subjects', required=True, help='";"-separated subjects for the models')
     ap.add_argument('--exclude', default='', help='regex on title/description to drop (e.g. aquarium|captive)')
@@ -205,9 +214,12 @@ def main() -> None:
             px, meta = pixabay_candidates(client, [q.strip() for q in a.pixabay.split(';') if q.strip()], a.pixabay_tags)
             report['pixabay_queries'] = meta
             cands += px
+        if a.noaa.strip():
+            from channel import noaa
+            cands = [{**noaa.info(int(v)), 'review_url': ''} for v in a.noaa.split(';') if v.strip()] + cands
         if a.exclude:
             ex = re.compile(a.exclude, re.I)
-            dropped = [c for c in cands if ex.search(c['title'] + ' ' + c['description'])]
+            dropped = [c for c in cands if c['source'] != 'noaa' and ex.search(c['title'] + ' ' + c['description'])]
             report['rejects']['excluded'] = len(dropped)
             cands = [c for c in cands if c not in dropped]
         report['candidates'] = len(cands)
@@ -218,7 +230,11 @@ def main() -> None:
         for i, c in enumerate(cands):
             tag = f'{i:02d}'
             try:
-                if c['source'] == 'pixabay':
+                if c['source'] == 'noaa':
+                    from channel import noaa
+                    path = noaa.download(client, c['id'], a.out / 'review' / f'{tag}.mp4')
+                    slate(path, a.out, tag)
+                elif c['source'] == 'pixabay':
                     from channel import pixabay
                     path = pixabay.download(client, c['review_url'], a.out / 'review' / f'{tag}.mp4')
                 else:

@@ -32,9 +32,12 @@ class DocumentaryError(RuntimeError):
 
 
 class ClipSource(BaseModel):
-    kind: Literal['commons', 'pixabay', 'ai'] = 'commons'
+    kind: Literal['commons', 'pixabay', 'noaa', 'ai'] = 'commons'
     title: str = ''            # exact Commons File: title (kind=commons)
     pixabay_id: int | None = None
+    noaa_id: int | None = None       # NOAA Fisheries B-roll package (public domain, credit NOAA Fisheries)
+    slate_checked: bool = False      # NOAA: opening slate read, extra credits copied into ``credit``
+    credit: str = ''                 # extra credit line required by the source (e.g. NOAA slate, permit numbers)
     species_verified: bool = False   # set only after someone looked at the clip (tags are not proof)
     ai_checked: bool = False         # set only after the Pixabay page was checked for an AI-generated label
     path: str = ''             # local file (kind=ai)
@@ -54,6 +57,8 @@ class ClipSource(BaseModel):
             self.disclosure = self.disclosure or AI_LABEL
         if self.kind == 'pixabay' and (self.pixabay_id is None or self.ai_generated):
             raise ValueError('pixabay clips need pixabay_id and must be real footage')
+        if self.kind == 'noaa' and (self.noaa_id is None or self.ai_generated):
+            raise ValueError('noaa clips need noaa_id and must be real footage')
         if self.kind == 'commons' and self.ai_generated:
             raise ValueError('commons clips in footage mode must be real footage')
         return self
@@ -177,6 +182,8 @@ def license_gate(plan: 'DocumentaryPlan', clip_info: dict[str, dict]) -> dict:
                 issues.append(f'{cid}: species not verified')
             if not src.ai_checked:
                 issues.append(f'{cid}: Pixabay page not checked for an AI-generated label')
+        if src.kind == 'noaa' and not src.slate_checked:
+            issues.append(f'{cid}: NOAA opening slate not read (third-party credits / permits)')
         if src.kind == 'ai':
             issues.append(f'{cid}: AI clip — needs YouTube altered/synthetic disclosure')
     return {'passed': not issues, 'issues': issues}
@@ -191,6 +198,10 @@ def credit_lines(clips: dict[str, dict], ambience: dict | None, voice_note: str)
         if info.get('source') == 'pixabay':
             lines.append(f"Pixabay #{info['id']} — {info['author']} — {info['license']} — pixabay.com. "
                          'Cambios: recortado, reencuadrado a 16:9, texto añadido.')
+            continue
+        if info.get('source') == 'noaa':
+            lines.append(f"«{info['title']}» — NOAA Fisheries — dominio público — videos.fisheries.noaa.gov"
+                         + (f" — {info['credit']}" if info.get('credit') else '') + '. Cambios: recortado, texto añadido.')
             continue
         name = info['title'].removeprefix('File:').rsplit('.', 1)[0]
         lines.append(f"«{name}» — {info['author']} — {info['license']} ({info['license_url']}) — Wikimedia Commons. "
@@ -498,6 +509,12 @@ def main() -> None:
                               'page': clip['page'], 'tags': clip['tags'], 'height': clip['best']['height'],
                               'has_audio': has_audio(files[cid]), 'location': src.location,
                               'species_verified': src.species_verified, 'ai_checked': src.ai_checked}
+                continue
+            if src.kind == 'noaa':
+                from channel import noaa
+                files[cid] = noaa.download(client, src.noaa_id, dl / f'{cid}.mp4')
+                infos[cid] = {**noaa.info(src.noaa_id), 'credit': src.credit, 'has_audio': has_audio(files[cid]),
+                              'location': src.location}
                 continue
             if src.kind != 'commons':
                 continue

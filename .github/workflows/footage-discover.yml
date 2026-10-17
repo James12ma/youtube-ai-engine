@@ -11,6 +11,9 @@ on:
       pixabay:
         description: '";"-separated Pixabay searches'
         default: ''
+      noaa:
+        description: '";"-separated NOAA Fisheries B-roll video ids'
+        default: ''
       pixabay_tags:
         description: Regex Pixabay tags must match
         default: ''
@@ -54,12 +57,13 @@ jobs:
           SEARCHES: ${{ inputs.searches }}
           PXQ: ${{ inputs.pixabay }}
           PXT: ${{ inputs.pixabay_tags }}
+          NOAA: ${{ inputs.noaa }}
           SUBJ: ${{ inputs.subjects }}
           EXCL: ${{ inputs.exclude }}
           MAXC: ${{ inputs.max_clips }}
         run: |
           set -uo pipefail
-          python -m scripts.footage_discover --categories "$CATS" --searches "$SEARCHES" --pixabay "$PXQ" \
+          python -m scripts.footage_discover --categories "$CATS" --searches "$SEARCHES" --pixabay "$PXQ" --noaa "$NOAA" \
             --pixabay-tags "$PXT" --subjects "$SUBJ" --exclude "$EXCL" --max-clips "$MAXC" --out outputs/discover \
             > lines.jsonl 2> err.txt; rc=$?
           [ $rc -eq 0 ] || { echo "::error title=discover::$(tail -c 2000 err.txt | tr '\n' ' ' | sed "s/${PIXABAY_API_KEY:-none}/***/g")"; exit $rc; }
