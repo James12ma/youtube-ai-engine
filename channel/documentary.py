@@ -114,6 +114,7 @@ class DocumentaryPlan(BaseModel):
     credits_note: str = ''
     title_start_s: float = Field(default=0.4, ge=0, le=20)
     show_title: bool = True
+    voice_length_scale: float = Field(default=1.0, ge=0.8, le=1.4)  # >1 = slower, calmer narration
     # Spoken-only phonetic fixes (Piper [[ IPA ]] syntax); subtitles keep the normal spelling.
     pronunciations: dict[str, str] = Field(default_factory=dict)     # voice / fact sources line for the credits card
 
@@ -343,7 +344,7 @@ def render_documentary(plan: DocumentaryPlan, voice_model: Path, out: Path, *, w
             raise DocumentaryError('missing footage for clip ' + cid)
 
     # 1. narration, one WAV per beat (real Piper voice; no fallback service)
-    narrator = PiperOrEdgeNarrator(voice_model, allow_edge_fallback=False)
+    narrator = PiperOrEdgeNarrator(voice_model, allow_edge_fallback=False, length_scale=plan.voice_length_scale)
     wavs = [narrator.synthesize(spoken_text(b.narration, plan.pronunciations), work / f'beat_{i}.wav')
             for i, b in enumerate(plan.beats)]
     tl = timeline(plan, [w.duration_s for w in wavs])
