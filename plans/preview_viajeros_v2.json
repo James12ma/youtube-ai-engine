@@ -1,0 +1,228 @@
+{
+ "series": "Historias Salvajes",
+ "title": "Viajeros del océano — avance (nuevo estándar visual)",
+ "subtitle": "Viajeros del océano",
+ "language": "es",
+ "preroll_s": 0.8,
+ "title_start_s": 14.5,
+ "pause_s": 0.8,
+ "tail_s": 1.5,
+ "credits_s": 7.0,
+ "crossfade_s": 0.5,
+ "voice_length_scale": 1.1,
+ "pronunciations": {
+  "crías": "kɾˈias",
+  "cría": "kɾˈia"
+ },
+ "ambience": [
+  "ocean waves",
+  "sea waves",
+  "waves beach"
+ ],
+ "subjects": [
+  "humpback whale",
+  "sea turtle"
+ ],
+ "credits_note": "Narración: voz sintética Piper (es_MX). Datos: NOAA Fisheries. Avance de revisión de Alan7 — no publicado.",
+ "clips": {
+  "whales": {
+   "kind": "noaa",
+   "noaa_id": 3911325489001,
+   "slate_checked": true,
+   "location": "Silver Bank, Dominican Republic (slate, 0:06–2:19)",
+   "credit": "Ballenas y crías en el Banco de la Plata, República Dominicana. Crédito: NOAA"
+  },
+  "turtle": {
+   "kind": "noaa",
+   "noaa_id": 4084488077001,
+   "slate_checked": true,
+   "location": "NW Hawaiian Islands (Papahānaumokuākea) and Big Island of Hawaii (slate)",
+   "credit": "Crédito: NOAA Fisheries"
+  }
+ },
+ "beats": [
+  {
+   "narration": "Bajo el agua, una ballena jorobada se acerca a la cámara. Gira, nos muestra su vientre blanco… y sigue mirando. ¿Qué hace un gigante así, tan cerca de nosotros?",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 119.5,
+     "out_s": 129.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "young humpback swims straight at the camera",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 129.0,
+     "out_s": 139.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "it rolls, white belly and pectoral fin",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Estamos en el Banco de la Plata, al norte de República Dominicana. Cada invierno llegan miles de jorobadas desde el Atlántico Norte para aparearse y dar a luz en estas aguas cálidas.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 10.0,
+     "out_s": 22.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "whale descends, long white pectoral fin",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 24.0,
+     "out_s": 39.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "two whales in deep blue water",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://sanctuaries.noaa.gov/",
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Esta es una madre con su cría. La pequeña nunca se aleja: sube a respirar con más frecuencia que su madre, y luego vuelve a su lado.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 88.0,
+     "out_s": 104.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "mother below, calf above in turquoise water",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 104.0,
+     "out_s": 118.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "calf swims beside its mother",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Sus aletas pectorales pueden medir casi cinco metros, casi un tercio de su cuerpo. Son las más largas de todas las ballenas.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 40.0,
+     "out_s": 54.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "adult passes close, pectoral fin",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 62.0,
+     "out_s": 75.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "adult glides past the camera",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "A miles de kilómetros, en los arrecifes de Hawái, otra viajera del océano se desliza sobre las rocas: la tortuga verde.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 13.0,
+     "out_s": 22.5,
+     "label": "Hawái",
+     "note": "green turtle swims over the reef",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 23.0,
+     "out_s": 46.5,
+     "label": "Hawái",
+     "note": "turtle glides close, shell and flippers",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/green-turtle"
+   ]
+  },
+  {
+   "narration": "Se alimenta de algas que crecen en el arrecife, y cuando descansa puede pasar horas sin subir a respirar.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 54.0,
+     "out_s": 62.5,
+     "label": "Hawái",
+     "note": "turtle beside the coral, flipper close",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 63.0,
+     "out_s": 74.0,
+     "label": "Hawái",
+     "note": "turtle swims over the rocks",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/green-turtle"
+   ]
+  },
+  {
+   "narration": "Y en Hawái hace algo poco común entre las tortugas marinas: sale a la playa solo para descansar al sol.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 115.0,
+     "out_s": 130.5,
+     "label": "Isla Grande de Hawái",
+     "note": "turtle resting on black sand",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 134.0,
+     "out_s": 147.0,
+     "label": "Isla Grande de Hawái",
+     "note": "close-up of the head on the beach",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/green-turtle"
+   ]
+  },
+  {
+   "narration": "Dos viajeras que cruzan océanos enteros. Y esto es solo el comienzo de su historia.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 74.0,
+     "out_s": 83.0,
+     "label": "Hawái",
+     "note": "turtle swims close over the rocks",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": []
+  }
+ ]
+}

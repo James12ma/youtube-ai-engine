@@ -39,10 +39,13 @@ VISUAL_STANDARD = {
 }
 
 SCENES = {
+    # Underwater footage is often murky green or deep blue; the prompts cover both (NOAA turtle B-roll test).
     'underwater': ['an underwater photo in the ocean', 'an underwater photo of a coral reef',
-                   'an underwater photo of a large animal swimming in blue water'],
-    'surface': ['a photo of the ocean surface', 'an aerial drone photo of the sea from above',
-                'a photo of an animal at the surface of the sea seen from a boat'],
+                   'an underwater photo of a large animal swimming in blue water',
+                   'a murky green underwater photo of an animal swimming over rocks',
+                   'a scuba diver photo of a sea animal close up'],
+    'surface': ['a photo of the ocean surface with waves', 'an aerial drone photo of the sea from above',
+                "a photo of a whale's back and fin above the waves"],
     'land': ['a photo of a sandy beach', 'a photo of a rocky coastline', 'a photo of snowy mountains and icebergs',
              'a photo of a forest or green hills', 'an aerial photo of an island'],
     'card': ['white text on a plain black background'],
