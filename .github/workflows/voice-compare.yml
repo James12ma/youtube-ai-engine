@@ -35,7 +35,8 @@ jobs:
         run: |
           set -euo pipefail
           ${{ steps.py311.outputs.python-path }} -m venv "$RUNNER_TEMP/cb"
-          "$RUNNER_TEMP/cb/bin/pip" install -q chatterbox-tts librosa soundfile
+          "$RUNNER_TEMP/cb/bin/pip" install -q "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git" librosa soundfile
+          "$RUNNER_TEMP/cb/bin/pip" show chatterbox-tts | head -3
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
