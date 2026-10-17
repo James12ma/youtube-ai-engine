@@ -25,7 +25,11 @@ def _voices():
     """Load channel/voices.py without channel/__init__ (the Chatterbox venv lacks the app deps)."""
     import importlib.util
     spec = importlib.util.spec_from_file_location('alan7_voices', Path(__file__).resolve().parents[1] / 'channel' / 'voices.py')
+    import sys
+    if 'alan7_voices' in sys.modules:
+        return sys.modules['alan7_voices']
     mod = importlib.util.module_from_spec(spec)
+    sys.modules['alan7_voices'] = mod   # dataclasses look the module up here
     spec.loader.exec_module(mod)
     return mod
 
