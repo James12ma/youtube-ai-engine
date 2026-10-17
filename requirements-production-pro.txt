@@ -2,5 +2,7 @@ playwright==1.56.0
 matplotlib>=3.8
 numpy>=1.26
 Pillow>=10
+# Existing LogicScript workbook generator (optional until spreadsheet mode is used).
+openpyxl>=3.1.5,<4
 # Piper is opt-in for actual neural narration; avoid installing for unit tests.
 # piper-tts>=1.2
