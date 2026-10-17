@@ -53,7 +53,7 @@ def install_cursor(page):
     }""")
 
 
-def run(voice,out,reuse=None,lesson_dir=None):
+def run(voice,out,reuse=None,lesson_dir=None,*,narrator_override=None):
     LESSON_DIR=Path(lesson_dir) if lesson_dir else LESSON
     out.mkdir(parents=True,exist_ok=True)
     lesson=json.loads((LESSON_DIR/'lesson.json').read_text());chapters=lesson['chapters']
@@ -70,7 +70,7 @@ def run(voice,out,reuse=None,lesson_dir=None):
         save_word_timestamps(aligned,out/'words.json')
         if (reuse/'PIPER_MODEL_CARD.md').exists():shutil.copy2(reuse/'PIPER_MODEL_CARD.md',out/'PIPER_MODEL_CARD.md')
     else:
-        narrator=PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
+        narrator=narrator_override or PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
         aligner=WhisperXAligner(min_token_coverage=1)
         # Shared, lesson-agnostic narration stage (same per-chapter Piper + WhisperX logic as before).
         narrated=narrate_chapters(chapters,out,narrator=narrator,aligner=aligner)
@@ -193,7 +193,8 @@ def run(voice,out,reuse=None,lesson_dir=None):
     qc=run_qc(out/'final.mp4',out/'captions.ass',min_caption_coverage=.70,forced_alignment_verified=True)
     if not qc.passed:raise RuntimeError('Technical QC failed; inspect report')
     lufs,peak=measure_loudness(out/'final.mp4')
-    report={'title':lesson['title'],'transcript':transcript,'provenance':lesson['provenance'],'aligner_ran':True,'method':'whisperx_ctc','token_coverage':1,'narration_backend':'piper','aligned_word_count':len(words),'caption_count':count,'final_duration_s':qc.duration_s,'alignment_duration_s':offset,'final_lufs':lufs,'final_tp':peak,'technical_qc':qc.model_dump(),'resolution':'1920x1080','ready_for_publication':False,'publishing':'disabled','live_llm_calls':0,'editorial_review':'separate review required','chapters':timeline}
+    backend='piper' if reuse else '+'.join(sorted(narrator.actual_backends))
+    report={'title':lesson['title'],'transcript':transcript,'provenance':lesson['provenance'],'aligner_ran':True,'method':'whisperx_ctc','token_coverage':1,'narration_backend':backend,'aligned_word_count':len(words),'caption_count':count,'final_duration_s':qc.duration_s,'alignment_duration_s':offset,'final_lufs':lufs,'final_tp':peak,'technical_qc':qc.model_dump(),'resolution':'1920x1080','ready_for_publication':False,'publishing':'disabled','live_llm_calls':0,'editorial_review':'separate review required','chapters':timeline}
     (out/'qc_report.json').write_text(json.dumps(report,indent=2))
     gates=enforce(out,expected_size=(1920,1080));(out/'independent_gates.json').write_text(json.dumps(gates,indent=2))
     (out/'demo_evidence.json').write_text(json.dumps(evidence,indent=2))

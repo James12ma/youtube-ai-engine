@@ -29,20 +29,30 @@ def master_documentary(plan, voice_model: Path, out: Path, **assets) -> dict:
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--lesson', type=Path, required=True)
-    p.add_argument('--voice', type=Path, required=True)
+    voice=p.add_mutually_exclusive_group(required=True)
+    voice.add_argument('--voice', type=Path)
+    voice.add_argument('--narration-dir', type=Path, help='Reuse the same prepared beat WAV/manifest contract as Alan7')
+    p.add_argument('--language', choices=('en','es'), default='en')
     p.add_argument('--output-dir', type=Path, required=True)
     args = p.parse_args(argv)
     from scripts.render_lesson import renderer_for
     kind = renderer_for(args.lesson)
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    narrator=None
+    if args.narration_dir:
+        from narration_pro.prepared import PreparedNarrator
+        narrator=PreparedNarrator(args.narration_dir,language=args.language)
     if kind == 'spreadsheet':
         from scripts.render_spreadsheet_lesson import run
-        result = run(args.lesson, args.output_dir/'base', voice=args.voice)
+        from narration_pro import WhisperXAligner
+        result = run(args.lesson, args.output_dir/'base', voice=args.voice,narrator=narrator,
+                     aligner=WhisperXAligner(language=args.language) if narrator else None)
     else:
         from scripts.render_educational import run
-        run(args.voice, args.output_dir/'base', lesson_dir=args.lesson)
+        if args.language!='en':raise ValueError('Existing browser lesson is English; provide a separately reviewed translated lesson first')
+        run(args.voice, args.output_dir/'base', lesson_dir=args.lesson,narrator_override=narrator)
         result = json.loads((args.output_dir/'base'/'qc_report.json').read_text())
-    profile = QualityProfile('screen', 'en')
+    profile = QualityProfile('screen', args.language)
     mastered = master_video(args.output_dir/'base'/'final.mp4', args.output_dir/'base'/'vo_norm.wav',
                              args.output_dir/'final.mp4', profile=profile)
     report = {'original_render': result, 'mastering': mastered, 'ready_for_publication': False}

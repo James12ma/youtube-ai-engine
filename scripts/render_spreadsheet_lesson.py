@@ -225,7 +225,7 @@ def run(lesson_dir: Path, out: Path, *, voice: Path | None = None, draft: bool =
             captions=out / 'captions.ass')
     export_srt(out / 'captions.ass', out / 'captions.srt')
     report = {'title': lesson['title'], 'renderer': 'spreadsheet', 'draft': narration.is_draft,
-              'narration_method': narration.method, 'narration_backend': 'none (draft)' if draft else 'piper',
+              'narration_method': narration.method, 'narration_backend': 'none (draft)' if draft else '+'.join(sorted(getattr(narrator,'actual_backends',{'injected-narrator'}))),
               'caption_count': count, 'alignment_duration_s': narration.duration_s,
               'evidence_checks': len(evidence), 'evidence_passed': all(r['passed'] for r in evidence),
               'resolution': f'{W}x{H}', 'ready_for_publication': False, 'publishing': 'disabled',
