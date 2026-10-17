@@ -24,6 +24,7 @@ def test_captions_are_explicitly_approximate(tmp_path):
  count,coverage,real=write_captions(n,tmp_path/'cap.ass',1280,720,max_chars=16)
  assert count>=1 and .9<=coverage<=1.0 and real is False
  assert r'\N' in (tmp_path/'cap.ass').read_text()
+ assert r'\\N' not in (tmp_path/'cap.ass').read_text()  # no visible stray slash before a line break
 
 def test_recording_block_nonlocal_url(tmp_path):
  with pytest.raises(Exception):WorkflowRecorder('https://example.com',tmp_path).record([])
