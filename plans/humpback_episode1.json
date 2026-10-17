@@ -1,0 +1,499 @@
+{
+ "series": "Historias Salvajes",
+ "title": "Ballenas jorobadas: viajeras entre el hielo y los trópicos",
+ "subtitle": "Viajeras entre el hielo y los trópicos",
+ "language": "es",
+ "preroll_s": 0.8,
+ "title_start_s": 5.0,
+ "pause_s": 0.9,
+ "tail_s": 1.5,
+ "credits_s": 8.0,
+ "crossfade_s": 0.5,
+ "pronunciations": {
+  "frías": "fɾˈias",
+  "crías": "kɾˈias",
+  "cría": "kɾˈia"
+ },
+ "clips": {
+  "gordons": {
+   "title": "File:Aerial view of a humpback whale near Gordon's Bay, Sydney, Australia at 24 August 2020.webm",
+   "location": "Gordon's Bay, Sydney, Australia"
+  },
+  "clovelly": {
+   "title": "File:Humpback Whale by Drone Clovelly and Coogee beaches, Sydney, Australia, August 21, 2020.webm",
+   "location": "Clovelly and Coogee, Sydney, Australia"
+  },
+  "gerringong": {
+   "title": "File:Humpback whale mother and calf south of Gerringong Boat Harbour, NSW, Australia.webm",
+   "location": "Gerringong, NSW, Australia"
+  },
+  "shellharbour": {
+   "title": "File:Humpback whales off The Shallows and Bass Point Quarry, Shellharbour, NSW, Australia.webm",
+   "location": "Shellharbour, NSW, Australia"
+  },
+  "boat": {
+   "title": "File:Mar adentro - Avistamiento de ballenas.webm",
+   "location": "Peru (offshore)"
+  },
+  "cuverville": {
+   "title": "File:Cuverville Island, Antarctica.webm",
+   "location": "Cuverville Island, Antarctica"
+  },
+  "solander": {
+   "title": "File:Aerial view of three humpback whales (Megaptera novaeangliae) near Cape Solander, New South Wales, Australia.webm",
+   "location": "Cape Solander, NSW, Australia"
+  },
+  "tailsail": {
+   "title": "File:Humpback whale Tail Sailing behaviour.webm",
+   "location": "Hawaiian Islands Humpback Whale National Marine Sanctuary, USA"
+  }
+ },
+ "beats": [
+  {
+   "narration": "Un estallido de espuma frente a Sídney. Durante un instante, un animal de hasta cuarenta toneladas sale del agua y vuelve a caer. Es una ballena jorobada, y está en medio de una de las migraciones más largas de cualquier mamífero del planeta.",
+   "shots": [
+    {
+     "clip": "gordons",
+     "in_s": 74,
+     "out_s": 86,
+     "label": "Sídney, Australia",
+     "note": "salto",
+     "key_s": 79.5
+    },
+    {
+     "clip": "clovelly",
+     "in_s": 44,
+     "out_s": 62,
+     "label": "Sídney, Australia",
+     "note": "salpicaduras",
+     "key_s": 50
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Las jorobadas pueden medir hasta dieciocho metros y vivir entre ochenta y noventa años. Se alimentan filtrando el agua para atrapar kril, pequeños crustáceos, y peces diminutos.",
+   "shots": [
+    {
+     "clip": "solander",
+     "in_s": 0,
+     "out_s": 28,
+     "label": "Cabo Solander, Australia",
+     "note": "tres ballenas nadando"
+    },
+    {
+     "clip": "gordons",
+     "in_s": 106,
+     "out_s": 122,
+     "label": "Sídney, Australia",
+     "note": "ballena en superficie",
+     "key_s": 112
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "En los meses cálidos, muchas viven en aguas frías y muy productivas, como las que rodean la Antártida. Allí comen sin descanso y acumulan grasa, una reserva de energía para el largo viaje que les espera.",
+   "shots": [
+    {
+     "clip": "cuverville",
+     "in_s": 46,
+     "out_s": 62,
+     "label": "Península Antártica",
+     "note": "glaciares"
+    },
+    {
+     "clip": "cuverville",
+     "in_s": 64,
+     "out_s": 76,
+     "label": "Isla Cuverville, Antártida",
+     "note": "iceberg"
+    },
+    {
+     "clip": "cuverville",
+     "in_s": 132,
+     "out_s": 150,
+     "label": "Isla Cuverville, Antártida",
+     "note": "cola junto a un iceberg",
+     "key_s": 146
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale",
+    "https://www.scu.edu.au/news/2003/be-careful-of-baby-whales-heading-south.php"
+   ],
+   "overlay": "Otras ballenas, otra población"
+  },
+  {
+   "narration": "Bajo la superficie, lejos de nuestra vista, algunas cazan de una forma sorprendente: sueltan cortinas de burbujas que encierran y concentran a sus presas.",
+   "shots": [
+    {
+     "clip": "cuverville",
+     "in_s": 190,
+     "out_s": 206,
+     "label": "Isla Cuverville, Antártida",
+     "note": "soplo",
+     "key_s": 200
+    },
+    {
+     "clip": "cuverville",
+     "in_s": 214,
+     "out_s": 232,
+     "label": "Isla Cuverville, Antártida",
+     "note": "lomos en superficie"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Como todos los mamíferos, respiran aire. Cada vez que salen a la superficie exhalan con fuerza, y el soplo de vapor puede verse desde muy lejos.",
+   "shots": [
+    {
+     "clip": "cuverville",
+     "in_s": 236,
+     "out_s": 254,
+     "label": "Isla Cuverville, Antártida",
+     "note": "dos ballenas respiran",
+     "key_s": 244
+    },
+    {
+     "clip": "shellharbour",
+     "in_s": 2,
+     "out_s": 10,
+     "label": "Shellharbour, Australia",
+     "note": "ballena cerca de la costa"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Cuando llega el invierno, emprenden el viaje. Algunas poblaciones nadan unos ocho mil kilómetros hasta aguas cálidas y poco profundas, cerca de arrecifes y costas, donde se aparean y dan a luz.",
+   "shots": [
+    {
+     "clip": "gerringong",
+     "in_s": 0,
+     "out_s": 14,
+     "label": "Gerringong, Australia",
+     "note": "costa y salpicadura",
+     "key_s": 11.5
+    },
+    {
+     "clip": "clovelly",
+     "in_s": 24,
+     "out_s": 44,
+     "label": "Sídney, Australia",
+     "note": "ballena aparece",
+     "key_s": 33
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Frente a la costa este de Australia, miles de jorobadas recorren cada año este corredor rumbo a las aguas subtropicales, donde nacerán sus crías.",
+   "shots": [
+    {
+     "clip": "clovelly",
+     "in_s": 62,
+     "out_s": 82,
+     "label": "Sídney, Australia",
+     "note": "ballena gira",
+     "key_s": 74
+    },
+    {
+     "clip": "gerringong",
+     "in_s": 25,
+     "out_s": 41,
+     "label": "Gerringong, Australia",
+     "note": "ballena desde arriba",
+     "key_s": 33
+    }
+   ],
+   "sources": [
+    "https://australian.museum/aap/young-humpbacks-exposed-to-danger-with-shifting-births/"
+   ]
+  },
+  {
+   "narration": "En el camino saltan fuera del agua y golpean la superficie con sus largas aletas y su cola. Estos saltos son uno de los espectáculos más famosos del océano.",
+   "shots": [
+    {
+     "clip": "gordons",
+     "in_s": 50,
+     "out_s": 62,
+     "label": "Sídney, Australia",
+     "note": "gran salpicadura",
+     "key_s": 55
+    },
+    {
+     "clip": "gerringong",
+     "in_s": 64,
+     "out_s": 78,
+     "label": "Gerringong, Australia",
+     "note": "salpicadura",
+     "key_s": 70
+    },
+    {
+     "clip": "clovelly",
+     "in_s": 84,
+     "out_s": 100,
+     "label": "Sídney, Australia",
+     "note": "ballena salpica",
+     "key_s": 90
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Cuando varias se encuentran, la superficie se llena de espuma, aletas y colas.",
+   "shots": [
+    {
+     "clip": "shellharbour",
+     "in_s": 120,
+     "out_s": 140,
+     "label": "Shellharbour, Australia",
+     "note": "grupo activo"
+    },
+    {
+     "clip": "shellharbour",
+     "in_s": 140,
+     "out_s": 160,
+     "label": "Shellharbour, Australia",
+     "note": "grupo activo"
+    }
+   ],
+   "sources": []
+  },
+  {
+   "narration": "Al nacer, una cría mide entre cuatro y cinco metros. Durante cerca de un año permanecerá junto a su madre, que la amamanta y la protege.",
+   "shots": [
+    {
+     "clip": "gerringong",
+     "in_s": 50,
+     "out_s": 62,
+     "label": "Gerringong, Australia",
+     "note": "madre y cría (título del archivo)",
+     "key_s": 56
+    },
+    {
+     "clip": "gerringong",
+     "in_s": 84,
+     "out_s": 98,
+     "label": "Gerringong, Australia",
+     "note": "ballena adulta",
+     "key_s": 88
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale",
+    "https://www.scu.edu.au/news/2003/be-careful-of-baby-whales-heading-south.php"
+   ]
+  },
+  {
+   "narration": "A partir de agosto, las madres comienzan el regreso hacia el sur con sus crías recién nacidas. Viajan con calma, y se detienen a descansar y a amamantar.",
+   "shots": [
+    {
+     "clip": "shellharbour",
+     "in_s": 84,
+     "out_s": 100,
+     "label": "Shellharbour, Australia",
+     "note": "ballenas en superficie"
+    },
+    {
+     "clip": "gerringong",
+     "in_s": 114,
+     "out_s": 130,
+     "label": "Gerringong, Australia",
+     "note": "ballena nadando"
+    }
+   ],
+   "sources": [
+    "https://www.scu.edu.au/news/2003/be-careful-of-baby-whales-heading-south.php"
+   ]
+  },
+  {
+   "narration": "En Hawái, al otro lado del Pacífico, una cámara de la NOAA registró a una jorobada con la cola fuera del agua durante largos segundos, como si fuera una vela al viento.",
+   "shots": [
+    {
+     "clip": "tailsail",
+     "in_s": 0,
+     "out_s": 32,
+     "label": "Hawái (EE. UU.) · NOAA",
+     "note": "cola fuera del agua"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Cada cola es distinta. Sus marcas funcionan como una huella digital, y permiten a los investigadores reconocer a cada ballena durante años.",
+   "shots": [
+    {
+     "clip": "cuverville",
+     "in_s": 94,
+     "out_s": 108,
+     "label": "Isla Cuverville, Antártida",
+     "note": "cola visible",
+     "key_s": 100
+    },
+    {
+     "clip": "cuverville",
+     "in_s": 150,
+     "out_s": 166,
+     "label": "Isla Cuverville, Antártida",
+     "note": "ballena junto al iceberg"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "En el Pacífico sur, frente a Perú, otras jorobadas cruzan aguas abiertas. Desde un barco apenas se ven sus lomos oscuros y el soplo de su respiración.",
+   "shots": [
+    {
+     "clip": "boat",
+     "in_s": 64,
+     "out_s": 74,
+     "label": "Perú · desde un barco",
+     "note": "salto lejano",
+     "key_s": 68
+    },
+    {
+     "clip": "boat",
+     "in_s": 108,
+     "out_s": 122,
+     "label": "Perú · desde un barco",
+     "note": "salpicadura"
+    },
+    {
+     "clip": "boat",
+     "in_s": 138,
+     "out_s": 152,
+     "label": "Perú · desde un barco",
+     "note": "lomo de ballena",
+     "key_s": 144
+    }
+   ],
+   "sources": []
+  },
+  {
+   "narration": "Pero el viaje está lleno de peligros: redes de pesca en las que pueden enredarse, choques con embarcaciones y el ruido constante bajo el agua.",
+   "shots": [
+    {
+     "clip": "boat",
+     "in_s": 22,
+     "out_s": 32,
+     "label": "Perú · desde un barco",
+     "note": "barco en mar abierto"
+    },
+    {
+     "clip": "shellharbour",
+     "in_s": 104,
+     "out_s": 120,
+     "label": "Shellharbour, Australia",
+     "note": "ballenas agitan el agua",
+     "key_s": 110
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale",
+    "https://australian.museum/aap/young-humpbacks-exposed-to-danger-with-shifting-births/"
+   ]
+  },
+  {
+   "narration": "La caza comercial redujo la mayoría de sus poblaciones en más de un noventa y cinco por ciento. Hoy, gracias a la protección, muchas se están recuperando, aunque cuatro de sus catorce poblaciones siguen en peligro.",
+   "shots": [
+    {
+     "clip": "gordons",
+     "in_s": 150,
+     "out_s": 178,
+     "label": "Sídney, Australia",
+     "note": "costa y mar abierto"
+    },
+    {
+     "clip": "clovelly",
+     "in_s": 240,
+     "out_s": 262,
+     "label": "Sídney, Australia",
+     "note": "acantilados de la costa"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "El Caribe también es parte de esta historia. Cada invierno, las jorobadas del Atlántico Norte llegan a las aguas cálidas de República Dominicana, como el Banco de la Plata y la Bahía de Samaná, para aparearse y dar a luz.",
+   "shots": [
+    {
+     "clip": "gordons",
+     "in_s": 124,
+     "out_s": 148,
+     "label": "Sídney, Australia",
+     "note": "ballena lejana con la costa"
+    },
+    {
+     "clip": "clovelly",
+     "in_s": 100,
+     "out_s": 124,
+     "label": "Sídney, Australia",
+     "note": "ballena en superficie",
+     "key_s": 110
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale",
+    "https://www.marinemammalhabitat.org/factsheets/west-indies-humpback-whale-breeding-ground-imma"
+   ],
+   "overlay": "Imágenes de Australia · no filmadas en Rep. Dominicana"
+  },
+  {
+   "narration": "Algún día, la cría que hoy nada junto a su madre hará este viaje por su cuenta. Y cada año, el océano volverá a ver pasar a las jorobadas: viajeras incansables entre el hielo y los trópicos.",
+   "shots": [
+    {
+     "clip": "solander",
+     "in_s": 2,
+     "out_s": 14,
+     "label": "Cabo Solander, Australia",
+     "note": "tres ballenas"
+    },
+    {
+     "clip": "gordons",
+     "in_s": 36,
+     "out_s": 48,
+     "label": "Sídney, Australia",
+     "note": "ballena sale a la superficie",
+     "key_s": 40
+    },
+    {
+     "clip": "cuverville",
+     "in_s": 258,
+     "out_s": 276,
+     "label": "Península Antártica",
+     "note": "iceberg y montañas"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  }
+ ],
+ "ambience": [
+  "ocean waves",
+  "sea waves",
+  "waves beach"
+ ],
+ "credits_note": "Narración: voz sintética Piper (es_MX). Datos: NOAA Fisheries; Southern Cross University; Australian Museum; IMMA. Episodio de revisión de Alan7 — no publicado."
+}
