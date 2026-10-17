@@ -200,10 +200,15 @@ class SheetRecorder:
                 sheet, cell = self._range(action['ref'])
                 self._show(sheet, cell)
                 self.controller.getFrame().getContainerWindow().setFocus()
-                # Replace the selected cell in normal mode. F2 edits an
-                # existing TEXT value as text, so even "38.75" can remain
-                # text and be (correctly) rejected by amount validation.
-                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Escape'], check=True)
+                # Clear CONTENTS through the actual Delete key first. Direct
+                # replacement of an imported TEXT cell can retain text input
+                # semantics during validation. Delete keeps formats/rules:
+                # help.libreoffice.org/latest/en-GB/text/scalc/01/02150000.html
+                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Escape', 'Delete'], check=True)
+                sleep(0.2)
+                if cell.getString():
+                    self.snapshot(self.workdir/'type-clear-failed.png')
+                    raise SheetRecorderError('Native Delete did not clear the selected input cell')
                 subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '90', '--',
                                 str(action['text'])], check=True)
                 subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Return'], check=True)
