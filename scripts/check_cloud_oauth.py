@@ -57,6 +57,10 @@ def main():
         report['next_action'] = NEXT_ACTIONS.get(exc.code, 'Inspect secret presence and OAuth account configuration; no credential values are logged.')
         code = 1
     print(json.dumps(report, indent=2))
+    ca = report.get('channel_access') or {}
+    print('::notice title=oauth::' + json.dumps({'refresh_ok': report.get('oauth_refresh_succeeded'),
+          'upload_scope': report.get('upload_scope_confirmed'), 'channels': ca.get('channels'),
+          'expected_matches': ca.get('expected_channel_matches'), 'error_code': report.get('error_code')}, ensure_ascii=False))
     return code
 
 
