@@ -200,7 +200,10 @@ class SheetRecorder:
                 sheet, cell = self._range(action['ref'])
                 self._show(sheet, cell)
                 self.controller.getFrame().getContainerWindow().setFocus()
-                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'F2', 'ctrl+a'], check=True)
+                # Replace the selected cell in normal mode. F2 edits an
+                # existing TEXT value as text, so even "38.75" can remain
+                # text and be (correctly) rejected by amount validation.
+                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Escape'], check=True)
                 subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '90', '--',
                                 str(action['text'])], check=True)
                 subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Return'], check=True)

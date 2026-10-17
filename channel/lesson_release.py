@@ -74,7 +74,7 @@ def source_urls(sources_md: str) -> list[str]:
 
 
 def lesson_description(script: ScriptArtifact, chapters_block: str | None, sources: list[str], *,
-                       practice_url: str | None) -> str:
+                       practice_url: str | None, narration_attribution: str = LIBRITTS_ATTRIBUTION) -> str:
     parts = [description_intro(script)]
     if practice_url:
         parts.append('Free practice lab (runs in a desktop browser, no account): ' + practice_url)
@@ -82,7 +82,7 @@ def lesson_description(script: ScriptArtifact, chapters_block: str | None, sourc
         parts.append('Chapters:\n' + chapters_block)
     if sources:
         parts.append('Sources referenced:\n' + '\n'.join('- ' + u for u in sources))
-    parts.append(LIBRITTS_ATTRIBUTION)
+    parts.append(narration_attribution)
     parts.append('All amounts and limits shown are invented teaching examples. Educational content; '
                  'not legal, accounting or security advice.')
     desc = _youtube_safe('\n\n'.join(parts))
@@ -101,6 +101,14 @@ def build_candidate(artifact_dir: Path, lesson_dir: Path, out_dir: Path, *, titl
     render_report = json.loads((artifact_dir / 'qc_report.json').read_text(encoding='utf-8'))
     if render_report.get('draft') or render_report.get('method') == 'estimated_draft':
         raise LessonReleaseError('This is a DRAFT render (no real narration); it can never be packaged for release')
+    if render_report.get('professional_voice_verified') is False:
+        raise LessonReleaseError('Engineering-only narration is not a production release')
+    backend=render_report.get('narration_backend','piper')  # preserve legacy Piper reports
+    attribution=render_report.get('narration_attribution')
+    if not attribution:
+        if backend!='piper':
+            raise LessonReleaseError('Explicit voice attribution required; do not label a new backend as LibriTTS')
+        attribution=LIBRITTS_ATTRIBUTION
     if render_report.get('evidence_passed') is False:
         raise LessonReleaseError('Live spreadsheet evidence failed; the video does not match the narration')
     if out_dir.exists() and any(out_dir.iterdir()):
@@ -123,7 +131,7 @@ def build_candidate(artifact_dir: Path, lesson_dir: Path, out_dir: Path, *, titl
             '(the video tells viewers a free practice lab exists)')
     sources = source_urls((lesson_dir / 'sources.md').read_text(encoding='utf-8'))
     description = lesson_description(script, format_chapters(chapters) if chapters else None, sources,
-                                     practice_url=practice_url)
+                                     practice_url=practice_url,narration_attribution=attribution)
     meta = ReleaseMetadata(title=_youtube_safe(report['title']), description=description,
                            tags=derive_tags(script), contains_synthetic_media=None)
 

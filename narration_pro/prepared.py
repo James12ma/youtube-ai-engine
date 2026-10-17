@@ -21,6 +21,7 @@ class PreparedNarrator:
         if language not in ('en','es') or declared!=language:
             raise NarrationError('Prepared voice language does not match the lesson; never reuse Spanish audio for English')
         self.language=language
+        self.attribution=self.manifest.get('attribution')
         self.index=0
         self.actual_backends=set()
 

@@ -195,6 +195,7 @@ def run(voice,out,reuse=None,lesson_dir=None,*,narrator_override=None):
     lufs,peak=measure_loudness(out/'final.mp4')
     backend='piper' if reuse else '+'.join(sorted(narrator.actual_backends))
     report={'title':lesson['title'],'transcript':transcript,'provenance':lesson['provenance'],'aligner_ran':True,'method':'whisperx_ctc','token_coverage':1,'narration_backend':backend,'aligned_word_count':len(words),'caption_count':count,'final_duration_s':qc.duration_s,'alignment_duration_s':offset,'final_lufs':lufs,'final_tp':peak,'technical_qc':qc.model_dump(),'resolution':'1920x1080','ready_for_publication':False,'publishing':'disabled','live_llm_calls':0,'editorial_review':'separate review required','chapters':timeline}
+    report['narration_attribution']=old_report.get('narration_attribution') if reuse else getattr(narrator,'attribution',None)
     (out/'qc_report.json').write_text(json.dumps(report,indent=2))
     gates=enforce(out,expected_size=(1920,1080));(out/'independent_gates.json').write_text(json.dumps(gates,indent=2))
     (out/'demo_evidence.json').write_text(json.dumps(evidence,indent=2))

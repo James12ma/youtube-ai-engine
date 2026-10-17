@@ -35,3 +35,15 @@ def test_audio_tampering_is_rejected_when_hash_supplied(tmp_path):
     (tmp_path/'manifest.json').write_text(json.dumps(manifest))
     n=PreparedNarrator(tmp_path,language='en')
     with pytest.raises(NarrationError,match='hash mismatch'):n.synthesize('Test this cell.',tmp_path/'out.wav')
+
+
+@pytest.mark.parametrize('report,message',[
+    ({'professional_voice_verified':False},'Engineering-only'),
+    ({'narration_backend':'chatterbox'},'attribution required'),
+])
+def test_engineering_and_uncredited_voice_cannot_be_packaged(tmp_path,report,message):
+    from channel.lesson_release import build_candidate,LessonReleaseError
+    for name in ('final.mp4','thumbnail.jpg','captions.srt'):(tmp_path/name).write_bytes(b'fixture')
+    (tmp_path/'qc_report.json').write_text(json.dumps(report))
+    with pytest.raises(LessonReleaseError,match=message):
+        build_candidate(tmp_path,tmp_path,tmp_path/'candidate',topic='fixture',thumbnail_text='fixture')
