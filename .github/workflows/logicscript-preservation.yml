@@ -35,6 +35,10 @@ jobs:
           import pathlib, site
           pathlib.Path(site.getsitepackages()[0], 'local_uno.pth').write_text('/usr/lib/python3/dist-packages\n/usr/lib/libreoffice/program\n')
           PY
+      - name: Fast real-keyboard input regression
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q -s tests/test_native_sheet.py
       - name: Existing tests, including genuine browser and Calc tests
         env:
           PYTHONPATH: .

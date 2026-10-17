@@ -200,11 +200,17 @@ class SheetRecorder:
                 sheet, cell = self._range(action['ref'])
                 self._show(sheet, cell)
                 self.controller.getFrame().getContainerWindow().setFocus()
+                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Escape'], check=True)
+                if action.get('as_number'):
+                    # An imported text amount can carry Text number format.
+                    # Use Calc's real Number-format shortcut before replacing it.
+                    subprocess.run(['xdotool', 'key', '--clearmodifiers', 'ctrl+shift+1'], check=True)
+                    sleep(0.2)
                 # Clear CONTENTS through the actual Delete key first. Direct
                 # replacement of an imported TEXT cell can retain text input
                 # semantics during validation. Delete keeps formats/rules:
                 # help.libreoffice.org/latest/en-GB/text/scalc/01/02150000.html
-                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Escape', 'Delete'], check=True)
+                subprocess.run(['xdotool', 'key', '--clearmodifiers', 'Delete'], check=True)
                 sleep(0.2)
                 if cell.getString():
                     self.snapshot(self.workdir/'type-clear-failed.png')
@@ -277,7 +283,8 @@ class SheetRecorder:
                 if action['do'] == 'type':
                     _, cell = self._range(action['ref'])
                     entry['typed_cell'] = {'text':cell.getString(), 'formula':cell.getFormula(),
-                                           'type':str(cell.getType())}
+                                           'type':str(cell.getType()),'number_format':cell.NumberFormat,
+                                           'format_type':self.doc.getNumberFormats().getByKey(cell.NumberFormat).Type}
                 if action['do'] in ('type', 'set', 'menu'):
                     snap = self.workdir / f'action_{len(log):02d}.png'
                     self.snapshot(snap)

@@ -54,7 +54,7 @@ def screen(out: Path):
         'This is a real spreadsheet in LibreOffice Calc. The file also opens in Excel. Watch the cursor move and click the sheet.',
         'I type the number forty one point twenty five and press Enter. The sheet accepts a numeric amount.',
         'Now I import an amount stored as text. Direct imports can bypass input validation. The live formula flags ERROR.',
-        'I fix the imported text by typing thirty eight point seventy five. Press Enter. The status changes back to OK.',
+        'I reset the number format, clear the cell, and type thirty eight point seventy five. The value is numeric, and the status changes back to OK.',
         'Here is a real category menu. I open the list and close it. Next, the Format menu opens above the sheet.',
         'I scroll down through the expense rows, then return to the summary. The workbook calculates the results itself.',
         'The summary says ALL CHECKS PASSED. This proves the workflow. The robotic voice is for engineering review only.'
@@ -68,7 +68,7 @@ def screen(out: Path):
         (1.5,{'do':'click'}),
         (starts[1]+.7,{'do':'type','ref':'Expenses!E9','text':'41.25','expect':{'Expenses!E9':'41.25','Expenses!J9':'OK'}}),
         (starts[2]+.7,{'do':'set','ref':'Expenses!E9','value':'$38.75','expect':{'Expenses!E9':'$38.75','Expenses!J9':'ERROR','Expenses!K9':'Amount is not a number.'}}),
-        (starts[3]+.7,{'do':'type','ref':'Expenses!E9','text':'38.75','expect':{'Expenses!E9':'38.75','Expenses!J9':'OK'}}),
+        (starts[3]+.7,{'do':'type','ref':'Expenses!E9','text':'38.75','as_number':True,'expect':{'Expenses!E9':'38.75','Expenses!J9':'OK'}}),
         (starts[4]+.3,{'do':'select','ref':'Expenses!D9'}),
         (starts[4]+1,{'do':'key','keys':'alt+Down'}),
         (starts[4]+3,{'do':'key','keys':'Escape'}),
