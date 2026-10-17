@@ -1,0 +1,88 @@
+name: Narrator voice comparison (free local engines; samples go only to the owner's Telegram)
+on:
+  workflow_dispatch:
+    inputs:
+      send_telegram:
+        description: '1 = send the samples to the owner on Telegram'
+        default: '1'
+      cb_exaggeration:
+        description: Chatterbox emotion (0.25-1.0)
+        default: '0.6'
+      cb_cfg:
+        description: Chatterbox pacing / adherence (0-1, lower = slower, more deliberate)
+        default: '0.4'
+      kokoro_voice:
+        default: em_alex
+permissions:
+  contents: read
+jobs:
+  voices:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      CUDA_VISIBLE_DEVICES: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        id: py311
+        with:
+          python-version: '3.11'
+      - name: Chatterbox in its own environment (it pins its own torch/transformers)
+        run: |
+          set -euo pipefail
+          ${{ steps.py311.outputs.python-path }} -m venv "$RUNNER_TEMP/cb"
+          "$RUNNER_TEMP/cb/bin/pip" install -q chatterbox-tts librosa soundfile
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Main environment (Piper, Kokoro, WhisperX for the check)
+        run: |
+          set -euo pipefail
+          printf '%s\n' "VOICE_DIR=$RUNNER_TEMP/piper-voices" "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng libsndfile1
+          python -m pip install -q --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          python -m pip install -q -r requirements-narration.txt 'kokoro>=0.9.4' soundfile librosa
+          mkdir -p "$RUNNER_TEMP/piper-voices"
+          python -m piper.download_voices --data-dir "$RUNNER_TEMP/piper-voices" es_MX-claude-high
+      - name: Synthesise
+        env:
+          KOKORO_VOICE: ${{ inputs.kokoro_voice }}
+          CB_EXAG: ${{ inputs.cb_exaggeration }}
+          CB_CFG: ${{ inputs.cb_cfg }}
+        run: |
+          set -uo pipefail
+          mkdir -p out
+          for e in piper-current piper-plus kokoro; do
+            python -m scripts.voice_compare synth --engine $e --out out/$e.wav 2> err_$e.txt \
+              && echo "::notice title=$e::$(cat err_$e.txt | tail -0)ok" || echo "::warning title=$e failed::$(tail -c 1200 err_$e.txt | tr '\n' ' ')"
+          done
+          # Chatterbox clones the timbre of a SYNTHETIC reference (Kokoro), never a real person's voice
+          ffmpeg -y -hide_banner -loglevel error -i out/kokoro.wav -t 12 -ar 24000 -ac 1 ref.wav || true
+          HF_HOME=$RUNNER_TEMP/hf "$RUNNER_TEMP/cb/bin/python" -m scripts.voice_compare synth --engine chatterbox --ref ref.wav --out out/chatterbox.wav > cb.json 2> err_cb.txt \
+            && echo "::notice title=chatterbox::$(cat cb.json)" || echo "::warning title=chatterbox failed::$(tail -c 1500 err_cb.txt | tr '\n' ' ')"
+          ls -la out
+      - name: Check (ASR round-trip, pitch variation, pauses)
+        run: |
+          python -m scripts.voice_compare analyze --dir out > analysis.jsonl 2> err_an.txt || tail -c 1500 err_an.txt
+          while read -r l; do echo "::notice title=analysis::$l"; done < analysis.jsonl
+      - name: Send to the owner on Telegram
+        if: inputs.send_telegram == '1'
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+        run: |
+          set -uo pipefail
+          send() { [ -f "out/$1.wav" ] || return 0
+            ffmpeg -y -hide_banner -loglevel error -i "out/$1.wav" -c:a libmp3lame -b:a 160k "$2.mp3"
+            code=$(curl -s -o /dev/null -w '%{http_code}' -F chat_id="$OWNER" -F title="$3" -F performer="Alan7" \
+              -F caption="$4" -F audio=@"$2.mp3" "https://api.telegram.org/bot$TG/sendAudio")
+            echo "::notice title=telegram $1::HTTP $code"; }
+          curl -s -o /dev/null --data-urlencode chat_id="$OWNER" --data-urlencode text="🎙 Alan7 — konparezon vwa naratè. Menm tèks panyòl la nan chak echantiyon. 0 = vwa aktyèl la (pou referans). 1, 2, 3 = nouvo opsyon gratis. Di m kiyès ou pi renmen." "https://api.telegram.org/bot$TG/sendMessage"
+          send piper-current 0_vwa_aktyel "0 — Vwa aktyèl" "0 — Vwa aktyèl la (Piper es_MX), pou referans"
+          send piper-plus 1_piper_amelyore "1 — Piper amelyore" "1 — Menm vwa a, men ak ritm istwa: fraz pa fraz, poz, plis varyasyon"
+          send kokoro 2_kokoro "2 — Kokoro" "2 — Kokoro (Apache-2.0), vwa gason panyòl"
+          send chatterbox 3_chatterbox_latam "3 — Chatterbox Latam" "3 — Chatterbox panyòl latinoameriken (MIT), plis emosyon"
