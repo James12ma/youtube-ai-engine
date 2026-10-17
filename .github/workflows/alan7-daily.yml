@@ -4,8 +4,8 @@ run-name: alan7 ${{ inputs.job_id || 'daily' }}
 # Kaggle T4 (~1 GPU-hour) from private start frames, AI-labelled and sent ONLY to the owner on Telegram.
 # Nothing is published. No automatic retries.
 on:
-  schedule:
-    - cron: '17 9 * * *'   # 09:17 UTC = 05:17 in Santo Domingo
+  # Daily schedule paused at the owner's request (3-second clips are not what he wants each day).
+  # Re-enable with:  schedule: [{cron: '17 9 * * *'}]
   workflow_dispatch:
     inputs:
       shot:
