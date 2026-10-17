@@ -32,8 +32,8 @@ jobs:
           python - <<'PY'
           import json
           for c in json.load(open('outputs/footage/clips.json')):
-              short = {k: c[k] for k in ('title','license','author','duration_s','has_audio','sheet_every_s','download_height')}
-              short['description'] = c['description'][:500]
+              short = {k: c.get(k) for k in ('title','license','author','duration_s','has_audio','sheet_every_s','download_height','error')}
+              short['description'] = (c.get('description') or '')[:500]
               print('::notice title=clip::' + json.dumps(short, ensure_ascii=False)[:3800])
           PY
       - name: Encrypted pack to qa/${{ github.run_id }}

@@ -79,17 +79,21 @@ def main() -> None:
     with httpx.Client(trust_env=True) as client:
         for i, item in enumerate(t.strip() for t in args.titles.split('|') if t.strip()):
             # "search terms::title prefix" or an exact title
-            title = resolve_title(client, *item.split('::', 1)) if '::' in item else item
-            info = clip_info(client, title)
-            ext = '.webm' if info['download'].endswith('.webm') else '.mp4'
-            path = download_clip(client, info['download'], args.out / f'clip_{i}{ext}')
+            try:
+                title = resolve_title(client, *item.split('::', 1)) if '::' in item else item
+                info = clip_info(client, title)
+                ext = '.webm' if info['download'].endswith('.webm') else '.mp4'
+                path = download_clip(client, info['download'], args.out / f'clip_{i}{ext}')
+            except Exception as exc:  # one bad item must not lose the others
+                clips.append({'title': item, 'error': f'{type(exc).__name__}: {str(exc)[:200]}'})
+                continue
             info.update(file=path.name, has_audio=has_audio(path))
             every = max(2.0, round(info['duration_s'] / 36, 1))
             sheet(path, args.out / f'clip_{i}_sheet.jpg', every)
             info['sheet_every_s'] = every
             clips.append(info)
     (args.out / 'clips.json').write_text(json.dumps(clips, indent=2, ensure_ascii=False), encoding='utf-8')
-    print(json.dumps([{k: c[k] for k in ('title', 'license', 'author', 'duration_s', 'has_audio', 'sheet_every_s')} for c in clips], ensure_ascii=False))
+    print(json.dumps([{k: c.get(k) for k in ('title', 'license', 'author', 'duration_s', 'has_audio', 'sheet_every_s', 'error')} for c in clips], ensure_ascii=False))
 
 
 if __name__ == '__main__':
