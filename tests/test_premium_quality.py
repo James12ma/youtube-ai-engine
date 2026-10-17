@@ -24,6 +24,27 @@ def test_voice_language_mismatch_fails_before_loading_model(tmp_path):
         local_narrator(model,QualityProfile('screen','en'))
 
 
+def test_music_is_measurably_ducked_during_voice(tmp_path):
+    import numpy as np
+    import wave
+    from production_pro.premium import mix_audio
+    sr=48000;t=np.arange(sr*4)/sr
+    def wav(path, values):
+        with wave.open(str(path),'wb') as f:
+            f.setnchannels(1);f.setsampwidth(2);f.setframerate(sr)
+            f.writeframes((values*32767).astype('<i2').tobytes())
+    voice=tmp_path/'voice.wav';music=tmp_path/'music.wav';mixed=tmp_path/'mixed.wav'
+    wav(voice,.2*np.sin(2*np.pi*260*t)*((t>=1)&(t<3)))
+    wav(music,.2*np.sin(2*np.pi*440*t))
+    mix_audio(voice,mixed,music=music,profile=QualityProfile('screen','en'))
+    with wave.open(str(mixed),'rb') as f:
+        audio=np.frombuffer(f.readframes(f.getnframes()),dtype='<i2').reshape(-1,2).mean(axis=1)/32767
+    def bed_amplitude(start):
+        a=audio[int(start*sr):int((start+.15)*sr)];time=np.arange(len(a))/sr
+        return abs(np.mean(a*np.exp(-2j*np.pi*440*time)))
+    assert bed_amplitude(1.6)<bed_amplitude(.75)*.7
+
+
 def test_mastering_decodes_both_modes_and_rejects_missing_evidence(tmp_path):
     src=tmp_path/'source.mp4';voice=tmp_path/'voice.wav';music=tmp_path/'bed.wav'
     def run(args):subprocess.run(['ffmpeg','-y','-v','error',*args],check=True)

@@ -117,7 +117,7 @@ def documentary(out: Path, footage: Path):
     parts=[];seconds=[];shots=[];fade=.4
     for i,seg in enumerate(narration.segments):
         p=out/f'shot_{i}.mp4'
-        start=(119.5,139,160)[i]
+        start=(119.5,28,94)[i]
         length=seg.duration_s+(fade if i<len(texts)-1 else 0)
         _cut_shot(footage,Shot(clip='whales',in_s=start,out_s=start+length+1),length,p,out,i,
                   width=1920,height=1080,fps=24,label='Archivo NOAA Fisheries | Banco de la Plata',disclosure='')

@@ -29,13 +29,19 @@ jobs:
           sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core libreoffice-calc python3-uno xvfb xdotool espeak
           python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-production.txt -r requirements-production-pro.txt -r requirements-release.txt
           python -m playwright install --with-deps chromium
+          # Append ONLY after pip's packages. Prepending the distro directory
+          # shadows current typing_extensions and prevents Pydantic collection.
+          python - <<'PY'
+          import pathlib, site
+          pathlib.Path(site.getsitepackages()[0], 'local_uno.pth').write_text('/usr/lib/python3/dist-packages\n/usr/lib/libreoffice/program\n')
+          PY
       - name: Existing tests, including genuine browser and Calc tests
         env:
-          PYTHONPATH: /usr/lib/python3/dist-packages:.
+          PYTHONPATH: .
         run: python -m pytest -q -rs --junitxml=outputs/preservation-junit.xml
       - name: Actual narrated spreadsheet screen capture (engineering voice)
         env:
-          PYTHONPATH: /usr/lib/python3/dist-packages:.
+          PYTHONPATH: .
         run: xvfb-run -a -s '-screen 0 1920x1080x24' python -m scripts.preservation_smoke --mode screen --engineering-voice --output-dir outputs/preservation-screen
       - name: Export review evidence without artifact storage
         if: always()
