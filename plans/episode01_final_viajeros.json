@@ -1,0 +1,422 @@
+{
+ "series": "Historias Salvajes",
+ "title": "Viajeros del océano: ballenas jorobadas y tortugas verdes",
+ "subtitle": "Viajeros del océano",
+ "language": "es",
+ "preroll_s": 0.8,
+ "title_start_s": 16.5,
+ "pause_s": 0.8,
+ "tail_s": 1.5,
+ "credits_s": 9.0,
+ "crossfade_s": 0.5,
+ "ambience": [
+  "ocean waves",
+  "sea waves",
+  "waves beach"
+ ],
+ "subjects": [
+  "humpback whale",
+  "sea turtle"
+ ],
+ "credits_note": "Datos: NOAA Fisheries; Servicio de Parques Nacionales de EE. UU.; Ministerio de Medio Ambiente RD (vía El Caribe).",
+ "clips": {
+  "whales": {
+   "kind": "noaa",
+   "noaa_id": 3911325489001,
+   "slate_checked": true,
+   "location": "Silver Bank DR (0:06–3:42), Massachusetts (3:45–3:56), Hawaii (4:00–5:00, NMFS MMPA Permit #14682)",
+   "credit": "Crédito: NOAA. Imágenes de Hawái tomadas bajo el permiso NMFS MMPA #14682"
+  },
+  "turtle": {
+   "kind": "noaa",
+   "noaa_id": 4084488077001,
+   "slate_checked": true,
+   "location": "NW Hawaiian Islands (Papahānaumokuākea) and Big Island of Hawaii",
+   "credit": "Crédito: NOAA Fisheries"
+  }
+ },
+ "beats": [
+  {
+   "narration": "Bajo el agua, una ballena jorobada se acerca a la cámara. Da la vuelta, nos muestra su vientre blanco… y sigue mirándonos. ¿Qué hace un animal tan grande, tan cerca de nosotros?",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 119.5,
+     "out_s": 129.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "young humpback swims straight at the camera",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 129.0,
+     "out_s": 139.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "it rolls, white belly and pectoral fin",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": []
+  },
+  {
+   "narration": "Estamos en el Banco de la Plata, frente a la costa norte de República Dominicana. Cada invierno, entre mil quinientas y dos mil ballenas jorobadas llegan a estas aguas y a la bahía de Samaná.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 76.0,
+     "out_s": 88.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "wide: two whales far below in deep blue",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 24.0,
+     "out_s": 39.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "two whales in deep blue water",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.elcaribe.com.do/panorama/pais/dia-mundial-de-las-ballenas-y-los-delfines/"
+   ]
+  },
+  {
+   "narration": "Desde mil novecientos ochenta y seis, estas aguas son un santuario de mamíferos marinos, el primero del océano Atlántico.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 143.0,
+     "out_s": 154.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "topside: whale backs at the surface, Silver Bank",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.elcaribe.com.do/panorama/pais/dia-mundial-de-las-ballenas-y-los-delfines/"
+   ]
+  },
+  {
+   "narration": "Muchas de ellas pasan el verano mucho más al norte, frente a Massachusetts, comiendo krill y pequeños peces. Algunas poblaciones de jorobadas recorren unos ocho mil kilómetros entre sus zonas de alimentación y sus zonas de cría.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 225.6,
+     "out_s": 236.0,
+     "label": "Massachusetts, EE. UU.",
+     "note": "fluke off Massachusetts (feeding grounds)",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 10.0,
+     "out_s": 22.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "whale descends, long white pectoral fin",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Aquí no vienen a comer. Vienen a reproducirse y a dar a luz en aguas cálidas y tranquilas. Durante el invierno viven sobre todo de la grasa que acumularon en el norte. Después de once meses de gestación, la cría nace midiendo entre cuatro y cinco metros.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 88.0,
+     "out_s": 104.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "mother below, calf above in turquoise water",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 104.0,
+     "out_s": 118.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "calf swims beside its mother",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale",
+    "https://home.nps.gov/kefj/learn/nature/humpback-whale.htm"
+   ]
+  },
+  {
+   "narration": "La cría no se separa de su madre. Se quedará a su lado hasta un año, aprendiendo a nadar y a respirar en la superficie… y, junto a ella, hará el largo viaje hacia el norte.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 58.0,
+     "out_s": 75.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "adult glides past the camera",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 54.5,
+     "out_s": 58.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "whale passes, deep blue",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "Su nombre viene de la joroba de su lomo. Y sus aletas pectorales, casi un tercio de la longitud de su cuerpo, le dieron su nombre científico: Megaptera, que significa «grandes alas».",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 159.0,
+     "out_s": 168.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "topside: the hump arches before a dive",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 40.0,
+     "out_s": 54.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "underwater: long white pectoral fin",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale",
+    "https://home.nps.gov/kefj/learn/nature/humpback-whale.htm"
+   ]
+  },
+  {
+   "narration": "Aquí también se escucha su canto. Los machos cantan en las zonas de cría, y un solo macho puede cantar desde veinte minutos hasta siete horas.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 188.0,
+     "out_s": 198.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "pectoral fins raised at the surface",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 199.0,
+     "out_s": 206.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "pectoral fin slaps the water",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://home.nps.gov/kefj/learn/nature/humpback-whale.htm"
+   ]
+  },
+  {
+   "narration": "Al otro lado del mundo, en Hawái, otra población de jorobadas hace el mismo viaje cada invierno. Y allí, a veces, golpean el agua con la cola… o saltan fuera de ella.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 240.0,
+     "out_s": 252.5,
+     "label": "Hawái",
+     "note": "tail slapping, Hawaii",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 253.0,
+     "out_s": 257.0,
+     "label": "Hawái",
+     "note": "whale rises vertically, Hawaii",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 261.5,
+     "out_s": 266.6,
+     "label": "Hawái",
+     "note": "breach, Hawaii",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "La caza comercial redujo la mayoría de sus poblaciones en más de un noventa y cinco por ciento. Desde la prohibición de mil novecientos ochenta y cinco, muchas se están recuperando.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 267.0,
+     "out_s": 276.5,
+     "label": "Hawái",
+     "note": "whales surface, Hawaiian island behind",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 277.0,
+     "out_s": 287.0,
+     "label": "Hawái",
+     "note": "whale backs offshore Hawaii",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/humpback-whale"
+   ]
+  },
+  {
+   "narration": "En esas mismas aguas de Hawái vive otra gran viajera: la tortuga verde. Un adulto mide alrededor de un metro y pesa unos ciento cincuenta kilos. Su nombre no viene del color de su caparazón, sino del color de su grasa.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 13.0,
+     "out_s": 22.5,
+     "label": "Hawái",
+     "note": "green turtle swims over the reef",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 23.0,
+     "out_s": 46.5,
+     "label": "Hawái",
+     "note": "turtle glides close, shell and flippers",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/green-turtle"
+   ]
+  },
+  {
+   "narration": "De adulta se alimenta sobre todo de algas y pastos marinos, que encuentra en arrecifes como este. Y puede vivir setenta años o más.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 54.0,
+     "out_s": 62.5,
+     "label": "Hawái",
+     "note": "turtle beside the coral",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 63.0,
+     "out_s": 74.0,
+     "label": "Hawái",
+     "note": "turtle swims over the rocks",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/species/green-turtle"
+   ]
+  },
+  {
+   "narration": "Para poner sus huevos, casi todas las tortugas verdes de Hawái viajan a un mismo lugar: Lalo, un atolón remoto en el noroeste del archipiélago. Allí anida cerca del noventa y seis por ciento de la población, y cada nido guarda unos ciento diez huevos.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 74.0,
+     "out_s": 83.0,
+     "label": "Hawái",
+     "note": "turtle swims close over the rocks",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 83.0,
+     "out_s": 92.5,
+     "label": "Noroeste de Hawái",
+     "note": "turtle on a remote beach",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 93.0,
+     "out_s": 101.5,
+     "label": "Noroeste de Hawái",
+     "note": "wide: turtle crawls on the beach",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/feature-story/destination-known-punaheles-safe-return-home-lalo"
+   ]
+  },
+  {
+   "narration": "Y en Hawái hacen algo que solo se ve en cuatro lugares del mundo: salen a la playa para descansar al sol. Así regulan su temperatura, ahorran energía y se alejan de los tiburones. A veces se quedan tan quietas que parecen esculturas sobre la arena.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 115.0,
+     "out_s": 130.5,
+     "label": "Isla Grande de Hawái",
+     "note": "turtle resting on black sand",
+     "expect": "sea turtle"
+    },
+    {
+     "clip": "turtle",
+     "in_s": 134.0,
+     "out_s": 147.0,
+     "label": "Isla Grande de Hawái",
+     "note": "close-up of the head on the beach",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/pacific-islands/endangered-species-conservation/frequent-questions-sea-turtles-pacific-islands-region"
+   ]
+  },
+  {
+   "narration": "Si alguna vez las ves en la playa, mantente al menos a tres metros de distancia.",
+   "shots": [
+    {
+     "clip": "turtle",
+     "in_s": 147.0,
+     "out_s": 157.0,
+     "label": "Isla Grande de Hawái",
+     "note": "close-up of the shell",
+     "expect": "sea turtle"
+    }
+   ],
+   "sources": [
+    "https://www.fisheries.noaa.gov/pacific-islands/endangered-species-conservation/frequent-questions-sea-turtles-pacific-islands-region"
+   ]
+  },
+  {
+   "narration": "Ballenas y tortugas: dos viajeras que cruzan océanos enteros. Y una parte de su historia comienza aquí, en aguas dominicanas.",
+   "shots": [
+    {
+     "clip": "whales",
+     "in_s": 170.0,
+     "out_s": 178.5,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "whales at the surface, Silver Bank",
+     "expect": "humpback whale"
+    },
+    {
+     "clip": "whales",
+     "in_s": 154.5,
+     "out_s": 159.0,
+     "label": "Banco de la Plata, Rep. Dominicana",
+     "note": "whale back at the surface, Silver Bank",
+     "expect": "humpback whale"
+    }
+   ],
+   "sources": []
+  }
+ ]
+}
