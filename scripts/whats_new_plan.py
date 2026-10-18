@@ -31,7 +31,7 @@ class Segment(BaseModel):
 
 class Plan(BaseModel):
     video_title: str
-    segments: list[Segment] = Field(min_length=3)
+    segments: list[Segment] = Field(min_length=1)
 
 
 def norm(t: str) -> str:
@@ -136,15 +136,22 @@ Rules:
 - Do not imitate any person; do not claim you used the product.
 
 CORPUS"""
-    # the adapters cap output at 4,096 tokens, so the ~1,400-word script is written in two parts
-    def part(n: int, extra: str) -> Plan:
-        p = prompt + ('\n\n' + extra)
-        return ask_model(p.replace('CORPUS', corpus[:150000]), p.replace('CORPUS', corpus[:45000]))
-    first = part(1, 'WRITE ONLY PART 1: the hook and the first 6 or 7 segments (the newest, biggest updates). Do NOT write the closing segment.')
-    done = '; '.join(x.title for x in first.segments)
-    second = part(2, 'WRITE ONLY PART 2: 6 or 7 MORE segments about OTHER updates, then the closing segment. No hook. '
-                     f'Part 1 already covered these (do not repeat them): {done}')
-    plan = Plan(video_title=first.video_title, segments=first.segments + second.segments)
+    # the adapters cap output at 4,096 tokens, so the ~1,400-word script is written in four parts
+    def part(extra: str) -> Plan:
+        p = prompt + ('\n\n' + extra + ' Return EXACTLY the number of segments asked, never more.')
+        return ask_model(p.replace('CORPUS', corpus[:150000]), p.replace('CORPUS', corpus[:18000]))
+    parts = ['WRITE ONLY PART 1 of 4: exactly 4 segments - the hook, then the 3 newest, biggest updates.',
+             'WRITE ONLY PART 2 of 4: exactly 3 segments about OTHER updates. No hook, no closing.',
+             'WRITE ONLY PART 3 of 4: exactly 3 segments about OTHER updates. No hook, no closing.',
+             'WRITE ONLY PART 4 of 4: exactly 3 segments about OTHER updates, the last one being the closing segment. No hook.']
+    segs, title = [], ''
+    for i, extra in enumerate(parts):
+        if segs:
+            extra += ' Already covered (do NOT repeat these updates): ' + '; '.join(x.title for x in segs)
+        got = part(extra)
+        title = title or got.video_title
+        segs += got.segments[:4 if i == 0 else 3]
+    plan = Plan(video_title=title, segments=segs)
     kept, dropped = ground(plan, usable)
     report = {'ai': a.ai, 'pages_loaded': sorted(usable), 'page_errors': {u: e for u, e in texts.items() if u.endswith('#error')},
               'segments_kept': len(kept), 'segments_dropped': dropped,
