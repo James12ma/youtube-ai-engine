@@ -131,7 +131,8 @@ def _sentences(t: str) -> list[str]:
 def _facts(t: str) -> set[str]:
     """Numbers (digits or spelled) and month names: these must be on the page next to the quoted text."""
     n = norm(t)
-    return set(NUM.findall(n)) | {w for w in re.findall(r"[a-z]+", n) if w in SPELLED or w in MONTHS}
+    # "percent" is said for "%": the number itself is what gets checked
+    return set(NUM.findall(n)) | {w for w in re.findall(r"[a-z]+", n) if (w in SPELLED or w in MONTHS) and w != 'percent'}
 
 
 def _words(t: str) -> set[str]:
@@ -287,14 +288,17 @@ def main() -> None:
     texts = page_texts(src['pages'])
     # also load the newest linked official articles (titles mentioning the AI, same hosts)
     extra = []
-    for u in src['pages']:
+    for u in src['pages']:            # up to 8 linked official articles PER source page (news posts carry the detail)
+        mine = []
         for href, label in json.loads(texts.get(u + '#links', '[]')):
+            href = href.split('#')[0].split('?')[0]
             path = urlparse(href).path
-            if (len(label) > 20 and href not in src['pages'] and href not in extra and href.count('/') > 3
+            if (len(label) > 20 and href not in src['pages'] and href not in extra and href not in mine and href.count('/') > 3
                     and re.search(r'/(news|blog|articles?|resources|release|changelog|product)', path)
                     and not re.search(r'/(collections|tag|category|careers|legal|privacy|terms)', path)):
-                extra.append(href.split('#')[0])
-    texts.update(page_texts(extra[:16]))
+                mine.append(href)
+        extra += mine[:8]
+    texts.update(page_texts(extra[:24]))
     usable = {u: t for u, t in texts.items() if '#' not in u and len(t) > 500}
     corpus = '\n\n'.join(f'=== PAGE {u} ===\n{t[:12000]}' for u, t in usable.items())
     # Step A: the list of distinct updates (small answer). Step B: one short segment per update, written from
@@ -308,7 +312,9 @@ Return JSON: {{"updates": [{{"title": str, "url": str, "anchor": str, "detail_ur
 
 CORPUS"""
     updates = ask_model(list_prompt.replace('CORPUS', corpus[:150000]),
-                        list_prompt.replace('CORPUS', f"=== PAGE {main_url} ===\n{usable.get(main_url, '')[:14000]}"), UpdateList).updates
+                        list_prompt.replace('CORPUS', f"=== PAGE {main_url} ===\n{usable.get(main_url, '')[:12000]}\n\n"
+                                         "=== OTHER PAGES (possible detail_url) ===\n" + '\n'.join(
+                                             f"{u} :: {' '.join(t.split())[:140]}" for u, t in usable.items() if u != main_url)), UpdateList).updates
     toks = {u: tok(t) for u, t in usable.items()}
     chosen, skipped, spans = [], [], []
     for up in updates:
@@ -326,7 +332,7 @@ CORPUS"""
     print(f'updates listed {len(updates)}, chosen {len(chosen)}', file=sys.stderr)
     seg_prompt = """Write ONE segment of a factual YouTube video (channel LogicScript) about this {name} update: "{title}".
 Use ONLY the official text below. Return JSON: {{"video_title": str, "segments": [{{"title": str, "narration": str, "url": str, "quotes": [str]}}]}}
-with exactly one segment. narration = 80 to 130 words of plain spoken English, in your own words, in the third person
+with exactly one segment. narration = 80 to 130 words (up to 180 when the text has that much detail) of plain spoken English, in your own words, in the third person
 (say "{company}", never "we"; open with what the update is, not with "{company} says"), no lists, no markdown: what changed, who gets it (plans), how to use or turn it on - only
 what the text says. Never add examples, benefits, opinions or steps the text does not state; if the text is short, write less.
 Say a date only if it is in the text. "url" = "{url}". "quotes" = 1-3 phrases (4-15 words) COPIED EXACTLY from the text.

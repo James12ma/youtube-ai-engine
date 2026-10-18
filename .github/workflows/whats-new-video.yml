@@ -89,7 +89,7 @@ jobs:
           text = '\n'.join(f"[{i}] {s['title']} ({s['url']}): {s['narration']}" for i, s in enumerate(p['segments']))
           g = json.load(open('outputs/wn/grounding_report.json'))
           cuts = '\n'.join(f"CUT [{s['title']}] {c['sentence']} {c['facts_not_near_quote']} e={c['entail']}" for s in p['segments'] for c in s.get('cut_sentences', []))
-          drops = '\n'.join(f"DROP [{d['title']}] {d['reason']}" for d in g['segments_dropped'])
+          drops = '\n'.join(f"DROP [{d['title']}] {d['reason']} :: " + ' / '.join(f"{c['sentence']} e={c['entail']}" for c in d.get('cut_sentences', [])[:2]) for d in g['segments_dropped'])
           esc = lambda t: t.replace('%', '%25').replace('\r', ' ').replace('\n', '%0A')
           for name, body in (('script', text), ('cut', cuts), ('dropped', drops)):
               for k in range(0, min(len(body), 3 * 3800), 3800):
