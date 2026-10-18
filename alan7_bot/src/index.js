@@ -222,13 +222,13 @@ async function cmdVideo(env, arg) {
     .bind(id, 'video', storedArg.slice(0, 1800), state, now()).run();
   await logEvent(env, id, 'video_requested', request.status);
   if (!request.supported_now) {
-    return '🗂 Demann <code>' + id + '</code> anrejistre. Sijè: <b>' + esc(request.topic) + '</b>.\\n'
-      + 'Motè sijere: ' + esc(request.suggested_engine) + '.\\n'
+    return '🗂 Demann <code>' + id + '</code> anrejistre. Sijè: <b>' + esc(request.topic) + '</b>.\n'
+      + 'Motè sijere: ' + esc(request.suggested_engine) + '.\n'
       + '⚠️ Poko gen motè valide pou konbinezon sa a. AI Director Gemini poko konekte. '
       + 'Pa gen okenn videyo ki lanse, ni okenn lajan ki depanse.';
   }
   if (!active) {
-    return '🗂 Demann <code>' + id + '</code> anrejistre. Motè a sipòte sijè sa a.\\n'
+    return '🗂 Demann <code>' + id + '</code> anrejistre. Motè a sipòte sijè sa a.\n'
       + '⏸ Rannman otomatik an poz: GitHub Actions / zero-cost runner poko otorize oswa konekte. '
       + 'Pa gen okenn videyo ki lanse. Konsève id travay la.';
   }
