@@ -1,0 +1,119 @@
+name: Alan7 video — private owner review
+run-name: alan7 ${ inputs.job_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Owner-only Telegram job ID
+        required: true
+      topic_id:
+        description: Validated registered topic
+        required: true
+      mode:
+        description: Preview (4s) or full (60s)
+        required: true
+        type: choice
+        options: [preview, full]
+      language:
+        description: Language of the registered video
+        required: true
+        type: choice
+        options: [en]
+      style:
+        description: Style actually supported by the renderer
+        required: true
+        type: choice
+        options: [motion]
+permissions:
+  contents: read
+concurrency:
+  group: alan7-video-${ inputs.job_id }}
+  cancel-in-progress: false
+jobs:
+  make-private-video:
+    # Free-minute spending must be explicitly approved first.
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Validate supported request (fail closed)
+        env:
+          ID: ${ inputs.job_id }}
+          TOPIC: ${ inputs.topic_id }}
+          MODE: ${ inputs.mode }}
+          LANG: ${ inputs.language }}
+          STYLE: ${ inputs.style }}
+        run: |
+          set -euo pipefail
+          [[ "$ID" =~ ^[0-9a-f]{8}$ ]] || exit 1
+          [[ "$TOPIC" == job-interviews ]] || exit 1
+          [[ "$MODE" == preview || "$MODE" == full ]] || exit 1
+          [[ "$LANG" == en && "$STYLE" == motion ]] || exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install free offline render dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng fonts-dejavu-core
+          python -m pip install --disable-pip-version-check 'Pillow>=10,<13' 'numpy>=1.26,<3'
+      - name: Produce MP4 with YouTube AI Engine
+        env:
+          MODE: ${ inputs.mode }}
+          TOPIC: ${ inputs.topic_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p outputs
+          extra=()
+          if [ "$MODE" = preview ]; then extra+=(--preview); fi
+          python -m tiktok_motion.produce --topic "$TOPIC" --output outputs/alan7-video.mp4 --voice espeak "${extra[@]}"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('outputs/alan7-video.engine_run.json').read_text())
+          assert report['render_status']=='passed'
+          assert report['requires_owner_approval'] is True
+          assert report['auto_publish'] is False
+          assert report['ai_director_enabled'] is False
+          assert Path(report['output']).is_file()
+          print('VALIDATED: owner-only review MP4')
+          PY
+      - name: Deliver private video to Telegram owner
+        env:
+          TG: ${ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${ secrets.ALAN7_OWNER_ID }}
+          JOB: ${ inputs.job_id }}
+          MODE: ${ inputs.mode }}
+        run: |
+          set -euo pipefail
+          [ -n "$TG" ] && [ -n "$OWNER" ] || { echo "::error::Telegram secrets not configured"; exit 1; }
+          mp4=outputs/alan7-video.mp4
+          [ -s "$mp4" ] || { echo "::error::MP4 missing"; exit 1; }
+          size=$(stat -c %s "$mp4")
+          if [ "$size" -gt 49000000 ]; then
+            ffmpeg -y -loglevel error -i "$mp4" -c:v libx264 -preset veryfast -crf 28 -c:a aac -b:a 112k outputs/alan7-video-tg.mp4
+            mp4=outputs/alan7-video-tg.mp4
+            [ "$(stat -c %s "$mp4")" -le 49000000 ] || { echo "::error::MP4 too big for Telegram"; exit 1; }
+          fi
+          response=$(mktemp)
+          http=$(curl -sS --connect-timeout 15 --max-time 180 -o "$response" -w '%{http_code}' \
+            -F "chat_id=$OWNER" -F supports_streaming=true \
+            -F "caption=Alan7 $JOB · $MODE · PRIVATE TEST · owner review only · not published" \
+            -F "video=@$mp4" "https://api.telegram.org/bot$TG/sendVideo")
+          if [ "$http" != 200 ] || ! python -c 'import json,sys;sys.exit(0 if json.load(open(sys.argv[1])).get("ok") is True else 1)' "$response"; then
+            echo "::error::Private Telegram send failed (HTTP $http)"; exit 1
+          fi
+          echo "::notice::Owner-only MP4 sent. No YouTube upload."
+      - name: Keep QA manifest for private debugging only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alan7-video-${ inputs.job_id }}-qa
+          path: outputs/*.engine_run.json
+          if-no-files-found: ignore
+          retention-days: 1
