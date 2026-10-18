@@ -31,6 +31,17 @@ class Segment(BaseModel):
     quotes: list[str] = Field(min_length=1)
 
 
+class Update(BaseModel):
+    title: str
+    url: str
+    anchor: str
+    detail_url: str = ''
+
+
+class UpdateList(BaseModel):
+    updates: list[Update] = Field(min_length=1)
+
+
 class Plan(BaseModel):
     video_title: str
     segments: list[Segment] = Field(min_length=1)
@@ -76,7 +87,8 @@ CANDIDATES = [('groq', None), ('openrouter', 'google/gemma-4-31b-it:free'), ('op
               ('gemini', None), ('openrouter', None)]
 
 
-def ask_model(prompt: str, small_prompt: str) -> Plan:
+def ask_model(prompt: str, small_prompt: str, schema=None):
+    schema = schema or Plan
     import dataclasses
     from adapters import GeminiAdapter, GroqAdapter, OpenRouterAdapter
     from adapters.base import LLMRequest
@@ -94,9 +106,9 @@ def ask_model(prompt: str, small_prompt: str) -> Plan:
             # Groq's free tier rejects very long requests (HTTP 413): it gets the shorter corpus
             text = small_prompt if kind == 'groq' else prompt
             with cls(config=dataclasses.replace(cfg, request_timeout=240.0)) as ad:   # long answers take > 45 s
-                r = ad.complete(LLMRequest(messages=[{'role': 'user', 'content': text}], schema=Plan, model=model,
+                r = ad.complete(LLMRequest(messages=[{'role': 'user', 'content': text}], schema=schema, model=model,
                                            temperature=0.3, max_tokens=4096))
-            got = r.parsed if getattr(r, 'parsed', None) else Plan.model_validate_json(r.text)
+            got = r.parsed if getattr(r, 'parsed', None) else schema.model_validate_json(r.text)
             print(f'plan part written by {kind}:{model or "default"}', file=sys.stderr)
             return got
         except Exception as exc:
@@ -124,6 +136,34 @@ def _facts(t: str) -> set[str]:
 
 def _words(t: str) -> set[str]:
     return {w for w in re.findall(r"[a-z][a-z0-9]+", norm(t)) if len(w) >= 4 and w not in STOP}
+
+
+def tok(t: str) -> str:
+    """Words only (punctuation, quotes and dashes ignored): a quote matches the page if its words appear in order."""
+    return ' '.join(re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", norm(t)))
+
+
+DATE = re.compile(r'\b(' + '|'.join(MONTHS) + r') (\d{1,2}) (\d{4})\b')
+
+
+def entry_date(page_tok: str, pos: int):
+    """Date heading the release-notes entry that contains ``pos`` (the last full date before it), or None."""
+    import datetime
+    last = None
+    for m in DATE.finditer(page_tok[:pos + 1]):
+        last = m
+    if not last:
+        return None
+    try:
+        return datetime.date(int(last.group(3)), MONTHS.index(last.group(1)) + 1, int(last.group(2)))
+    except ValueError:
+        return None
+
+
+def parse_since(since: str):
+    import datetime
+    m = re.search(r'(' + '|'.join(MONTHS) + r')\s+(\d{4})', since.lower())
+    return datetime.date(int(m.group(2)), MONTHS.index(m.group(1)) + 1, 1) if m else None
 
 
 class Entailment:
@@ -167,13 +207,13 @@ def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, m
     cache: dict[str, list[str]] = {}
     for s in plan.segments:
         raw = texts.get(s.url, '')
-        page = norm(raw)
-        good = [q for q in s.quotes if len(q.split()) >= 3 and norm(q) in page]
+        page = tok(raw)
+        good = [q for q in s.quotes if len(q.split()) >= 3 and tok(q) in page]
         row = {**s.model_dump(), 'valid_quotes': good}
         if not page or not good:
             dropped.append({**row, 'reason': 'page not loaded' if not page else 'no verbatim quote on the page'})
             continue
-        near = ' '.join(page[max(0, i - 600):i + len(norm(q)) + 600] for q in good for i in [page.find(norm(q))])
+        near = ' '.join(page[max(0, i - 600):i + len(tok(q)) + 600] for q in good for i in [page.find(tok(q))])
         near_facts = _facts(near)
         if nli is not None and s.url not in cache:
             cache[s.url] = nli.passages(unicodedata.normalize('NFKC', raw))
@@ -232,51 +272,70 @@ def main() -> None:
     texts.update(page_texts(extra[:16]))
     usable = {u: t for u, t in texts.items() if '#' not in u and len(t) > 500}
     corpus = '\n\n'.join(f'=== PAGE {u} ===\n{t[:12000]}' for u, t in usable.items())
-    prompt = f"""You write a factual YouTube script for the channel LogicScript: "What's new in {src['name']}"{(' since ' + a.since) if a.since else ''}.
-Use ONLY the official {src['company']} pages below. Never add facts from memory. Prefer the newest updates.
-Return JSON: {{"video_title": str, "segments": [{{"title": str, "narration": str, "url": str, "quotes": [str]}}]}}
-Rules:
-- Each segment explains ONE update in 90 to 120 words of plain spoken English (no lists, no markdown): what it does, who gets it,
-  how to turn it on or use it - ONLY as far as the page says. For details, use the update's own help article when it is in the pages.
-- Write NO intro and NO closing (they are added separately). Every sentence must restate something the page says; never add
-  examples, benefits, use cases or steps the page does not state. If the page says little, write less.
-- "url" must be one of the page URLs below (the page the segment is about). "quotes" = 1-3 short phrases (4-15 words)
-  COPIED EXACTLY, character for character, from that page; they prove the segment's facts.
-- Every date, month, number (also spelled out), plan name and price you say must appear on that page next to your quotes.
-- Say which plans get a feature when the page says it. Do not invent benefits, comparisons or opinions about competitors.
-- Do not imitate any person; do not claim you used the product.
+    # Step A: the list of distinct updates (small answer). Step B: one short segment per update, written from
+    # that update's own text only (small requests fit every free tier; no duplicates, no mixing of updates).
+    since = parse_since(a.since)
+    main_url = src['pages'][0]
+    list_prompt = f"""List the newest DISTINCT updates to {src['name']}{(' since ' + a.since) if a.since else ''} from the official {src['company']} pages below.
+Return JSON: {{"updates": [{{"title": str, "url": str, "anchor": str, "detail_url": str}}]}} with up to 16 updates, newest first.
+"url" = the page that announces it; "anchor" = 5-15 words COPIED EXACTLY from that page's entry about the update;
+"detail_url" = a page below that explains this update in more detail, or "" if none. Each update once.
 
 CORPUS"""
-    # the adapters cap output at 4,096 tokens: ask for 3-4 updates at a time until ~1,250 verified words (max 9 asks)
-    others = [u for u in usable if u != src['pages'][0]]
-    def part(extra: str, k: int) -> Plan:
-        p = prompt + ('\n\n' + extra + ' Return EXACTLY the number of segments asked, never more.')
-        # Groq's free tier only takes a short request: the main release notes + a rotating slice of the other pages
-        small = f"=== PAGE {src['pages'][0]} ===\n{usable.get(src['pages'][0], '')[:9000]}\n\n" + '\n\n'.join(
-            f'=== PAGE {u} ===\n{usable[u][:3000]}' for u in (others[k * 3 % max(1, len(others)):] + others)[:3])
-        return ask_model(p.replace('CORPUS', corpus[:150000]), p.replace('CORPUS', small))
+    updates = ask_model(list_prompt.replace('CORPUS', corpus[:150000]),
+                        list_prompt.replace('CORPUS', f"=== PAGE {main_url} ===\n{usable.get(main_url, '')[:14000]}"), UpdateList).updates
+    toks = {u: tok(t) for u, t in usable.items()}
+    chosen, skipped, spans = [], [], []
+    for up in updates:
+        page = toks.get(up.url, '')
+        pos = page.find(tok(up.anchor)) if page and len(up.anchor.split()) >= 4 else -1
+        if pos < 0:
+            skipped.append({'title': up.title, 'reason': 'anchor not on the page'}); continue
+        d = entry_date(page, pos)
+        if since and d and d < since:
+            skipped.append({'title': up.title, 'reason': f'older than {a.since} ({d})'}); continue
+        if any(u == up.url and abs(pos - p0) < 150 for u, p0 in spans):
+            skipped.append({'title': up.title, 'reason': 'same entry as another update'}); continue
+        spans.append((up.url, pos))
+        chosen.append((up, pos, d))
+    print(f'updates listed {len(updates)}, chosen {len(chosen)}', file=sys.stderr)
+    seg_prompt = """Write ONE segment of a factual YouTube video (channel LogicScript) about this {name} update: "{title}".
+Use ONLY the official text below. Return JSON: {{"video_title": str, "segments": [{{"title": str, "narration": str, "url": str, "quotes": [str]}}]}}
+with exactly one segment. narration = 80 to 130 words of plain spoken English, in your own words, in the third person
+("{company} says...", never "we"), no lists, no markdown: what changed, who gets it (plans), how to use or turn it on - only
+what the text says. Never add examples, benefits, opinions or steps the text does not state; if the text is short, write less.
+Say a date only if it is in the text. "url" = "{url}". "quotes" = 1-3 phrases (4-15 words) COPIED EXACTLY from the text.
+
+=== {url} ===
+{text}"""
     kept, dropped, title = [], [], ''
     nli = Entailment()
-    for k in range(9):
-        if sum(len(x['narration'].split()) for x in kept) >= 1250:
+    for k, (up, pos, d) in enumerate(chosen):
+        if sum(len(x['narration'].split()) for x in kept) >= 1300:
             break
-        extra = f'WRITE exactly 4 segments, each about a DIFFERENT update (newest first).'
-        seen = [x['title'] for x in kept + dropped]
-        if seen:
-            extra += ' Already covered or rejected - do NOT write about these again: ' + '; '.join(seen)
+        raw = usable[up.url]
+        # the update's entry: start near the anchor, ~2,500 characters of the page around it
+        words = re.findall(r"[A-Za-z0-9]+", up.anchor)[:6]
+        m = re.search(r'\W+'.join(map(re.escape, words)), raw, re.I) if words else None
+        i = m.start() if m else -1
+        entry = raw[max(0, i - 600): i + 1900] if i >= 0 else raw[:2500]
+        detail = usable.get(up.detail_url, '') if up.detail_url and up.detail_url != up.url else ''
+        text = entry + (f"\n\n=== {up.detail_url} ===\n{detail[:6000]}" if detail else '')
+        url = up.detail_url if detail and len(detail) > 1500 else up.url
+        p = seg_prompt.format(name=src['name'], title=up.title, company=src['company'], url=url, text=text)
         if k:
-            time.sleep(30)   # stay under the free tiers' tokens-per-minute limits
+            time.sleep(20)   # stay under the free tiers' tokens-per-minute limits
         try:
-            got = part(extra, k)
+            got = ask_model(p, p)
         except SystemExit as exc:
-            if kept:
-                print(f'stopping early: {exc}', file=sys.stderr)
-                break
-            raise
-        title = title or got.video_title
-        g_kept, g_dropped = ground(Plan(video_title=got.video_title, segments=got.segments[:4]), usable, nli)
+            dropped.append({'title': up.title, 'reason': f'no model answer: {str(exc)[:200]}'}); continue
+        seg = got.segments[0].model_copy(update={'url': url if got.segments[0].url not in usable else got.segments[0].url})
+        g_kept, g_dropped = ground(Plan(video_title='x', segments=[seg]), usable, nli)
+        for r in g_kept:
+            r['entry_date'] = str(d) if d else ''
         kept += g_kept
         dropped += g_dropped
+    dropped = skipped + dropped
     hook, close = hook_and_close(src['name'], src['company'], kept)
     first_url = kept[0]['url'] if kept else src['pages'][0]
     kept = ([{'title': 'What changed', 'narration': hook, 'url': first_url, 'quotes': [], 'valid_quotes': kept[0]['valid_quotes'] if kept else []}]
@@ -285,7 +344,7 @@ CORPUS"""
     import datetime
     video_title = f"What's new in {src['name']} - {datetime.date.today():%B %Y}"
     report = {'ai': a.ai, 'pages_loaded': sorted(usable), 'page_errors': {u: e for u, e in texts.items() if u.endswith('#error')},
-              'segments_kept': len(kept), 'model_title': title, 'segments_dropped': dropped,
+              'segments_kept': len(kept), 'updates_listed': len(updates), 'updates_chosen': len(chosen), 'segments_dropped': dropped,
               'words_kept': sum(len(s['narration'].split()) for s in kept)}
     (a.out / 'grounding_report.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
     if len(kept) < 6:   # hook + >= 4 verified updates + closing
