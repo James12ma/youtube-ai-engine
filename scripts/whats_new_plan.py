@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import re
+import sys
 import unicodedata
 from pathlib import Path
 from urllib.parse import urlparse
@@ -68,22 +69,35 @@ def page_texts(urls: list[str]) -> dict[str, str]:
     return out
 
 
+# free models tried in order (OpenRouter list checked 2026-10-18 with scripts/llm_probe.py); the small
+# default code model rambles past the 4,096-token cap on long scripts, so instruction models come first
+CANDIDATES = [('openrouter', 'google/gemma-4-31b-it:free'), ('openrouter', 'nvidia/nemotron-3-super-120b-a12b:free'),
+              ('groq', None), ('gemini', None), ('openrouter', None)]
+
+
 def ask_model(prompt: str, small_prompt: str) -> Plan:
+    import dataclasses
     from adapters import GeminiAdapter, GroqAdapter, OpenRouterAdapter
     from adapters.base import LLMRequest
+    from adapters.config import GEMINI_CONFIG, GROQ_CONFIG, OPENROUTER_CONFIG
+    kinds = {'gemini': (GeminiAdapter, GEMINI_CONFIG, 'GEMINI_API_KEY'), 'groq': (GroqAdapter, GROQ_CONFIG, 'GROQ_API_KEY'),
+             'openrouter': (OpenRouterAdapter, OPENROUTER_CONFIG, 'OPENROUTER_API_KEY')}
     errors = []
-    for cls, key in ((GeminiAdapter, 'GEMINI_API_KEY'), (GroqAdapter, 'GROQ_API_KEY'), (OpenRouterAdapter, 'OPENROUTER_API_KEY')):
+    for kind, model in CANDIDATES:
+        cls, cfg, key = kinds[kind]
         if not os.environ.get(key):
             continue
         try:
             # Groq's free tier rejects very long requests (HTTP 413): it gets the shorter corpus
-            text = small_prompt if cls is GroqAdapter else prompt
-            with cls() as ad:
-                r = ad.complete(LLMRequest(messages=[{'role': 'user', 'content': text}], schema=Plan,
+            text = small_prompt if kind == 'groq' else prompt
+            with cls(config=dataclasses.replace(cfg, request_timeout=240.0)) as ad:   # long answers take > 45 s
+                r = ad.complete(LLMRequest(messages=[{'role': 'user', 'content': text}], schema=Plan, model=model,
                                            temperature=0.3, max_tokens=4096))
-            return r.parsed if getattr(r, 'parsed', None) else Plan.model_validate_json(r.text)
+            got = r.parsed if getattr(r, 'parsed', None) else Plan.model_validate_json(r.text)
+            print(f'plan part written by {kind}:{model or "default"}', file=sys.stderr)
+            return got
         except Exception as exc:
-            errors.append(f'{cls.__name__}: {type(exc).__name__}: {str(exc)[:200]}')
+            errors.append(f'{kind}:{model or "default"}: {type(exc).__name__}: {str(exc)[:160]}')
     raise SystemExit('no free model produced a valid plan: ' + ' | '.join(errors))
 
 

@@ -70,6 +70,7 @@ jobs:
           python -m scripts.whats_new_plan --ai "$AI" --since "$SINCE" --out outputs/wn > plan_summary.json 2> plan_err.txt; rc=$?
           python -m scripts.gh_note notice plan plan_summary.json
           [ -f outputs/wn/grounding_report.json ] && python -m scripts.gh_note notice grounding outputs/wn/grounding_report.json 3800
+          grep -h "plan part written by" plan_err.txt > plan_models.txt; python -m scripts.gh_note notice plan-models plan_models.txt
           [ $rc -eq 0 ] || { python -m scripts.gh_note error plan-error plan_err.txt 3000; exit 1; }
       - name: Keep the verified plan (reruns reuse it and its narration)
         uses: actions/cache/save@v4
