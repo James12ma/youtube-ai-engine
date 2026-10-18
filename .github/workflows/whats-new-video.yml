@@ -35,13 +35,16 @@ jobs:
           python-version: '3.12'
       - name: Dependencies
         run: |
-          set -euo pipefail
+          set -uo pipefail
           printf '%s\n' "HF_HOME=$RUNNER_TEMP/hf" "NLTK_DATA=$RUNNER_TEMP/nltk" >> "$GITHUB_ENV"
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 fonts-dejavu-core
-          python -m pip install -q --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
-          python -m pip install -q -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt playwright
-          python -m playwright install --with-deps chromium
-          python -c "import nltk,os; nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'])"
+          step() { if ! "$@" > dep.log 2>&1; then echo "::error title=deps ($1 $2)::$(grep -v -E '^\s*$|Downloading|Collecting|━' dep.log | tail -n 25 | tr '\n' ' ' | tail -c 3000)"; exit 1; fi; }
+          step sudo apt-get update
+          step sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 fonts-dejavu-core
+          step python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchaudio==2.8.0 torchvision==0.23.0
+          step python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python -c "import playwright" 2>/dev/null || step python -m pip install playwright
+          step python -m playwright install --with-deps chromium
+          step python -c "import nltk,os; nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'])"
       - name: Grounded plan from the official pages (free model)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
