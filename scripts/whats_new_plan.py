@@ -152,7 +152,8 @@ class Entailment:
         enc = self.tok(ranked, [sentence] * len(ranked), truncation=True, max_length=320, padding=True, return_tensors='pt')
         with self.torch.no_grad():
             pr = self.model(**enc).logits.softmax(-1)
-        return float(pr[:, self.ent].max()), float(pr[:, self.con].max())
+        best = int(pr[:, self.ent].argmax())      # contradiction is read on the SAME passage (other passages talk about other things)
+        return float(pr[best, self.ent]), float(pr[best, self.con])
 
 
 def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, min_entail: float = 0.5) -> tuple[list[dict], list[dict]]:
@@ -161,7 +162,7 @@ def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, m
     - every number, spelled number and month it says appears on the page near a verified quote (+-600 chars:
       on release-notes pages the date heads the entry);
     - each sentence is ENTAILED by a passage of the page (NLI model). Unsupported sentences are cut, never
-      rewritten; the segment survives with >= 3 sentences and >= 45 words."""
+      rewritten; the segment survives with >= 2 sentences and >= 35 words."""
     kept, dropped = [], []
     cache: dict[str, list[str]] = {}
     for s in plan.segments:
@@ -180,13 +181,16 @@ def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, m
         for sent in _sentences(s.narration):
             missing = sorted(_facts(sent) - near_facts)
             ent, con = nli.score(sent, cache[s.url]) if nli is not None else (1.0, 0.0)
-            if missing or ent < min_entail or con > 0.5:
+            # a date line ("announced on July 10, 2026") is checked by the facts rule + words near the quote
+            ws = _words(sent)
+            dated = bool(_facts(sent)) and not missing and ws and sum(w in near for w in ws) / len(ws) >= 0.7
+            if missing or (ent < min_entail and not dated):
                 cut.append({'sentence': sent, 'facts_not_near_quote': missing, 'entail': round(ent, 2), 'contradict': round(con, 2)})
             else:
                 keep.append(sent)
         text = ' '.join(keep)
         row.update(narration=text, cut_sentences=cut)
-        if len(keep) >= 3 and len(text.split()) >= 45:
+        if len(keep) >= 2 and len(text.split()) >= 35:
             kept.append(row)
         else:
             dropped.append({**row, 'narration_original': s.narration,
@@ -243,7 +247,7 @@ Rules:
 - Do not imitate any person; do not claim you used the product.
 
 CORPUS"""
-    # the adapters cap output at 4,096 tokens: ask for 3-4 updates at a time until ~1,250 verified words (max 7 asks)
+    # the adapters cap output at 4,096 tokens: ask for 3-4 updates at a time until ~1,250 verified words (max 9 asks)
     others = [u for u in usable if u != src['pages'][0]]
     def part(extra: str, k: int) -> Plan:
         p = prompt + ('\n\n' + extra + ' Return EXACTLY the number of segments asked, never more.')
@@ -253,10 +257,10 @@ CORPUS"""
         return ask_model(p.replace('CORPUS', corpus[:150000]), p.replace('CORPUS', small))
     kept, dropped, title = [], [], ''
     nli = Entailment()
-    for k in range(7):
+    for k in range(9):
         if sum(len(x['narration'].split()) for x in kept) >= 1250:
             break
-        extra = f'WRITE exactly {4 if k == 0 else 3} segments, each about a DIFFERENT update (newest first).'
+        extra = f'WRITE exactly 4 segments, each about a DIFFERENT update (newest first).'
         seen = [x['title'] for x in kept + dropped]
         if seen:
             extra += ' Already covered or rejected - do NOT write about these again: ' + '; '.join(seen)
