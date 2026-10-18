@@ -1,39 +1,40 @@
-# TikTok Motion Engine — isolated vertical explainer
+# TikTok Motion Engine
 
-**Status:** End-to-end offline demo ready. Produces a 60-second 1080×1920 MP4 with scene-specific motion graphics, synchronized captions, and zero-cost English narration (espeak-ng engineering voice).
+Multi-engine vertical explainer pipeline (1080×1920 @ 30 fps).
 
-Demo topic: **What If the Internet Disappeared for 24 Hours?**
+## Engines
 
-## Quick start (local, no paid services)
+| Engine | Status in this environment | License |
+|--------|---------------------------|---------|
+| **Manim Community** | **Working** — real adapter + Demo C | MIT |
+| Motion Canvas | Adapter scaffold; **npm install blocked** (registry 502) | MIT |
+| Remotion | Adapter scaffold; **npm install blocked** (registry 502). Free License OK for individuals / orgs ≤3 | Remotion Free / Company |
+| Pillow | Always available (composition + demos A/B) | HPND |
+
+Alan7 and LogicScript are **not modified**.
+
+## Demos produced
+
+- `demo_A_kinetic_news.mp4` — 15s kinetic typography news explainer (Pillow path; Remotion target style)
+- `demo_B_map_network.mp4` — 15s animated map / network fade (Pillow path; Motion Canvas target style)
+- `demo_C_manim_stats.mp4` — 15s statistical bar chart (**real Manim Community**)
+- `tiktok_60s_multi_engine.mp4` — 60s concat of A+B+C+A
+
+## Run
 
 ```bash
-# Storyboard only
-python -m tiktok_motion.storyboard
-
-# Unit tests
 python -m unittest tests.test_tiktok_motion
-
-# Full render with engineering narration
-python -m tiktok_motion.render --generate-voice --output /tmp/tiktok-demo-001.mp4
+python -m tiktok_motion.premium_demos          # A + B
+manim -qh tiktok_motion/engines/manim_scenes/stats_demo.py InternetStatsExplainer
+python -m tiktok_motion.render --generate-voice --output /tmp/out.mp4
 ```
 
-## Contract
+## Blockers
 
-- 1080×1920, 30 fps, exactly 60 seconds
-- Six contiguous scenes with English on-screen text + narration
-- Cream / black / red editorial palette
-- `requires_owner_approval: true`, `auto_publish: false`
-- Does **not** touch Alan7, LogicScript, or any publish path
+1. **npm registry 502** — cannot install `@remotion/*` or `@motion-canvas/*` in this sandbox.
+2. **Natural TTS** — `piper-tts` wheel fetch also failed (502). Narration remains espeak-ng engineering voice.
+3. Word-level caption sync requires offline alignment (WhisperX/etc.) not installed.
 
-## Limitations
+Owner can install Node packages locally and the adapters will detect them via `available_engines()`.
 
-- Narration uses espeak-ng (clear but robotic engineering voice). Natural neural voices (Piper etc.) can be swapped via `--voice` once locally available and approved.
-- Captions are scene-level (not word-timed). Word-level alignment requires additional offline tools.
-- Motion graphics are Pillow/vector 2D, not Remotion or After Effects.
-- No network, no billing, no upload, no GitHub Actions required for the local demo.
-
-## Next (owner-gated)
-
-- Swap engineering voice for approved neural English
-- Optional Remotion path after license/runtime review
-- Owner listening + visual approval before any release
+No paid APIs, no publish, no merge without owner approval.
