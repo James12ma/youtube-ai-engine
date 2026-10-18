@@ -266,10 +266,13 @@ def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, m
             missing = sorted(_facts(sent) - near_facts)
             ent, con = nli.score(claim(sent), premises) if nli is not None else (1.0, 0.0)
             # a date line ("announced on July 10, 2026") is checked by the facts rule + words near the quote
+            # or: its facts are near the quote and its words come from this update's entry (paraphrase the NLI
+            # model under-rates); the opening sentence is held to 0.7 of its words, the others to 0.8
             ws = _words(sent)
-            dated = bool(_facts(sent)) and not missing and ws and sum(w in near for w in ws) / len(ws) >= 0.7
-            if missing or (ent < min_entail and not dated):
-                cut.append({'sentence': sent, 'facts_not_near_quote': missing, 'entail': round(ent, 2), 'contradict': round(con, 2)})
+            lexical = (sum(w in near for w in ws) / len(ws)) if ws else 0.0
+            need = 0.7 if not keep and not cut else 0.8
+            if missing or (ent < min_entail and lexical < need):
+                cut.append({'sentence': sent, 'facts_not_near_quote': missing, 'entail': round(ent, 2), 'lexical': round(lexical, 2)})
             else:
                 keep.append(sent)
         text = ' '.join(keep)
@@ -337,14 +340,22 @@ CORPUS"""
     toks = {u: tok(t) for u, t in usable.items()}
     chosen, skipped, spans = [], [], []
     for up in updates:
-        page = toks.get(up.url, '')
-        pos = page.find(tok(up.anchor)) if page and len(up.anchor.split()) >= 4 else -1
+        # find the entry: the anchor on its page, else on any official page, else the update's title on its page
+        pos, where = -1, up.url
+        for cand_url, needle in ([(up.url, up.anchor)] + [(u, up.anchor) for u in toks if u != up.url]
+                                 + [(up.url, up.title), (main_url, up.title)]):
+            t, n = toks.get(cand_url, ''), tok(needle)
+            if t and len(n.split()) >= 3 and n in t:
+                pos, where = t.find(n), cand_url
+                up = up.model_copy(update={'url': cand_url, 'anchor': needle})
+                break
+        page = toks.get(where, '')
         if pos < 0:
             skipped.append({'title': up.title, 'reason': 'anchor not on the page'}); continue
         d = entry_date(page, pos)
         if since and d and d < since:
             skipped.append({'title': up.title, 'reason': f'older than {a.since} ({d})'}); continue
-        if any(u == up.url and abs(pos - p0) < 150 for u, p0 in spans):
+        if any(u == up.url and abs(pos - p0) < 60 for u, p0 in spans):
             skipped.append({'title': up.title, 'reason': 'same entry as another update'}); continue
         spans.append((up.url, pos))
         chosen.append((up, pos, d))
