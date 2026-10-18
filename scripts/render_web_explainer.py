@@ -144,7 +144,7 @@ def main() -> None:
     from channel.ai_sources import AI_SOURCES
     plan = json.loads(a.plan.read_text(encoding='utf-8'))
     man = json.loads((a.narration_dir / 'manifest.json').read_text(encoding='utf-8'))
-    work = a.out.parent / (a.out.stem + '_work')
+    work = (a.out.parent / (a.out.stem + '_work')).resolve()   # absolute: ffmpeg concat resolves paths from the list's folder
     work.mkdir(parents=True, exist_ok=True)
     wavs = [a.narration_dir / b['file'] for b in man['beats']]
     if len(wavs) != len(plan['segments']):
