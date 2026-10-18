@@ -1,19 +1,27 @@
-# Multi-engine motion integration — Phase 1
+# Multi-engine motion integration — status
 
-This branch now includes a **routing foundation**, not working Remotion, Motion Canvas, or Manim render integrations.
+## Working
 
-- Remotion: planned final editorial composition, animated captions and transitions.
-- Motion Canvas: planned maps, networks, vector diagrams and flow graphics.
-- Manim: planned mathematical, finance and statistics scenes.
-- Existing LogicScript and Alan7: retain existing renderers and owner approval gates.
+- **Manim Community v0.20.1 (MIT)** — real adapter, vertical 1080×1920 scene, Demo C MP4 verified.
+- **Pillow composition path** — kinetic news (Demo A), map/network (Demo B), full 60s assembly.
+- **visual_director** routes scene kinds; falls back to available engines.
+- **Unit tests** green (8 tests).
 
-The deterministic `visual_director.py` routes scene kinds to candidate engines; `engine_registry.py` reports basic dependency availability only. Neither imports or runs the external engines.
+## Blocked in this sandbox
 
-## Completion gates
-1. Inspect existing engine render contracts and pin dependency versions after license/runtime review.
-2. Implement adapters for each renderer and exchange intermediate scene assets through a documented format.
-3. Render a real MP4 with each adapter; validate full decode, audio and synchronized captions.
-4. Assemble final video and compare frames against user-approved reference; improve artistic direction.
-5. Run unit and regression suites, then owner review. No automatic publishing, paid services or merge.
+- **Remotion** — Free License eligible for individuals / orgs ≤3. npm install fails with registry 502. Adapter scaffold only.
+- **Motion Canvas** — MIT. Same npm 502 blocker. Adapter scaffold only.
+- **piper-tts** — natural local voice; wheel download 502. Narration remains espeak-ng.
 
-**No claim of production readiness is made.**
+## Owner next steps (local machine)
+
+```bash
+# After npm registry is reachable:
+npm install remotion @remotion/cli
+npm install @motion-canvas/core @motion-canvas/2d @motion-canvas/ffmpeg
+pip install piper-tts   # optional neural English
+```
+
+Adapters will report `available: true` once packages are present.
+
+No paid services used. Alan7 / LogicScript untouched. PR stays draft.

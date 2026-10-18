@@ -1,18 +1,45 @@
 """Deterministic scene-to-engine routing. No external calls or publishing."""
 from __future__ import annotations
 
-ENGINES = ("remotion", "motion_canvas", "manim", "logicscript", "alan7")
+from .engines.adapters import available_engines
+
+ENGINES = ("remotion", "motion_canvas", "manim", "pillow", "logicscript", "alan7")
+
 
 def choose_engine(kind: str, mode: str = "tiktok") -> str:
+    """Pick best available engine for a scene kind."""
     if mode == "screen_tutorial":
         return "logicscript"
     if mode == "documentary":
         return "alan7"
-    if kind in {"chart", "math", "equation", "statistics"}:
+    status = available_engines()
+    preferred = {
+        "chart": "manim",
+        "math": "manim",
+        "equation": "manim",
+        "statistics": "manim",
+        "systems": "manim",
+        "map": "motion_canvas",
+        "diagram": "motion_canvas",
+        "network": "motion_canvas",
+        "flow": "motion_canvas",
+        "hook": "remotion",
+        "outro": "remotion",
+        "devices": "remotion",
+        "nuance": "remotion",
+    }.get(kind, "remotion")
+    if status.get(preferred, {}).get("available"):
+        return preferred
+    # Fallbacks
+    if status.get("manim", {}).get("available") and kind in {
+        "chart", "math", "equation", "statistics", "systems"
+    }:
         return "manim"
-    if kind in {"map", "diagram", "network", "flow"}:
-        return "motion_canvas"
-    return "remotion"
+    return "pillow"
+
 
 def route_storyboard(storyboard: dict, mode: str = "tiktok") -> list[dict]:
-    return [{**scene, "engine": choose_engine(scene["kind"], mode)} for scene in storyboard["scenes"]]
+    return [
+        {**scene, "engine": choose_engine(scene["kind"], mode)}
+        for scene in storyboard["scenes"]
+    ]
