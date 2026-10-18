@@ -1,16 +1,39 @@
-# TikTok Motion Engine — isolated foundation
+# TikTok Motion Engine — isolated vertical explainer
 
-**Status:** Phase 1 storyboard contract only. This is NOT yet a rendered MP4, an integrated production pipeline, or a publishing feature.
+**Status:** End-to-end offline demo ready. Produces a 60-second 1080×1920 MP4 with scene-specific motion graphics, synchronized captions, and zero-cost English narration (espeak-ng engineering voice).
 
-The first demo is a hypothetical 60-second English explainer: **What If the Internet Disappeared for 24 Hours?** It uses 1080x1920, 30 fps, six contiguous scenes, a cream/black/red editorial palette, and mandatory owner review.
+Demo topic: **What If the Internet Disappeared for 24 Hours?**
 
-Generate the storyboard locally without paid APIs or GitHub Actions:
+## Quick start (local, no paid services)
 
 ```bash
+# Storyboard only
 python -m tiktok_motion.storyboard
+
+# Unit tests
 python -m unittest tests.test_tiktok_motion
+
+# Full render with engineering narration
+python -m tiktok_motion.render --generate-voice --output /tmp/tiktok-demo-001.mp4
 ```
 
-Next engineering work: inspect the existing narration and rendering adapters, add synchronized voice/captions and actual SVG motion graphics, export and decode-check an MP4, then run regression tests. Keep Alan7 and LogicScript untouched. Never auto-publish or use paid infrastructure.
+## Contract
 
-Remotion may be considered after license eligibility and runtime compatibility checks; it is **not installed or required** by this foundation.
+- 1080×1920, 30 fps, exactly 60 seconds
+- Six contiguous scenes with English on-screen text + narration
+- Cream / black / red editorial palette
+- `requires_owner_approval: true`, `auto_publish: false`
+- Does **not** touch Alan7, LogicScript, or any publish path
+
+## Limitations
+
+- Narration uses espeak-ng (clear but robotic engineering voice). Natural neural voices (Piper etc.) can be swapped via `--voice` once locally available and approved.
+- Captions are scene-level (not word-timed). Word-level alignment requires additional offline tools.
+- Motion graphics are Pillow/vector 2D, not Remotion or After Effects.
+- No network, no billing, no upload, no GitHub Actions required for the local demo.
+
+## Next (owner-gated)
+
+- Swap engineering voice for approved neural English
+- Optional Remotion path after license/runtime review
+- Owner listening + visual approval before any release
