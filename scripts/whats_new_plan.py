@@ -128,11 +128,30 @@ def _sentences(t: str) -> list[str]:
     return [x.strip() for x in re.split(r'(?<=[.!?])\s+', t.strip()) if x.strip()]
 
 
+UNITS = {w: i for i, w in enumerate('zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen '
+                                     'fifteen sixteen seventeen eighteen nineteen'.split())}
+TENS = {w: 10 * i for i, w in enumerate('_ _ twenty thirty forty fifty sixty seventy eighty ninety'.split(), 0) if w != '_'}
+
+
+def spelled_to_digits(t: str) -> str:
+    """'forty percent' -> '40 percent', 'thirty-seven' -> '37' (so it is checked like any number)."""
+    def rep(m):
+        a, b = m.group(1).lower(), (m.group(2) or '').lower()
+        return str(TENS[a] + (UNITS[b] if b else 0)) if a in TENS else str(UNITS[a])
+    tens, units = '|'.join(TENS), '|'.join(u for u in UNITS if UNITS[u] < 10)
+    t = re.sub(rf'\b({tens})(?:[-\u2010\u2011 ]({units}))?\b', rep, t, flags=re.I)
+    return re.sub(r'\b(' + '|'.join(UNITS) + r')\b(?= (?:percent|%|times|x\b|million|billion|thousand|hundred|days|hours|months|weeks|years|models|skills|languages|seats))',
+                  lambda m: str(UNITS[m.group(1).lower()]), t, flags=re.I)
+
+
 def _facts(t: str) -> set[str]:
     """Numbers (digits or spelled) and month names: these must be on the page next to the quoted text."""
-    n = norm(t)
+    n = norm(spelled_to_digits(t))
     # "percent" is said for "%": the number itself is what gets checked
-    return set(NUM.findall(n)) | {w for w in re.findall(r"[a-z]+", n) if (w in SPELLED or w in MONTHS) and w != 'percent'}
+    # (counts like "37 skills" were turned into digits above; a bare "one" or "two" is ordinary language)
+    big = {'hundred', 'thousand', 'million', 'billion'}
+    out = set(NUM.findall(n)) | {w for w in re.findall(r"[a-z]+", n) if w in big or (w in MONTHS and w != 'may')}
+    return out | ({'may'} if re.search(r'\bmay \d', n) else set())   # "may" is a month only before a day
 
 
 def _words(t: str) -> set[str]:

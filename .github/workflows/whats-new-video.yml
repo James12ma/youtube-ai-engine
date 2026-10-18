@@ -81,11 +81,11 @@ jobs:
           path: outputs/wn
           key: whats-new-plan-${{ inputs.ai }}-${{ github.run_id }}
       - name: Show the verified script
-        if: inputs.plan_only == '1'
+        if: always() && inputs.plan_only == '1'
         run: |
           python - <<'PY'
-          import json
-          p = json.load(open('outputs/wn/plan.json'))
+          import json, os
+          p = json.load(open('outputs/wn/plan.json')) if os.path.exists('outputs/wn/plan.json') else {'segments': []}
           text = '\n'.join(f"[{i}] {s['title']} ({s['url']}): {s['narration']}" for i, s in enumerate(p['segments']))
           g = json.load(open('outputs/wn/grounding_report.json'))
           cuts = '\n'.join(f"CUT [{s['title']}] {c['sentence']} {c['facts_not_near_quote']} e={c['entail']}" for s in p['segments'] for c in s.get('cut_sentences', []))
