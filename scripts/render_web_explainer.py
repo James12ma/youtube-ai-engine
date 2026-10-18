@@ -178,6 +178,11 @@ def main() -> None:
     ass = work / 'captions.ass'
     count, blocks = build_ass_from_words(aligned.words, ass, width=W, height=H, size=56, max_chars_per_line=38,
                                          bottom_margin=60, max_duration_s=3.2)
+    # over a busy web page plain outlined text is hard to read: dark translucent box behind each caption
+    # (libass BorderStyle 3 draws the box in OutlineColour; Outline = padding)
+    ass.write_text('\n'.join(
+        ','.join(l.split(',')[:5] + ['&H38000000', '&H00000000'] + l.split(',')[7:15] + ['3', '10', '0'] + l.split(',')[18:])
+        if l.startswith('Style: Default,') else l for l in ass.read_text(encoding='utf-8').split('\n')), encoding='utf-8')
     save_srt_from_blocks(blocks, a.out.with_suffix('.srt'))
     muxed = work / 'muxed.mp4'
     run(['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-i', str(picture), '-i', str(voice), '-map', '0:v', '-map', '1:a',
