@@ -31,7 +31,7 @@ class Segment(BaseModel):
 
 class Plan(BaseModel):
     video_title: str
-    segments: list[Segment] = Field(min_length=4)
+    segments: list[Segment] = Field(min_length=3)
 
 
 def norm(t: str) -> str:
@@ -80,7 +80,7 @@ def ask_model(prompt: str, small_prompt: str) -> Plan:
             text = small_prompt if cls is GroqAdapter else prompt
             with cls() as ad:
                 r = ad.complete(LLMRequest(messages=[{'role': 'user', 'content': text}], schema=Plan,
-                                           temperature=0.3, max_tokens=12000))   # ~1,400 words + quotes need > 4k tokens
+                                           temperature=0.3, max_tokens=4096))
             return r.parsed if getattr(r, 'parsed', None) else Plan.model_validate_json(r.text)
         except Exception as exc:
             errors.append(f'{cls.__name__}: {type(exc).__name__}: {str(exc)[:200]}')
@@ -127,7 +127,7 @@ def main() -> None:
 Use ONLY the official {src['company']} pages below. Never add facts from memory. Prefer the newest updates.
 Return JSON: {{"video_title": str, "segments": [{{"title": str, "narration": str, "url": str, "quotes": [str]}}]}}
 Rules:
-- 12 to 14 segments of 100 to 130 words each (about 1,400 words in total), plain spoken English, no lists, no markdown. Explain each update: what it does, who gets it, how to use it, when the page says so.
+- In total the video has 12 to 14 segments of 100 to 130 words each (about 1,400 words), plain spoken English, no lists, no markdown. Explain each update: what it does, who gets it, how to use it, when the page says so.
 - Segment 1 is a hook (what changed and why it matters); the last segment says which features to try first and asks viewers to subscribe.
 - "url" must be one of the page URLs below (the page the segment is about). "quotes" = 1-3 short phrases (4-15 words)
   COPIED EXACTLY, character for character, from that page; they prove the segment's facts.
@@ -136,7 +136,15 @@ Rules:
 - Do not imitate any person; do not claim you used the product.
 
 CORPUS"""
-    plan = ask_model(prompt.replace('CORPUS', corpus[:150000]), prompt.replace('CORPUS', corpus[:45000]))
+    # the adapters cap output at 4,096 tokens, so the ~1,400-word script is written in two parts
+    def part(n: int, extra: str) -> Plan:
+        p = prompt + ('\n\n' + extra)
+        return ask_model(p.replace('CORPUS', corpus[:150000]), p.replace('CORPUS', corpus[:45000]))
+    first = part(1, 'WRITE ONLY PART 1: the hook and the first 6 or 7 segments (the newest, biggest updates). Do NOT write the closing segment.')
+    done = '; '.join(x.title for x in first.segments)
+    second = part(2, 'WRITE ONLY PART 2: 6 or 7 MORE segments about OTHER updates, then the closing segment. No hook. '
+                     f'Part 1 already covered these (do not repeat them): {done}')
+    plan = Plan(video_title=first.video_title, segments=first.segments + second.segments)
     kept, dropped = ground(plan, usable)
     report = {'ai': a.ai, 'pages_loaded': sorted(usable), 'page_errors': {u: e for u, e in texts.items() if u.endswith('#error')},
               'segments_kept': len(kept), 'segments_dropped': dropped,
