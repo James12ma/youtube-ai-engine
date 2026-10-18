@@ -196,7 +196,27 @@ class Entailment:
         return float(pr[best, self.ent]), float(pr[best, self.con])
 
 
-def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, min_entail: float = 0.5) -> tuple[list[dict], list[dict]]:
+ATTRIBUTION = re.compile(r"^(?:(?:on|in) [a-z]+ \d{1,2}(?:st|nd|rd|th)?,? \d{4},?\s*|according to [^,]{3,60},\s*|"
+                         r"[a-z]+(?: [a-z]+)? (?:says|said|announced|notes|explains|reports|states|adds)(?: that)?\s+|"
+                         r"the (?:release notes|announcement|page|update|entry) (?:says|states|notes|explains|adds)(?: that)?\s+)+", re.I)
+
+
+def claim(sentence: str) -> str:
+    """The claim itself, without "Anthropic says", "According to the release notes," or a leading date
+    (the NLI model rightly finds "Anthropic says" unsupported when the page doesn't name Anthropic; dates are
+    checked separately by the facts rule)."""
+    c = ATTRIBUTION.sub('', sentence).strip()
+    return (c[:1].upper() + c[1:]) if c else sentence
+
+
+def raw_window(raw: str, quote: str, before: int = 900, after: int = 1500) -> str:
+    words = re.findall(r"[A-Za-z0-9]+", quote)[:8]
+    m = re.search(r'\W+'.join(map(re.escape, words)), raw, re.I) if words else None
+    return raw[max(0, m.start() - before): m.end() + after] if m else ''
+
+
+def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, min_entail: float = 0.5,
+           multi_entry: frozenset = frozenset()) -> tuple[list[dict], list[dict]]:
     """No generative model involved. A segment is kept when:
     - at least one quote is VERBATIM on its page;
     - every number, spelled number and month it says appears on the page near a verified quote (+-600 chars:
@@ -204,7 +224,6 @@ def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, m
     - each sentence is ENTAILED by a passage of the page (NLI model). Unsupported sentences are cut, never
       rewritten; the segment survives with >= 2 sentences and >= 35 words."""
     kept, dropped = [], []
-    cache: dict[str, list[str]] = {}
     for s in plan.segments:
         raw = texts.get(s.url, '')
         page = tok(raw)
@@ -215,12 +234,17 @@ def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, m
             continue
         near = ' '.join(page[max(0, i - 600):i + len(tok(q)) + 600] for q in good for i in [page.find(tok(q))])
         near_facts = _facts(near)
-        if nli is not None and s.url not in cache:
-            cache[s.url] = nli.passages(unicodedata.normalize('NFKC', raw))
+        # on a page that lists many updates (release notes, newsroom) a sentence may only be supported by
+        # THIS update's entry, not by another update further down the page
+        if s.url in multi_entry:
+            premise = '\n'.join(raw_window(raw, q) for q in good)
+        else:
+            premise = raw
+        premises = nli.passages(unicodedata.normalize('NFKC', premise)) if nli is not None else []
         keep, cut = [], []
         for sent in _sentences(s.narration):
             missing = sorted(_facts(sent) - near_facts)
-            ent, con = nli.score(sent, cache[s.url]) if nli is not None else (1.0, 0.0)
+            ent, con = nli.score(claim(sent), premises) if nli is not None else (1.0, 0.0)
             # a date line ("announced on July 10, 2026") is checked by the facts rule + words near the quote
             ws = _words(sent)
             dated = bool(_facts(sent)) and not missing and ws and sum(w in near for w in ws) / len(ws) >= 0.7
@@ -230,11 +254,12 @@ def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, m
                 keep.append(sent)
         text = ' '.join(keep)
         row.update(narration=text, cut_sentences=cut)
-        if len(keep) >= 2 and len(text.split()) >= 35:
+        first_ok = bool(keep) and keep[0] == _sentences(s.narration)[0]   # without its opening the segment makes no sense
+        if first_ok and len(keep) >= 2 and len(text.split()) >= 35:
             kept.append(row)
         else:
             dropped.append({**row, 'narration_original': s.narration,
-                            'reason': f'only {len(keep)} supported sentences left after cutting {len(cut)}'})
+                            'reason': (f'only {len(keep)} supported sentences left after cutting {len(cut)}' if first_ok else 'opening sentence not supported')})
     return kept, dropped
 
 
@@ -302,7 +327,7 @@ CORPUS"""
     seg_prompt = """Write ONE segment of a factual YouTube video (channel LogicScript) about this {name} update: "{title}".
 Use ONLY the official text below. Return JSON: {{"video_title": str, "segments": [{{"title": str, "narration": str, "url": str, "quotes": [str]}}]}}
 with exactly one segment. narration = 80 to 130 words of plain spoken English, in your own words, in the third person
-("{company} says...", never "we"), no lists, no markdown: what changed, who gets it (plans), how to use or turn it on - only
+(say "{company}", never "we"; open with what the update is, not with "{company} says"), no lists, no markdown: what changed, who gets it (plans), how to use or turn it on - only
 what the text says. Never add examples, benefits, opinions or steps the text does not state; if the text is short, write less.
 Say a date only if it is in the text. "url" = "{url}". "quotes" = 1-3 phrases (4-15 words) COPIED EXACTLY from the text.
 
@@ -330,7 +355,7 @@ Say a date only if it is in the text. "url" = "{url}". "quotes" = 1-3 phrases (4
         except SystemExit as exc:
             dropped.append({'title': up.title, 'reason': f'no model answer: {str(exc)[:200]}'}); continue
         seg = got.segments[0].model_copy(update={'url': url if got.segments[0].url not in usable else got.segments[0].url})
-        g_kept, g_dropped = ground(Plan(video_title='x', segments=[seg]), usable, nli)
+        g_kept, g_dropped = ground(Plan(video_title='x', segments=[seg]), usable, nli, multi_entry=frozenset(src['pages']))
         for r in g_kept:
             r['entry_date'] = str(d) if d else ''
         kept += g_kept
