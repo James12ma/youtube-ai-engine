@@ -1,0 +1,102 @@
+name: LogicScript — What's new in <AI> (official pages, grounded, sent to Telegram; no upload)
+on:
+  workflow_dispatch:
+    inputs:
+      ai:
+        type: choice
+        options: [claude, chatgpt, gemini, copilot, grok, perplexity, meta-ai, deepseek]
+        default: claude
+      since:
+        description: 'Period the video covers, e.g. "August 2026"'
+        default: 'August 2026'
+      delivery_pubkey:
+        description: Optional base64 RSA public key for the full-quality encrypted pack
+        default: ''
+permissions:
+  contents: write  # only for the optional ENCRYPTED pack
+concurrency:
+  group: whats-new-${{ inputs.ai }}
+  cancel-in-progress: false
+jobs:
+  video:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      CUDA_VISIBLE_DEVICES: ''
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies
+        run: |
+          set -euo pipefail
+          printf '%s\n' "HF_HOME=$RUNNER_TEMP/hf" "NLTK_DATA=$RUNNER_TEMP/nltk" >> "$GITHUB_ENV"
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1 fonts-dejavu-core
+          python -m pip install -q --index-url https://download.pytorch.org/whl/cpu 'torch==2.8.0' 'torchaudio==2.8.0' 'torchvision==0.23.0'
+          python -m pip install -q -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt playwright
+          python -m playwright install --with-deps chromium
+          python -c "import nltk,os; nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'])"
+      - name: Grounded plan from the official pages (free model)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI: ${{ inputs.ai }}
+          SINCE: ${{ inputs.since }}
+        run: |
+          set -uo pipefail
+          python -m scripts.whats_new_plan --ai "$AI" --since "$SINCE" --out outputs/wn > plan_summary.json 2> plan_err.txt; rc=$?
+          echo "::notice title=plan::$(head -c 3000 plan_summary.json)"
+          [ -f outputs/wn/grounding_report.json ] && echo "::notice title=grounding::$(python -c "import json;r=json.load(open('outputs/wn/grounding_report.json'));print(json.dumps({'kept':r['segments_kept'],'words':r['words_kept'],'dropped':[(d['title'],d['reason']) for d in r['segments_dropped']],'errors':r['page_errors']})[:3500])")"
+          [ $rc -eq 0 ] || { echo "::error title=plan::$(tail -c 2000 plan_err.txt | tr '\n' ' ')"; exit 1; }
+      - name: Narrate (owner-approved shared voice, English)
+        uses: ./.github/actions/alan7-voice
+        with:
+          texts: outputs/wn/narration_texts.json
+          language: en
+          out: outputs/narration
+      - name: Record the official pages and edit
+        run: python -m scripts.render_web_explainer --plan outputs/wn/plan.json --narration-dir outputs/narration --out outputs/wn/video.mp4
+      - name: QA and YouTube package
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, subprocess
+          p = json.load(open('outputs/wn/plan.json')); r = json.load(open('outputs/wn/video_work/render_report.json'))
+          from channel.ai_sources import AI_SOURCES
+          src = AI_SOURCES[p['ai']]
+          dur = float(subprocess.run(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0','outputs/wn/video.mp4'],capture_output=True,text=True).stdout)
+          desc = [p['title'], '', f"Everything new in {src['name']}, explained from {src['company']}'s official announcements and release notes.", '', 'Chapters'] + r['chapters'] + \
+                 ['', 'Official sources'] + [f'- {u}' for u in r['sources']] + ['', f"All pages shown are the official {src['company']} pages. LogicScript is not affiliated with {src['company']}. Narration: synthetic AI voice.", '', f"#{src['name'].replace(' ','')} #AI #LogicScript"]
+          pkg = f"TITLE\n{p['title']}\n\nDESCRIPTION\n" + '\n'.join(desc) + "\n\nSETTINGS\n- Altered or synthetic content: YES (synthetic voice)\n- Made for kids: NO\n- Captions are burned into the video: do not upload another subtitle file\n"
+          open('outputs/wn/YouTube_package.txt','w').write(pkg)
+          print('::notice title=video::' + json.dumps({'duration_s': round(dur,1), 'quotes_highlighted': r['quotes_highlighted'], 'segments': len(r['segments']), 'padded_total_s': r['padded_total_s'], 'errors': [s['error'] for s in r['segments'] if s['error']]}))
+          PY
+          d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 outputs/wn/video.mp4)
+          vb=$(python -c "print(int(46*8*1024/$d - 96))")
+          ffmpeg -y -hide_banner -loglevel error -i outputs/wn/video.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -b:v ${vb}k -maxrate ${vb}k -bufsize $((vb*2))k -c:a aac -b:a 96k -movflags +faststart outputs/wn/telegram.mp4
+          ls -la outputs/wn
+      - name: Send to the owner on Telegram
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+        run: |
+          set -uo pipefail
+          title=$(head -2 outputs/wn/YouTube_package.txt | tail -1)
+          code=$(curl -s -o /dev/null -w '%{http_code}' -F chat_id="$OWNER" -F supports_streaming=true -F caption="LogicScript — $title (preview 720p, pa pibliye)" -F video=@outputs/wn/telegram.mp4 "https://api.telegram.org/bot$TG/sendVideo")
+          echo "::notice title=telegram video::HTTP $code"
+          curl -s -o /dev/null -F chat_id="$OWNER" -F caption="Tit, deskripsyon, chapit ak sous pou YouTube" -F document=@outputs/wn/YouTube_package.txt "https://api.telegram.org/bot$TG/sendDocument"
+      - name: Full-quality encrypted pack
+        if: inputs.delivery_pubkey != ''
+        uses: ./.github/actions/encrypted-pack
+        with:
+          dir: outputs/wn
+          pubkey_b64: ${{ inputs.delivery_pubkey }}
+          token: ${{ github.token }}
+          label: whats-new video
