@@ -1,0 +1,65 @@
+name: Web explainer smoke test (2 short segments, Piper voice; encrypted result)
+on:
+  workflow_dispatch:
+    inputs:
+      delivery_pubkey:
+        required: true
+permissions:
+  contents: write
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies
+        run: |
+          set -e
+          echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg libsndfile1 fonts-dejavu-core
+          python -m pip install -q --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchaudio==2.8.0 torchvision==0.23.0
+          python -m pip install -q -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
+          python -c "import playwright" 2>/dev/null || python -m pip install -q playwright
+          python -m playwright install --with-deps chromium > /dev/null
+          python -c "import nltk,sys; nltk.download('punkt_tab', download_dir=sys.argv[1])" "$RUNNER_TEMP/nltk"
+          echo "NLTK_DATA=$RUNNER_TEMP/nltk" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/v" && python -m piper.download_voices --data-dir "$RUNNER_TEMP/v" en_US-libritts-high
+      - name: Tiny plan + Piper narration + render
+        run: |
+          set +e
+          python - <<'PY' > smoke_err.txt 2>&1
+          import json, hashlib, wave, os
+          from pathlib import Path
+          from piper import PiperVoice
+          plan = {'ai': 'claude', 'title': 'Smoke test', 'language': 'en', 'segments': [
+            {'title': 'Haiku 5.5', 'url': 'https://support.claude.com/en/articles/12138966-release-notes',
+             'narration': 'Anthropic released Claude Haiku five point five for high volume work.', 'quotes': ['Claude Haiku 5.5'], 'valid_quotes': ['Claude Haiku 5.5']},
+            {'title': 'Newsroom', 'url': 'https://www.anthropic.com/news',
+             'narration': 'The newsroom lists every announcement, newest first.', 'quotes': ['Introducing Claude Haiku 5.5'], 'valid_quotes': ['Introducing Claude Haiku 5.5']}]}
+          Path('outputs/wn').mkdir(parents=True, exist_ok=True); Path('outputs/narration').mkdir(parents=True, exist_ok=True)
+          json.dump(plan, open('outputs/wn/plan.json', 'w'))
+          v = PiperVoice.load(os.environ['RUNNER_TEMP'] + '/v/en_US-libritts-high.onnx')
+          beats = []
+          for i, s in enumerate(plan['segments']):
+              f = f'seg_{i:03d}.wav'
+              with wave.open(f'outputs/narration/{f}', 'wb') as w: v.synthesize_wav(s['narration'], w)
+              beats.append({'index': i, 'file': f, 'sha1': hashlib.sha1(s['narration'].encode()).hexdigest()})
+          json.dump({'engine': 'piper', 'beats': beats}, open('outputs/narration/manifest.json', 'w'))
+          PY
+          rc=$?; [ $rc -eq 0 ] || { python -m scripts.gh_note error setup smoke_err.txt; exit 1; }
+          python -m scripts.render_web_explainer --plan outputs/wn/plan.json --narration-dir outputs/narration --out outputs/wn/video.mp4 > r_out.txt 2> r_err.txt; rc=$?
+          python -m scripts.gh_note notice render r_out.txt
+          [ $rc -eq 0 ] || { python -m scripts.gh_note error render-error r_err.txt 3500; exit 1; }
+          python -m scripts.gh_note notice report outputs/wn/video_work/render_report.json 3000
+          mkdir -p pack && cp outputs/wn/video.mp4 outputs/wn/video_work/render_report.json pack/
+      - uses: ./.github/actions/encrypted-pack
+        with:
+          dir: pack
+          pubkey_b64: ${{ inputs.delivery_pubkey }}
+          token: ${{ github.token }}
+          label: web explainer smoke
