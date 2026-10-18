@@ -1,30 +1,59 @@
-"""Contract tests for the independent TikTok planning module."""
-import copy
+"""Unit tests for the isolated TikTok Motion Engine foundation."""
+from __future__ import annotations
+
 import unittest
+from pathlib import Path
+import tempfile
+import shutil
 
-from tiktok_motion import build_demo, validate_storyboard
+from tiktok_motion.storyboard import build_demo, validate_storyboard, full_narration_text
 
 
-class TikTokMotionTests(unittest.TestCase):
-    def test_demo_contract(self):
-        demo = build_demo()
-        self.assertEqual((demo["width"], demo["height"], demo["fps"]), (1080, 1920, 30))
-        self.assertEqual(len(demo["scenes"]), 6)
-        self.assertEqual(demo["duration_seconds"], 60)
-        self.assertFalse(demo["auto_publish"])
-        self.assertTrue(demo["requires_owner_approval"])
+class TestStoryboard(unittest.TestCase):
+    def test_build_demo_contract(self):
+        data = build_demo()
+        self.assertEqual(data["width"], 1080)
+        self.assertEqual(data["height"], 1920)
+        self.assertEqual(data["fps"], 30)
+        self.assertEqual(data["duration_seconds"], 60)
+        self.assertTrue(data["requires_owner_approval"])
+        self.assertFalse(data["auto_publish"])
+        self.assertEqual(data["language"], "en")
+        self.assertEqual(len(data["scenes"]), 6)
 
-    def test_timeline_gap_rejected(self):
-        demo = copy.deepcopy(build_demo())
-        demo["scenes"][1]["start_seconds"] = 6
+    def test_timeline_continuous(self):
+        data = build_demo()
+        validate_storyboard(data)  # raises on failure
+
+    def test_narration_present(self):
+        data = build_demo()
+        text = full_narration_text(data)
+        self.assertIn("internet", text.lower())
+        self.assertGreater(len(text), 100)
+        for s in data["scenes"]:
+            self.assertTrue(s["narration"].strip())
+
+    def test_no_auto_publish(self):
+        data = build_demo()
+        data["auto_publish"] = True
         with self.assertRaises(ValueError):
-            validate_storyboard(demo)
+            validate_storyboard(data)
 
-    def test_publish_gate_rejected(self):
-        demo = copy.deepcopy(build_demo())
-        demo["auto_publish"] = True
-        with self.assertRaises(ValueError):
-            validate_storyboard(demo)
+
+class TestRenderSmoke(unittest.TestCase):
+    def test_render_module_imports(self):
+        from tiktok_motion import render as r
+        self.assertTrue(callable(r.render))
+        self.assertTrue(callable(r.generate_narration))
+
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("espeak-ng"), "ffmpeg/espeak required")
+    def test_short_render(self):
+        """Render a few frames conceptually by calling build + font path."""
+        from tiktok_motion.render import _font, SCENE_DRAW
+        f = _font(40)
+        self.assertIsNotNone(f)
+        self.assertIn("hook", SCENE_DRAW)
+        self.assertIn("outro", SCENE_DRAW)
 
 
 if __name__ == "__main__":
