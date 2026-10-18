@@ -113,16 +113,19 @@ def main() -> None:
     extra = []
     for u in src['pages']:
         for href, label in json.loads(texts.get(u + '#links', '[]')):
-            if len(label) > 12 and href not in src['pages'] and href not in extra and href.count('/') > 3:
-                extra.append(href)
-    texts.update(page_texts(extra[:12]))
+            path = urlparse(href).path
+            if (len(label) > 20 and href not in src['pages'] and href not in extra and href.count('/') > 3
+                    and re.search(r'/(news|blog|articles?|resources|release|changelog|product)', path)
+                    and not re.search(r'/(collections|tag|category|careers|legal|privacy|terms)', path)):
+                extra.append(href.split('#')[0])
+    texts.update(page_texts(extra[:16]))
     usable = {u: t for u, t in texts.items() if '#' not in u and len(t) > 500}
     corpus = '\n\n'.join(f'=== PAGE {u} ===\n{t[:12000]}' for u, t in usable.items())
     prompt = f"""You write a factual YouTube script for the channel LogicScript: "What's new in {src['name']}"{(' since ' + a.since) if a.since else ''}.
 Use ONLY the official {src['company']} pages below. Never add facts from memory. Prefer the newest updates.
 Return JSON: {{"video_title": str, "segments": [{{"title": str, "narration": str, "url": str, "quotes": [str]}}]}}
 Rules:
-- 9 to 12 segments, total narration about 1,300 words, plain spoken English, no lists, no markdown.
+- 12 to 14 segments of 100 to 130 words each (about 1,400 words in total), plain spoken English, no lists, no markdown. Explain each update: what it does, who gets it, how to use it, when the page says so.
 - Segment 1 is a hook (what changed and why it matters); the last segment says which features to try first and asks viewers to subscribe.
 - "url" must be one of the page URLs below (the page the segment is about). "quotes" = 1-3 short phrases (4-15 words)
   COPIED EXACTLY, character for character, from that page; they prove the segment's facts.

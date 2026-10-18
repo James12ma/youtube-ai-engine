@@ -9,6 +9,9 @@ on:
       since:
         description: 'Period the video covers, e.g. "August 2026"'
         default: 'August 2026'
+      fresh_plan:
+        description: '1 = write a new script; 0 = reuse the last verified script for this AI (and its cached narration)'
+        default: '0'
       delivery_pubkey:
         description: Optional base64 RSA public key for the full-quality encrypted pack
         default: ''
@@ -45,7 +48,16 @@ jobs:
           python -c "import playwright" 2>/dev/null || step python -m pip install playwright
           step python -m playwright install --with-deps chromium
           step python -c "import nltk,sys; nltk.download('punkt_tab', download_dir=sys.argv[1])" "$RUNNER_TEMP/nltk"
+      - name: Last verified plan for this AI
+        id: plancache
+        if: inputs.fresh_plan != '1'
+        uses: actions/cache/restore@v4
+        with:
+          path: outputs/wn
+          key: whats-new-plan-${{ inputs.ai }}-${{ github.run_id }}
+          restore-keys: whats-new-plan-${{ inputs.ai }}-
       - name: Grounded plan from the official pages (free model)
+        if: steps.plancache.outputs.cache-matched-key == ''
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -59,6 +71,11 @@ jobs:
           python -m scripts.gh_note notice plan plan_summary.json
           [ -f outputs/wn/grounding_report.json ] && python -m scripts.gh_note notice grounding outputs/wn/grounding_report.json 3800
           [ $rc -eq 0 ] || { python -m scripts.gh_note error plan-error plan_err.txt 3000; exit 1; }
+      - name: Keep the verified plan (reruns reuse it and its narration)
+        uses: actions/cache/save@v4
+        with:
+          path: outputs/wn
+          key: whats-new-plan-${{ inputs.ai }}-${{ github.run_id }}
       - name: Narrate (owner-approved shared voice, English)
         uses: ./.github/actions/alan7-voice
         with:
