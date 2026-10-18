@@ -12,6 +12,9 @@ on:
       fresh_plan:
         description: '1 = write a new script; 0 = reuse the last verified script for this AI (and its cached narration)'
         default: '0'
+      plan_only:
+        description: '1 = only write and check the script (shown in the run notes); the next run with fresh_plan=0 reuses it'
+        default: '0'
       delivery_pubkey:
         description: Optional base64 RSA public key for the full-quality encrypted pack
         default: ''
@@ -77,19 +80,37 @@ jobs:
         with:
           path: outputs/wn
           key: whats-new-plan-${{ inputs.ai }}-${{ github.run_id }}
+      - name: Show the verified script
+        if: inputs.plan_only == '1'
+        run: |
+          python - <<'PY'
+          import json
+          p = json.load(open('outputs/wn/plan.json'))
+          text = '\n'.join(f"[{i}] {s['title']} ({s['url']}): {s['narration']}" for i, s in enumerate(p['segments']))
+          g = json.load(open('outputs/wn/grounding_report.json'))
+          cuts = '\n'.join(f"CUT [{s['title']}] {c['sentence']} {c['facts_not_near_quote']} e={c['entail']}" for s in p['segments'] for c in s.get('cut_sentences', []))
+          drops = '\n'.join(f"DROP [{d['title']}] {d['reason']}" for d in g['segments_dropped'])
+          esc = lambda t: t.replace('%', '%25').replace('\r', ' ').replace('\n', '%0A')
+          for name, body in (('script', text), ('cut', cuts), ('dropped', drops)):
+              for k in range(0, min(len(body), 3 * 3800), 3800):
+                  print(f'::notice title={name}-{k // 3800}::{esc(body[k:k + 3800])}')
+          PY
       - name: Narrate (owner-approved shared voice, English)
+        if: inputs.plan_only != '1'
         uses: ./.github/actions/alan7-voice
         with:
           texts: outputs/wn/narration_texts.json
           language: en
           out: outputs/narration
       - name: Record the official pages and edit
+        if: inputs.plan_only != '1'
         run: |
           set +e
           python -m scripts.render_web_explainer --plan outputs/wn/plan.json --narration-dir outputs/narration --out outputs/wn/video.mp4 > render_out.txt 2> render_err.txt; rc=$?
           python -m scripts.gh_note notice render render_out.txt
           [ $rc -eq 0 ] || { python -m scripts.gh_note error render-error render_err.txt 3500; exit 1; }
       - name: QA and YouTube package
+        if: inputs.plan_only != '1'
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -109,6 +130,7 @@ jobs:
           ffmpeg -y -hide_banner -loglevel error -i outputs/wn/video.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -b:v ${vb}k -maxrate ${vb}k -bufsize $((vb*2))k -c:a aac -b:a 96k -movflags +faststart outputs/wn/telegram.mp4
           ls -la outputs/wn
       - name: Send to the owner on Telegram
+        if: inputs.plan_only != '1'
         env:
           TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
@@ -119,7 +141,7 @@ jobs:
           echo "::notice title=telegram video::HTTP $code"
           curl -s -o /dev/null -F chat_id="$OWNER" -F caption="Tit, deskripsyon, chapit ak sous pou YouTube" -F document=@outputs/wn/YouTube_package.txt "https://api.telegram.org/bot$TG/sendDocument"
       - name: Full-quality encrypted pack
-        if: inputs.delivery_pubkey != ''
+        if: inputs.delivery_pubkey != '' && inputs.plan_only != '1'
         uses: ./.github/actions/encrypted-pack
         with:
           dir: outputs/wn

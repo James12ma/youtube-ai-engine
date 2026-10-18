@@ -77,9 +77,10 @@ def record_segments(plan: dict, durations: list[float], work: Path) -> list[dict
         for i, (seg, d) in enumerate(zip(plan['segments'], durations)):
             vdir = work / f'rec_{i:02d}'
             vdir.mkdir(parents=True, exist_ok=True)
-            # 1280x720 page recorded at 1920x1080 = text 1.5x larger, readable on a phone
+            # a 1280x720 page recorded at 1280x720 and scaled to 1920x1080 = text 1.5x larger, readable on a phone
+            # (recording at a size larger than the viewport leaves the page in a corner on a grey canvas)
             ctx = b.new_context(viewport={'width': 1280, 'height': 720}, record_video_dir=str(vdir),
-                                record_video_size={'width': W, 'height': H}, locale='en-US', device_scale_factor=1)
+                                record_video_size={'width': 1280, 'height': 720}, locale='en-US', device_scale_factor=1)
             t0 = time.time()
             page = ctx.new_page()
             ok, err = False, ''
@@ -95,8 +96,9 @@ def record_segments(plan: dict, durations: list[float], work: Path) -> list[dict
                 page.wait_for_timeout(1500)          # smooth scroll settles
                 t_ready = time.time() - t0
                 steps = max(1, int(d))
-                for _ in range(steps):               # slow drift down, like a reader
-                    page.mouse.wheel(0, 12)
+                px = max(1, min(12, 160 // steps))   # slow drift, at most ~160 px so the highlight stays on screen
+                for _ in range(steps):
+                    page.mouse.wheel(0, px)
                     page.wait_for_timeout(1000)
                 page.wait_for_timeout(600)
             except Exception as exc:
@@ -108,7 +110,7 @@ def record_segments(plan: dict, durations: list[float], work: Path) -> list[dict
             clip = work / f'seg_{i:02d}.mp4'
             label = f"{i + 1}/{len(plan['segments'])} · {seg['title']}"
             src = 'Source: ' + (urlparse(seg['url']).hostname or '')
-            vf = (f"fps={FPS},scale={W}:{H},"
+            vf = (f"fps={FPS},scale={W}:{H}:flags=lanczos,"
                   f"drawbox=x=0:y=0:w=iw:h=86:color=black@0.62:t=fill,"
                   f"drawtext=fontfile={FONT_B}:text='{esc(label)}':x=40:y=24:fontsize=38:fontcolor=white,"
                   f"drawtext=fontfile={FONT}:text='{esc(src)}':x=w-tw-40:y=30:fontsize=30:fontcolor=0xFFD640")

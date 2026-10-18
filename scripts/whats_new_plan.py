@@ -104,19 +104,107 @@ def ask_model(prompt: str, small_prompt: str) -> Plan:
     raise SystemExit('no free model produced a valid plan: ' + ' | '.join(errors))
 
 
-def ground(plan: Plan, texts: dict[str, str]) -> tuple[list[dict], list[dict]]:
+MONTHS = ('january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october',
+          'november', 'december')
+STOP = set('''the a an and or but of to in on for with by at from as is are was were be been it its this that these those
+you your they them their we our can will now new also more most just into than then so not no all any each which who what
+when where how about over after before while using use used lets let make makes made gives give get gets like only there
+here have has had do does did one'''.split())
+
+
+def _sentences(t: str) -> list[str]:
+    return [x.strip() for x in re.split(r'(?<=[.!?])\s+', t.strip()) if x.strip()]
+
+
+def _facts(t: str) -> set[str]:
+    """Numbers (digits or spelled) and month names: these must be on the page next to the quoted text."""
+    n = norm(t)
+    return set(NUM.findall(n)) | {w for w in re.findall(r"[a-z]+", n) if w in SPELLED or w in MONTHS}
+
+
+def _words(t: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z][a-z0-9]+", norm(t)) if len(w) >= 4 and w not in STOP}
+
+
+class Entailment:
+    """Does the official page support a sentence? A small free NLI model (runs on the CPU, no API).
+    Premises are the page passages that share the most words with the sentence."""
+    MODEL = 'cross-encoder/nli-deberta-v3-base'
+
+    def __init__(self):
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        self.torch = torch
+        self.tok = AutoTokenizer.from_pretrained(self.MODEL)
+        self.model = AutoModelForSequenceClassification.from_pretrained(self.MODEL).eval()
+        labels = {v.lower(): int(k) for k, v in self.model.config.id2label.items()}
+        self.ent, self.con = labels['entailment'], labels['contradiction']
+
+    def passages(self, page_raw: str, size: int = 3) -> list[str]:
+        sents = [x for x in re.split(r'(?<=[.!?])\s+|\n+', page_raw) if len(x.split()) >= 3]
+        return [' '.join(sents[i:i + size]) for i in range(0, len(sents), max(1, size - 1))]
+
+    def score(self, sentence: str, passages: list[str], top: int = 4) -> tuple[float, float]:
+        ws = _words(sentence)
+        ranked = sorted(passages, key=lambda p: -len(ws & _words(p)))[:top]
+        if not ranked:
+            return 0.0, 0.0
+        enc = self.tok(ranked, [sentence] * len(ranked), truncation=True, max_length=320, padding=True, return_tensors='pt')
+        with self.torch.no_grad():
+            pr = self.model(**enc).logits.softmax(-1)
+        return float(pr[:, self.ent].max()), float(pr[:, self.con].max())
+
+
+def ground(plan: Plan, texts: dict[str, str], nli: 'Entailment | None' = None, min_entail: float = 0.5) -> tuple[list[dict], list[dict]]:
+    """No generative model involved. A segment is kept when:
+    - at least one quote is VERBATIM on its page;
+    - every number, spelled number and month it says appears on the page near a verified quote (+-600 chars:
+      on release-notes pages the date heads the entry);
+    - each sentence is ENTAILED by a passage of the page (NLI model). Unsupported sentences are cut, never
+      rewritten; the segment survives with >= 3 sentences and >= 45 words."""
     kept, dropped = [], []
+    cache: dict[str, list[str]] = {}
     for s in plan.segments:
-        page = norm(texts.get(s.url, ''))
+        raw = texts.get(s.url, '')
+        page = norm(raw)
         good = [q for q in s.quotes if len(q.split()) >= 3 and norm(q) in page]
-        nums_spoken = set(NUM.findall(s.narration))
-        nums_quoted = set(NUM.findall(' '.join(good)))
-        why = ('page not loaded' if not page else
-               'no verbatim quote on the page' if not good else
-               f'numbers not in quotes: {sorted(nums_spoken - nums_quoted)}' if nums_spoken - nums_quoted else '')
         row = {**s.model_dump(), 'valid_quotes': good}
-        (dropped if why else kept).append({**row, 'reason': why} if why else row)
+        if not page or not good:
+            dropped.append({**row, 'reason': 'page not loaded' if not page else 'no verbatim quote on the page'})
+            continue
+        near = ' '.join(page[max(0, i - 600):i + len(norm(q)) + 600] for q in good for i in [page.find(norm(q))])
+        near_facts = _facts(near)
+        if nli is not None and s.url not in cache:
+            cache[s.url] = nli.passages(unicodedata.normalize('NFKC', raw))
+        keep, cut = [], []
+        for sent in _sentences(s.narration):
+            missing = sorted(_facts(sent) - near_facts)
+            ent, con = nli.score(sent, cache[s.url]) if nli is not None else (1.0, 0.0)
+            if missing or ent < min_entail or con > 0.5:
+                cut.append({'sentence': sent, 'facts_not_near_quote': missing, 'entail': round(ent, 2), 'contradict': round(con, 2)})
+            else:
+                keep.append(sent)
+        text = ' '.join(keep)
+        row.update(narration=text, cut_sentences=cut)
+        if len(keep) >= 3 and len(text.split()) >= 45:
+            kept.append(row)
+        else:
+            dropped.append({**row, 'narration_original': s.narration,
+                            'reason': f'only {len(keep)} supported sentences left after cutting {len(cut)}'})
     return kept, dropped
+
+
+def hook_and_close(name: str, company: str, kept: list[dict]) -> tuple[str, str]:
+    """Intro and outro written by code (no facts, only the titles that passed the gate)."""
+    titles = [k['title'] for k in kept]
+    show = ', '.join(titles[:3])
+    hook = (f"{name} keeps changing fast, so here is what is new, taken straight from {company}'s official pages. "
+            f"In the next few minutes we cover {len(titles)} updates, starting with {show}. "
+            "Every fact you hear is shown on the real page while we talk, and the links are in the description.")
+    close = (f"That was what is new in {name}. If one of these updates fits your work, open the official page linked "
+             "in the description and try it today. Tell me in the comments which update you want explained in detail, "
+             "and subscribe to LogicScript for the next one.")
+    return hook, close
 
 
 def main() -> None:
@@ -144,41 +232,61 @@ def main() -> None:
 Use ONLY the official {src['company']} pages below. Never add facts from memory. Prefer the newest updates.
 Return JSON: {{"video_title": str, "segments": [{{"title": str, "narration": str, "url": str, "quotes": [str]}}]}}
 Rules:
-- In total the video has 12 to 14 segments of 100 to 130 words each (about 1,400 words), plain spoken English, no lists, no markdown. Explain each update: what it does, who gets it, how to use it, when the page says so.
-- Segment 1 is a hook (what changed and why it matters); the last segment says which features to try first and asks viewers to subscribe.
+- Each segment explains ONE update in 90 to 120 words of plain spoken English (no lists, no markdown): what it does, who gets it,
+  how to turn it on or use it - ONLY as far as the page says. For details, use the update's own help article when it is in the pages.
+- Write NO intro and NO closing (they are added separately). Every sentence must restate something the page says; never add
+  examples, benefits, use cases or steps the page does not state. If the page says little, write less.
 - "url" must be one of the page URLs below (the page the segment is about). "quotes" = 1-3 short phrases (4-15 words)
   COPIED EXACTLY, character for character, from that page; they prove the segment's facts.
-- Every date, number, plan name and price you say must appear inside your quotes.
+- Every date, month, number (also spelled out), plan name and price you say must appear on that page next to your quotes.
 - Say which plans get a feature when the page says it. Do not invent benefits, comparisons or opinions about competitors.
 - Do not imitate any person; do not claim you used the product.
 
 CORPUS"""
-    # the adapters cap output at 4,096 tokens, so the ~1,400-word script is written in four parts
-    def part(extra: str) -> Plan:
+    # the adapters cap output at 4,096 tokens: ask for 3-4 updates at a time until ~1,250 verified words (max 7 asks)
+    others = [u for u in usable if u != src['pages'][0]]
+    def part(extra: str, k: int) -> Plan:
         p = prompt + ('\n\n' + extra + ' Return EXACTLY the number of segments asked, never more.')
-        return ask_model(p.replace('CORPUS', corpus[:150000]), p.replace('CORPUS', corpus[:18000]))
-    parts = ['WRITE ONLY PART 1 of 4: exactly 4 segments - the hook, then the 3 newest, biggest updates.',
-             'WRITE ONLY PART 2 of 4: exactly 3 segments about OTHER updates. No hook, no closing.',
-             'WRITE ONLY PART 3 of 4: exactly 3 segments about OTHER updates. No hook, no closing.',
-             'WRITE ONLY PART 4 of 4: exactly 3 segments about OTHER updates, the last one being the closing segment. No hook.']
-    segs, title = [], ''
-    for i, extra in enumerate(parts):
-        if segs:
-            extra += ' Already covered (do NOT repeat these updates): ' + '; '.join(x.title for x in segs)
-        if i:
+        # Groq's free tier only takes a short request: the main release notes + a rotating slice of the other pages
+        small = f"=== PAGE {src['pages'][0]} ===\n{usable.get(src['pages'][0], '')[:9000]}\n\n" + '\n\n'.join(
+            f'=== PAGE {u} ===\n{usable[u][:3000]}' for u in (others[k * 3 % max(1, len(others)):] + others)[:3])
+        return ask_model(p.replace('CORPUS', corpus[:150000]), p.replace('CORPUS', small))
+    kept, dropped, title = [], [], ''
+    nli = Entailment()
+    for k in range(7):
+        if sum(len(x['narration'].split()) for x in kept) >= 1250:
+            break
+        extra = f'WRITE exactly {4 if k == 0 else 3} segments, each about a DIFFERENT update (newest first).'
+        seen = [x['title'] for x in kept + dropped]
+        if seen:
+            extra += ' Already covered or rejected - do NOT write about these again: ' + '; '.join(seen)
+        if k:
             time.sleep(30)   # stay under the free tiers' tokens-per-minute limits
-        got = part(extra)
+        try:
+            got = part(extra, k)
+        except SystemExit as exc:
+            if kept:
+                print(f'stopping early: {exc}', file=sys.stderr)
+                break
+            raise
         title = title or got.video_title
-        segs += got.segments[:4 if i == 0 else 3]
-    plan = Plan(video_title=title, segments=segs)
-    kept, dropped = ground(plan, usable)
+        g_kept, g_dropped = ground(Plan(video_title=got.video_title, segments=got.segments[:4]), usable, nli)
+        kept += g_kept
+        dropped += g_dropped
+    hook, close = hook_and_close(src['name'], src['company'], kept)
+    first_url = kept[0]['url'] if kept else src['pages'][0]
+    kept = ([{'title': 'What changed', 'narration': hook, 'url': first_url, 'quotes': [], 'valid_quotes': kept[0]['valid_quotes'] if kept else []}]
+            + kept + [{'title': 'What to try first', 'narration': close, 'url': first_url, 'quotes': [],
+                       'valid_quotes': kept[0]['valid_quotes'] if kept else []}])
+    import datetime
+    video_title = f"What's new in {src['name']} - {datetime.date.today():%B %Y}"
     report = {'ai': a.ai, 'pages_loaded': sorted(usable), 'page_errors': {u: e for u, e in texts.items() if u.endswith('#error')},
-              'segments_kept': len(kept), 'segments_dropped': dropped,
+              'segments_kept': len(kept), 'model_title': title, 'segments_dropped': dropped,
               'words_kept': sum(len(s['narration'].split()) for s in kept)}
     (a.out / 'grounding_report.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
-    if len(kept) < 4:
+    if len(kept) < 6:   # hook + >= 4 verified updates + closing
         raise SystemExit('grounding gate: fewer than 4 verified segments — no video (see grounding_report.json)')
-    out = {'ai': a.ai, 'title': plan.video_title, 'language': 'en', 'segments': kept}
+    out = {'ai': a.ai, 'title': video_title, 'language': 'en', 'segments': kept}
     (a.out / 'plan.json').write_text(json.dumps(out, indent=1, ensure_ascii=False), encoding='utf-8')
     (a.out / 'narration_texts.json').write_text(json.dumps([s['narration'] for s in kept], ensure_ascii=False), encoding='utf-8')
     print(json.dumps({k: v for k, v in report.items() if k != 'segments_dropped'} | {'dropped': len(dropped)}, ensure_ascii=False))
