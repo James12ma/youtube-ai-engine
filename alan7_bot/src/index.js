@@ -10,10 +10,13 @@
 // - Jobs whose dispatch fails stay queued and are retried by the cron with
 //   backoff. Nothing is published anywhere.
 
+import { parseVideoRequest, routeVideoRequest } from './video_director.js';
+
 const TG = 'https://api.telegram.org';
 const GH = 'https://api.github.com';
 const REPO = 'James12ma/youtube-ai-engine';
 const JOB_WORKFLOW = 'alan7-job.yml';
+const VIDEO_WORKFLOW = 'alan7-video.yml';
 const MAX_ATTEMPTS = 12;
 
 // Job kinds the bot can run today. Anything else is refused with an honest message.
@@ -27,6 +30,8 @@ const HELP = [
   '/status — eta bot la, GitHub ak file atant lan',
   '/create test — lanse yon tès sistèm (san GPU)',
   '/create lena [0-4] — jenere yon plan IA LENA 3 s sou Kaggle (~1 è); videyo a rive isit la',
+  '/video sijè | lang=en | duration=60 | style=motion | mode=preview — mande yon nouvo videyo',
+  '/topics — wè sa motè a ka pwodwi kounye a',
   '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
   '/queue — 10 dènye travay yo',
   '/cancel &lt;id&gt; — anile yon travay',
@@ -102,8 +107,20 @@ export async function dispatchJob(env, job) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 0, detail: 'GITHUB_TOKEN pa konfigire' };
   try {
     const wf = workflowFor(job.kind);
-    const inputs = wf === JOB_WORKFLOW ? { job_id: job.id, kind: job.kind, arg: job.arg || '' }
-      : { job_id: job.id, shot: /^[0-4]$/.test((job.arg || '').trim()) ? job.arg.trim() : '' };
+    let inputs;
+    if (job.kind === 'video') {
+      // Even if D1 data is changed, never send an unsupported topic to the runner.
+      if (env.VIDEO_RUNNER_ENABLED !== '1') return { ok: false, status: 0, detail: 'video runner disabled (zero-cost approval pending)' };
+      let requested;
+      try { requested = routeVideoRequest(parseVideoRequest(JSON.parse(job.arg).request)); }
+      catch { return { ok: false, status: 0, detail: 'invalid video request' }; }
+      if (!requested.supported_now) return { ok: false, status: 0, detail: 'unsupported video request' };
+      inputs = { job_id: job.id, topic_id: requested.topic_id, mode: requested.mode,
+        language: requested.language, style: requested.style };
+    } else {
+      inputs = wf === JOB_WORKFLOW ? { job_id: job.id, kind: job.kind, arg: job.arg || '' }
+        : { job_id: job.id, shot: /^[0-4]$/.test((job.arg || '').trim()) ? job.arg.trim() : '' };
+    }
     const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${wf}/dispatches`, {
       method: 'POST',
       headers: { ...ghHeaders(env), 'content-type': 'application/json' },
@@ -116,7 +133,7 @@ export async function dispatchJob(env, job) {
   }
 }
 
-const workflowFor = (kind) => (KINDS[kind] && KINDS[kind].workflow) || JOB_WORKFLOW;
+const workflowFor = (kind) => kind === 'video' ? VIDEO_WORKFLOW : (KINDS[kind] && KINDS[kind].workflow) || JOB_WORKFLOW;
 
 // Find the run started for a job (run-name "alan7 <job_id>") and return its state.
 export async function findRun(env, job) {
@@ -193,6 +210,44 @@ async function cmdCreate(env, arg) {
     'Li rete nan file atant; m ap eseye ankò otomatikman chak 5 minit.';
 }
 
+async function cmdVideo(env, arg) {
+  let request;
+  try { request = routeVideoRequest(parseVideoRequest(arg)); }
+  catch (error) { return '⚠️ ' + esc(error.message); }
+  const id = newId();
+  const active = request.supported_now && env.VIDEO_RUNNER_ENABLED === '1' && Boolean(env.GITHUB_TOKEN);
+  const state = active ? 'queued' : 'awaiting_approval';
+  const storedArg = JSON.stringify({ request: arg.trim(), route: request });
+  await env.DB.prepare('INSERT INTO jobs(id, kind, arg, state, attempts, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 0, ?5, ?5)')
+    .bind(id, 'video', storedArg.slice(0, 1800), state, now()).run();
+  await logEvent(env, id, 'video_requested', request.status);
+  if (!request.supported_now) {
+    return '🗂 Demann <code>' + id + '</code> anrejistre. Sijè: <b>' + esc(request.topic) + '</b>.\\n'
+      + 'Motè sijere: ' + esc(request.suggested_engine) + '.\\n'
+      + '⚠️ Poko gen motè valide pou konbinezon sa a. AI Director Gemini poko konekte. '
+      + 'Pa gen okenn videyo ki lanse, ni okenn lajan ki depanse.';
+  }
+  if (!active) {
+    return '🗂 Demann <code>' + id + '</code> anrejistre. Motè a sipòte sijè sa a.\\n'
+      + '⏸ Rannman otomatik an poz: GitHub Actions / zero-cost runner poko otorize oswa konekte. '
+      + 'Pa gen okenn videyo ki lanse. Konsève id travay la.';
+  }
+  const d = await dispatchJob(env, { id, kind: 'video', arg: storedArg });
+  await setMeta(env, 'github_last', d.ok ? 'OK' : d.detail);
+  if (d.ok) {
+    await env.DB.prepare("UPDATE jobs SET state = 'running', attempts = 1, updated_at = ?2 WHERE id = ?1").bind(id, now()).run();
+    await logEvent(env, id, 'dispatched', 'video');
+    return '🎬 Travay <code>' + id + '</code> voye bay motè GitHub. '
+      + (request.mode === 'preview' ? 'Preview 4 segonn.' : 'Videyo 60 segonn.')
+      + ' Mp4 prive sèlman; pa gen piblikasyon.';
+  }
+  await env.DB.prepare('UPDATE jobs SET state = ?2, attempts = 1, last_error = ?3, next_try_at = ?4, updated_at = ?5 WHERE id = ?1')
+    .bind(id, 'queued', d.detail, now() + 300, now()).run();
+  await logEvent(env, id, 'dispatch_failed', d.detail);
+  return '🕒 Demann <code>' + id + '</code> anrejistre, men GitHub pa disponib (' + esc(d.detail)
+    + '). Li rete nan file atant; m ap reeseye san depans lè runner gratis la aktive.';
+}
+
 async function cmdQueue(env) {
   const rows = await env.DB.prepare('SELECT id, kind, state, attempts, created_at FROM jobs ORDER BY created_at DESC LIMIT 10').all();
   const list = rows.results || [];
@@ -233,6 +288,12 @@ export async function handleCommand(env, text) {
       return cmdCreate(env, arg);
     case 'queue':
       return cmdQueue(env);
+    case 'topics':
+      return '🎬 Kounye a, motè valide: <code>job-interviews</code> (en, 60s, motion; preview/full). '
+        + 'Ou kapab soumèt lòt sijè pou planifikasyon, men yo pap rann san yon motè teste. '
+        + 'Gemini AI Director poko konekte.';
+    case 'video':
+      return cmdVideo(env, arg);
     case 'cancel':
       return cmdCancel(env, arg);
     default:
