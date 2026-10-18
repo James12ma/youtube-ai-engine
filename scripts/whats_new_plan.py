@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import time
 import unicodedata
 from pathlib import Path
 from urllib.parse import urlparse
@@ -71,8 +72,8 @@ def page_texts(urls: list[str]) -> dict[str, str]:
 
 # free models tried in order (OpenRouter list checked 2026-10-18 with scripts/llm_probe.py); the small
 # default code model rambles past the 4,096-token cap on long scripts, so instruction models come first
-CANDIDATES = [('openrouter', 'google/gemma-4-31b-it:free'), ('openrouter', 'nvidia/nemotron-3-super-120b-a12b:free'),
-              ('groq', None), ('gemini', None), ('openrouter', None)]
+CANDIDATES = [('groq', None), ('openrouter', 'google/gemma-4-31b-it:free'), ('openrouter', 'nvidia/nemotron-3-super-120b-a12b:free'),
+              ('gemini', None), ('openrouter', None)]
 
 
 def ask_model(prompt: str, small_prompt: str) -> Plan:
@@ -83,7 +84,9 @@ def ask_model(prompt: str, small_prompt: str) -> Plan:
     kinds = {'gemini': (GeminiAdapter, GEMINI_CONFIG, 'GEMINI_API_KEY'), 'groq': (GroqAdapter, GROQ_CONFIG, 'GROQ_API_KEY'),
              'openrouter': (OpenRouterAdapter, OPENROUTER_CONFIG, 'OPENROUTER_API_KEY')}
     errors = []
-    for kind, model in CANDIDATES:
+    for kind, model in [c for _ in range(3) for c in CANDIDATES]:   # 3 rounds: free tiers often answer 400/429 for a minute
+        if errors and kind == CANDIDATES[0][0] and model == CANDIDATES[0][1]:
+            time.sleep(70)
         cls, cfg, key = kinds[kind]
         if not os.environ.get(key):
             continue
@@ -162,6 +165,8 @@ CORPUS"""
     for i, extra in enumerate(parts):
         if segs:
             extra += ' Already covered (do NOT repeat these updates): ' + '; '.join(x.title for x in segs)
+        if i:
+            time.sleep(30)   # stay under the free tiers' tokens-per-minute limits
         got = part(extra)
         title = title or got.video_title
         segs += got.segments[:4 if i == 0 else 3]
