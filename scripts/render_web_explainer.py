@@ -77,7 +77,8 @@ def record_segments(plan: dict, durations: list[float], work: Path) -> list[dict
         for i, (seg, d) in enumerate(zip(plan['segments'], durations)):
             vdir = work / f'rec_{i:02d}'
             vdir.mkdir(parents=True, exist_ok=True)
-            ctx = b.new_context(viewport={'width': W, 'height': H}, record_video_dir=str(vdir),
+            # 1280x720 page recorded at 1920x1080 = text 1.5x larger, readable on a phone
+            ctx = b.new_context(viewport={'width': 1280, 'height': 720}, record_video_dir=str(vdir),
                                 record_video_size={'width': W, 'height': H}, locale='en-US', device_scale_factor=1)
             t0 = time.time()
             page = ctx.new_page()
@@ -95,7 +96,7 @@ def record_segments(plan: dict, durations: list[float], work: Path) -> list[dict
                 t_ready = time.time() - t0
                 steps = max(1, int(d))
                 for _ in range(steps):               # slow drift down, like a reader
-                    page.mouse.wheel(0, 18)
+                    page.mouse.wheel(0, 12)
                     page.wait_for_timeout(1000)
                 page.wait_for_timeout(600)
             except Exception as exc:
