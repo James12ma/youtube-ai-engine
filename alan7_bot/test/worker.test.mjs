@@ -180,3 +180,47 @@ test('a video without a caption asks for the narration', async () => {
   });
   assert.match((await res.json()).text, /caption/);
 });
+
+
+test('/video creates a safe queued-for-approval career request, not a paid render', async () => {
+  const dispatchCount = calls.filter((c) => c.path.endsWith('/dispatches')).length;
+  const r = await say('/video 5 types of job interviews | lang=en | duration=60 | mode=preview');
+  assert.equal(r.status, 200);
+  assert.match(r.json.text, /anrejistre/);
+  assert.match(r.json.text, /an poz/);
+  const videoRows = (await jobs()).filter(j => j.kind === 'video');
+  assert.ok(videoRows.length >= 1);
+  const job = videoRows.at(-1);
+  assert.equal(job.state, 'awaiting_approval');
+  assert.equal(JSON.parse(job.arg).route.topic_id, 'job-interviews');
+  assert.equal(calls.filter((c) => c.path.endsWith('/dispatches')).length, dispatchCount);
+});
+
+test('unregistered subject is stored as a non-runnable director request', async () => {
+  const dispatchCount = calls.filter((c) => c.path.endsWith('/dispatches')).length;
+  const r = await say('/video Ce qui se passe en France | lang=fr | style=news | mode=preview');
+  assert.equal(r.status, 200);
+  assert.match(r.json.text, /Gemini poko konekte/);
+  const videoRows=(await jobs()).filter(j => j.kind === 'video');
+  const job=videoRows.at(-1);
+  assert.equal(job.state,'awaiting_approval');
+  const route=JSON.parse(job.arg).route;
+  assert.equal(route.category,'news');
+  assert.equal(route.supported_now,false);
+  assert.equal(calls.filter((c) => c.path.endsWith('/dispatches')).length, dispatchCount);
+});
+
+test('topics list is truthful and invalid video arguments create no job', async () => {
+  assert.match((await say('/topics')).json.text, /job-interviews/);
+  const beforeCount=(await jobs()).length;
+  const reply=await say('/video interview | duration=99999');
+  assert.match(reply.json.text, /ant 10 ak 600/);
+  assert.equal((await jobs()).length,beforeCount);
+});
+
+test('only the owner can create a new video request', async () => {
+  const beforeCount=(await jobs()).length;
+  const r=await say('/video job-interviews', {from: '999'});
+  assert.equal(r.raw,'ok');
+  assert.equal((await jobs()).length,beforeCount);
+});
