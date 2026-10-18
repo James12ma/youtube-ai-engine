@@ -38,3 +38,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Fonts bundled with the premium motion prototype
+
+`tiktok_motion/premium/remotion/public/fonts/` contains unmodified WOFF2 files from
+[@fontsource/inter-tight](https://fontsource.org/fonts/inter-tight) (Inter Tight, © The Inter Project Authors) and
+[@fontsource/playfair-display](https://fontsource.org/fonts/playfair-display) (Playfair Display, © Claus Eggers Sørensen),
+both licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).
