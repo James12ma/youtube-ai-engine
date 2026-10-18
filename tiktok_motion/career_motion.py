@@ -63,6 +63,9 @@ def orb(im,x,y,size):
  sp=SPRITES[size];im.paste(sp,(int(x-size/2),int(y-size/2)),sp)
 def body(t):
  im=BG.copy();d=ImageDraw.Draw(im)
+ # Quiet moving grid cursor: background motion under the illustrated objects.
+ sweep_x=42+int((t*160)%590)
+ d.line((sweep_x,145,sweep_x,1180),fill='#dcded9',width=3)
  if t<8:
   common(d,t,0,'60 SECONDS. MORE CONFIDENCE.')
   tx(d,42,236,'5 TYPES OF',74);tx(d,42,325,'JOB',133);tx(d,42,475,'INTERVIEWS',62);tx(d,48,561,'explained.',70,RED,'i')
@@ -146,6 +149,9 @@ def body(t):
  dt=t-start
  if dt<.32:
   w=int(W*(1-e(dt/.32)));d.rectangle((0,0,w,H),fill=WHITE);d.rectangle((w-5,0,w,H),fill=RED)
+ # Animated editorial side marker prevents frozen stretches in explanatory shots.
+ marker_y=196+int((t*600)%770)
+ d.rounded_rectangle((19,marker_y,33,marker_y+74),radius=5,fill=RED)
  d.rectangle((0,H-9,int(W*t/DUR),H),fill=RED)
  return im
 
