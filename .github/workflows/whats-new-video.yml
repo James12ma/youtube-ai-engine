@@ -44,7 +44,7 @@ jobs:
           step python -m pip install -r requirements-narration.txt -r requirements.txt -r requirements-production.txt -r requirements-production-pro.txt
           python -c "import playwright" 2>/dev/null || step python -m pip install playwright
           step python -m playwright install --with-deps chromium
-          step python -c "import nltk,os; nltk.download('punkt_tab', download_dir=os.environ['NLTK_DATA'])"
+          step python -c "import nltk,sys; nltk.download('punkt_tab', download_dir=sys.argv[1])" "$RUNNER_TEMP/nltk"
       - name: Grounded plan from the official pages (free model)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
