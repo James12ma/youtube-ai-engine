@@ -55,9 +55,9 @@ jobs:
         run: |
           set -uo pipefail
           python -m scripts.whats_new_plan --ai "$AI" --since "$SINCE" --out outputs/wn > plan_summary.json 2> plan_err.txt; rc=$?
-          echo "::notice title=plan::$(head -c 3000 plan_summary.json)"
-          [ -f outputs/wn/grounding_report.json ] && echo "::notice title=grounding::$(python -c "import json;r=json.load(open('outputs/wn/grounding_report.json'));print(json.dumps({'kept':r['segments_kept'],'words':r['words_kept'],'dropped':[(d['title'],d['reason']) for d in r['segments_dropped']],'errors':r['page_errors']})[:3500])")"
-          [ $rc -eq 0 ] || { echo "::error title=plan::$(tail -c 2000 plan_err.txt | tr '\n' ' ')"; exit 1; }
+          python -m scripts.gh_note notice plan plan_summary.json
+          [ -f outputs/wn/grounding_report.json ] && python -m scripts.gh_note notice grounding outputs/wn/grounding_report.json 3800
+          [ $rc -eq 0 ] || { python -m scripts.gh_note error plan-error plan_err.txt 3000; exit 1; }
       - name: Narrate (owner-approved shared voice, English)
         uses: ./.github/actions/alan7-voice
         with:
