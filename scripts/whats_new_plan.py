@@ -68,7 +68,7 @@ def page_texts(urls: list[str]) -> dict[str, str]:
     return out
 
 
-def ask_model(prompt: str) -> Plan:
+def ask_model(prompt: str, small_prompt: str) -> Plan:
     from adapters import GeminiAdapter, GroqAdapter, OpenRouterAdapter
     from adapters.base import LLMRequest
     errors = []
@@ -76,9 +76,11 @@ def ask_model(prompt: str) -> Plan:
         if not os.environ.get(key):
             continue
         try:
+            # Groq's free tier rejects very long requests (HTTP 413): it gets the shorter corpus
+            text = small_prompt if cls is GroqAdapter else prompt
             with cls() as ad:
-                r = ad.complete(LLMRequest(messages=[{'role': 'user', 'content': prompt}], schema=Plan,
-                                           temperature=0.3, max_tokens=4096))
+                r = ad.complete(LLMRequest(messages=[{'role': 'user', 'content': text}], schema=Plan,
+                                           temperature=0.3, max_tokens=12000))   # ~1,400 words + quotes need > 4k tokens
             return r.parsed if getattr(r, 'parsed', None) else Plan.model_validate_json(r.text)
         except Exception as exc:
             errors.append(f'{cls.__name__}: {type(exc).__name__}: {str(exc)[:200]}')
@@ -133,8 +135,8 @@ Rules:
 - Say which plans get a feature when the page says it. Do not invent benefits, comparisons or opinions about competitors.
 - Do not imitate any person; do not claim you used the product.
 
-{corpus[:150000]}"""
-    plan = ask_model(prompt)
+CORPUS"""
+    plan = ask_model(prompt.replace('CORPUS', corpus[:150000]), prompt.replace('CORPUS', corpus[:45000]))
     kept, dropped = ground(plan, usable)
     report = {'ai': a.ai, 'pages_loaded': sorted(usable), 'page_errors': {u: e for u, e in texts.items() if u.endswith('#error')},
               'segments_kept': len(kept), 'segments_dropped': dropped,
