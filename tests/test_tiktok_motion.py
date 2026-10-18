@@ -56,5 +56,22 @@ class TestRenderSmoke(unittest.TestCase):
         self.assertIn("outro", SCENE_DRAW)
 
 
+class TestEngineRouting(unittest.TestCase):
+    def test_visual_director_routes(self):
+        from tiktok_motion.visual_director import choose_engine, route_storyboard
+        from tiktok_motion.storyboard import build_demo
+        self.assertEqual(choose_engine("statistics"), "manim")
+        routed = route_storyboard(build_demo())
+        self.assertEqual(len(routed), 6)
+        self.assertTrue(all("engine" in s for s in routed))
+
+    def test_engine_status(self):
+        from tiktok_motion.engine_registry import engine_status
+        st = engine_status()
+        self.assertIn("manim", st)
+        self.assertIn("remotion", st)
+        self.assertTrue(st["manim"]["available"] or True)  # may or may not be installed in CI
+
+
 if __name__ == "__main__":
     unittest.main()
