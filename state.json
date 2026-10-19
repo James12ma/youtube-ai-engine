@@ -61,6 +61,20 @@
       },
       "task_type": "pipeline.verify"
     },
+    "532ae181de8d027ce71a2258918396129645bd83d5229e055de6d337ead8c118": {
+      "completed_at": "2026-10-19T22:52:01.682266+00:00",
+      "result": {
+        "claim_ids": [
+          "1ae2b61bb2394e8a",
+          "c2d665d7b07a2e7d",
+          "6195082747115e20"
+        ],
+        "heading": "Creating a Table for Expenses",
+        "narration": "Begin by selecting the exact range where you want your expense information to appear. Open the Insert menu, choose Table, and verify that the highlighted area matches the columns you intend to use, such as Date, Description, and Amount. Confirm the selection to create a structured table that Excel recognizes automatically. If the worksheet already contains data, make sure the range encompasses all relevant columns to avoid missing entries. This step adds built\u2011in formatting that simplifies adding new rows and keeps the dataset organized. A well\u2011defined table also enables features like filtering and automatic totals later in the process. After creating the table, you can optionally add headers, apply a style, and start entering your expense details. To practice, select a few sample cells in a blank sheet, insert a table, and then type a few dummy expense entries to see how the formatting adjusts.",
+        "on_screen_text": "Select the range > Insert > Table > Confirm selection"
+      },
+      "task_type": "pipeline.script_section"
+    },
     "6763a91353c7fcd00e8fea8518fcf6acc0a7f3df0ef958e176d649715fb419f5": {
       "completed_at": "2026-10-19T22:51:51.061886+00:00",
       "result": {
