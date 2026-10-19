@@ -1,0 +1,50 @@
+{
+  "title": "3 Mistakes Before a Job Interview",
+  "language": "en",
+  "scenes": [
+    {
+      "narration": "Most people prepare for an interview by memorizing answers. But three small mistakes can make a good candidate look unprepared.",
+      "kind": "kinetic",
+      "on_screen": "3 INTERVIEW MISTAKES",
+      "duration_seconds": 12
+    },
+    {
+      "narration": "First, ignoring the job description. Highlight the skills they actually ask for, and match each one with a real achievement.",
+      "kind": "cards",
+      "on_screen": "01 | READ THE ROLE",
+      "items": [
+        "Job skills",
+        "Your evidence"
+      ],
+      "duration_seconds": 15
+    },
+    {
+      "narration": "Second, speaking without a structure. Try this: describe the situation, the action you took, and the result.",
+      "kind": "process",
+      "on_screen": "02 | SHOW YOUR IMPACT",
+      "items": [
+        "Situation",
+        "Action",
+        "Result"
+      ],
+      "duration_seconds": 15
+    },
+    {
+      "narration": "Third, forgetting your own questions. Ask what success looks like in the first ninety days. Show that you think beyond getting hired.",
+      "kind": "ui",
+      "on_screen": "03 | ASK SMART QUESTIONS",
+      "duration_seconds": 17
+    },
+    {
+      "narration": "Preparation is more than practice. Know the role, tell clear stories, and ask meaningful questions. Save this for your next interview.",
+      "kind": "timeline",
+      "on_screen": "PREPARE TO STAND OUT",
+      "items": [
+        "Know the role",
+        "Tell clear stories",
+        "Ask smart questions"
+      ],
+      "duration_seconds": 16
+    }
+  ]
+}
