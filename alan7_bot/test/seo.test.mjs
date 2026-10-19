@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { seoCommand } from '../src/seo.js';
+import { seoCommand } from '../src/index.js';
 
 test('no key: no network or fake SEO results', async () => {
   const old = globalThis.fetch;
