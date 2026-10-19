@@ -161,6 +161,19 @@
       },
       "task_type": "pipeline.research"
     },
+    "dc73c37e6f68d3243fb076e8daf76e43fb3d0a2824cc4709c86d38ff32038ed1": {
+      "completed_at": "2026-10-19T22:52:11.068737+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "6195082747115e20"
+        ],
+        "heading": "Adding Headers to Your Table",
+        "narration": "When the Create Table dialog appears, check the box labeled My table has headers if your data already includes column titles. If you skip this step, Excel for the web will generate default headers like Column1 and Column2, which may require renaming. Properly labeled headers improve readability and enable features like filtering and sorting. Use clear names such as Date, Description, Category, and Amount to keep your expense tracker intuitive. For example, after creating a table for your expenses, you can select the first row, type Date, and press Tab to rename the header. This ensures that any new rows added will automatically align with the existing column structure. A suggested exercise: create a simple expense table, add headers for Date, Description, Category, and Amount, then enter a few sample expenses to see how the headers facilitate sorting and filtering.",
+        "on_screen_text": "Check 'My table has headers' in the Create Table dialog."
+      },
+      "task_type": "pipeline.script_section"
+    },
     "e5ac4009fbc56bc15ab5d46c60134bd26bac8f5c91e8b5df3d1f1ff9dcf71d1d": {
       "completed_at": "2026-10-19T22:51:35.304134+00:00",
       "result": {
