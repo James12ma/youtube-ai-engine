@@ -34,11 +34,17 @@ def generate_draft(repo:Path,topic:str,urls:list[str],out_dir:Path,*,
     if not adapters:raise RuntimeError('No free-tier provider API key configured')
     try:
         router=Router(state,adapters)
-        pipeline=VerifiedContentPipeline(ContentPipeline(
-            state,router,HttpSourceFetcher(allowed_hosts=trusted_hosts),
-            thresholds=QualityThresholds(language=language,
-                packaging_style='growth' if mode=='documentary' else 'standard')),
-            VerificationGate(router))
+        fetcher = HttpSourceFetcher(allowed_hosts=trusted_hosts)
+        if language == 'en' and mode == 'tutorial':
+            # Keep the exact original LogicScript path and test doubles untouched.
+            engine = ContentPipeline(state, router, fetcher)
+        else:
+            engine = ContentPipeline(
+                state, router, fetcher,
+                thresholds=QualityThresholds(
+                    language=language,
+                    packaging_style='growth' if mode=='documentary' else 'standard'))
+        pipeline = VerifiedContentPipeline(engine, VerificationGate(router))
         result=pipeline.run(topic,urls)
     finally:
         for adapter in adapters.values():adapter.close()
