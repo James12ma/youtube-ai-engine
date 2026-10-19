@@ -1,4 +1,18 @@
 {
   "schema_version": "1.0",
-  "tasks": {}
+  "tasks": {
+    "d7652e9fa9e200a258e7a7ad904fe670fa29c761af215bef70da869e28843782": {
+      "completed_at": "2026-10-19T22:51:10.788148+00:00",
+      "result": {
+        "claims": [
+          {
+            "source_id": "0559be5f521e",
+            "supporting_snippet": "Simple formulas always start with an equal sign ( \u2060=\u2060 ),",
+            "text": "Simple formulas always start with an equal sign (=)."
+          }
+        ]
+      },
+      "task_type": "pipeline.research"
+    }
+  }
 }
