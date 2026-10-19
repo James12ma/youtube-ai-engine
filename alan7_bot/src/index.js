@@ -1,3 +1,5 @@
+import { seoCommand } from './seo.js';
+
 // Alan7 Telegram control bot — Cloudflare Worker (webhook) + D1 (jobs/queue).
 //
 // Design rules
@@ -25,6 +27,7 @@ const KINDS = {
 const HELP = [
   '<b>Alan7 — kòmand</b>',
   '/status — eta bot la, GitHub ak file atant lan',
+  '/seo es <sijè> oswa /seo en <topic> — analize videyo ak chanèl konpetitè (US, done piblik)',
   '/create test — lanse yon tès sistèm (san GPU)',
   '/create lena [0-4] — jenere yon plan IA LENA 3 s sou Kaggle (~1 è); videyo a rive isit la',
   '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
@@ -229,6 +232,8 @@ export async function handleCommand(env, text) {
       return HELP;
     case 'status':
       return cmdStatus(env);
+    case 'seo':
+      return seoCommand(env, arg);
     case 'create':
       return cmdCreate(env, arg);
     case 'queue':
