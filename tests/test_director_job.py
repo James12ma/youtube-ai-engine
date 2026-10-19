@@ -66,3 +66,16 @@ def test_spanish_documentary_is_explicitly_supported():
     data=validate_job(payload("ballenas jorobadas","es","documentary"),"ee12ac34")
     assert data["language"]=="es"
     assert data["mode"]=="documentary"
+
+
+def test_preinstall_validation_import_works_without_third_party_site_packages():
+    import subprocess
+    import sys
+    program = ("from scripts.director_job import validate_job; "
+               "import json; "
+               "validate_job(json.dumps(dict(language='en',mode='tutorial',"
+               "topic='Excel expense tracker',urls=['https://example.org/a','https://example.com/b'])),"
+               "'f5d48791')")
+    output = subprocess.run([sys.executable, "-S", "-c", program],
+                            capture_output=True, text=True, check=False)
+    assert output.returncode == 0, output.stderr
