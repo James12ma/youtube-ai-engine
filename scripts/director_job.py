@@ -63,10 +63,49 @@ def run_job(raw: str, job_id: str, *, repo: Path, output_root: Path) -> dict:
         raise RuntimeError("Director job output already exists")
     draft = out / "draft"
     director = out / "director"
-    result = generate_draft(
-        Path(repo), payload["topic"], payload["urls"], draft,
-        allow_live=True, language=payload["language"], mode=payload["mode"],
-    )
+    capture = out / "unverified_script_candidate.json"
+    try:
+        result = generate_draft(
+            Path(repo), payload["topic"], payload["urls"], draft,
+            allow_live=True, language=payload["language"], mode=payload["mode"],
+            unverified_capture=capture,
+        )
+    except Exception as exc:
+        # Preserve the actual model draft and an explicitly unapproved review,
+        # even when the provider quota prevents final verification. NEVER
+        # downgrade the production quality gate or report draft success.
+        out.mkdir(parents=True,exist_ok=True)
+        kind=type(exc).__name__
+        reason = {
+            "AllProvidersFailed": "Free-only AI providers unavailable; review the quotas and retry only when available.",
+            "RouterPaused": "AI Router is paused by the existing safety controls.",
+            "PipelineQualityError": "Source-backed content failed the existing production quality gate.",
+            "InsufficientSourcesError": "The approved URLs did not return enough usable verified sources.",
+        }.get(kind, "Research or script pipeline failed; inspect sanitized GitHub step status.")
+        summary={"status":"FAILED_UNVERIFIED","job_id":job_id,"exception_class":kind,
+                 "reason":reason,"published":False,"rendered":False,
+                 "candidate_saved":capture.is_file(),
+                 "provider_quotas_not_bypassed":True}
+        (out / "failure_review.json").write_text(
+            json.dumps(summary,ensure_ascii=False,indent=2),encoding="utf-8")
+        if capture.is_file():
+            cached=json.loads(capture.read_text(encoding="utf-8"))
+            candidate=cached["candidate"]
+            parts=["AI DIRECTOR — UNVERIFIED SCRIPT CANDIDATE",
+                   "Job: "+job_id,"Status: FAILED QA; NOT APPROVED for rendering or publication.",
+                   "Provider availability or QA failure prevented a finished verified script.",
+                   "Title: "+candidate.get("title",""),"Hook:",candidate.get("hook","")]
+            for n,section in enumerate(candidate.get("sections",[]),1):
+                parts.extend(["",str(n)+". "+section.get("heading",""),
+                              section.get("narration",""),
+                              "Claim IDs (not verified): "+", ".join(section.get("claim_ids",[]))])
+            parts.extend(["","CTA:",candidate.get("cta",""),"",
+                          "This text is not an approved or fact-checked script.",
+                          "No final verification, storyboard, recording, render or upload."])
+            (out / "unverified_candidate_review.txt").write_text(
+                "\\n".join(parts),encoding="utf-8")
+        raise
+
     final = director_cli(draft, director, payload["mode"])
     script = json.loads((draft / "script.json").read_text(encoding="utf-8"))
     review = [
