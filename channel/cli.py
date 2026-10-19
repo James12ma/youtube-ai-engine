@@ -66,7 +66,17 @@ def main(argv=None):
     z.add_argument('--video-url',default='');z.add_argument('--channel-id',default='')
     z.add_argument('--snapshot',type=Path);z.add_argument('--live',action='store_true')
     z.add_argument('--draft',type=Path);z.add_argument('--out',type=Path,required=True)
+    director=sub.add_parser('director-review',help='Combine source-verified script, visuals and SEO observations; no publication')
+    director.add_argument('--draft',type=Path,required=True)
+    director.add_argument('--mode',choices=('tutorial','documentary'),required=True)
+    director.add_argument('--seo-snapshot',type=Path)
+    director.add_argument('--out',type=Path,required=True)
     args=p.parse_args(argv)
+    if args.command=='director-review':
+        from .director import director_cli
+        result=director_cli(args.draft,args.out,args.mode,args.seo_snapshot)
+        print(json.dumps(result,indent=2))
+        return 0
     if args.command=='seo-review':
         from .seo_intelligence import main as seo_main
         opts=['--topic',args.topic,'--region',args.region,'--language',args.language,
