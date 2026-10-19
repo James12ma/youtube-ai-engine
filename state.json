@@ -202,6 +202,19 @@
       },
       "task_type": "pipeline.script_section"
     },
+    "df8080631739b7e19d9504ca6ff97c37ef5c0c604b192270e6a6a1c544cfe71e": {
+      "completed_at": "2026-10-19T22:52:48.194823+00:00",
+      "result": {
+        "claim_ids": [
+          "7c2f8388ef92beff",
+          "6195082747115e20"
+        ],
+        "heading": "Using Formulas for Totals",
+        "narration": "To calculate totals, click in a blank cell below the Amount column and type a formula that sums the values. Excel allows up to 8192 characters in a formula, so you can combine multiple functions if needed. For a simple total, use =SUM(Amount:Amount) to add all expenses. This provides a quick overview of overall spending and helps identify trends over time. To illustrate, imagine you have entered several expense entries such as groceries, utilities, and transportation. By applying the SUM function to the Amount column, Excel aggregates these entries into a single figure, making it easy to see the total outflow. If you need more complex calculations, you can nest additional functions within the formula, such as =SUM(IF(Amount>100, Amount, 0)) to sum only expenses exceeding a certain threshold. This flexibility allows you to tailor the total calculation to specific analytical needs. A practical exercise is to create a small table with a few sample expenses, apply the SUM formula, and then modify the formula to calculate a subtotal for a specific category, reinforcing the concept of dynamic totals. This hands\u2011on practice helps solidify understanding of how formulas can be used to extract meaningful insights from raw expense data.",
+        "on_screen_text": "Click a blank cell below Amount column, type =SUM(Amount:Amount), press Enter to see total."
+      },
+      "task_type": "pipeline.script_section"
+    },
     "e21dbbf200ec210e9c28037ecad21faea09c6e2b35ee39a8f7364144375c656f": {
       "completed_at": "2026-10-19T22:52:29.688878+00:00",
       "result": {
