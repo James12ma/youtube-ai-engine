@@ -72,3 +72,41 @@ or metric manipulation. Competitor material is not verification of factual
 script claims. Human approval and source checks remain mandatory.
 Python tests use HTTPX MockTransport and JS tests replace fetch, so no external
 requests occur during offline tests.
+
+
+## SEO Editorial Package — second stage
+
+Each existing CLI seo-review also generates an **unapproved** editorial proposal:
+- seo_editorial_package.json — five title options, hook, provisional description,
+  topic-derived keywords/tags and three hashtags;
+- seo_editorial_telegram.txt — concise phone-review representation.
+
+Choose mode explicitly if the language alone doesn't convey the content type:
+
+    python -m channel.cli seo-review --topic "ballenas jorobadas" \
+      --language es --mode documentary --snapshot observations.json --out outputs/seo-doc
+    python -m channel.cli seo-review --topic "Excel expense tracker" \
+      --language en --mode tutorial --snapshot observations.json --out outputs/seo-tutorial
+
+The output remains a **deterministic, $0 template-based editorial draft, NOT an LLM
+director**. It uses observed competitor title keywords as sampled themes with counts
+(but DOES NOT claim they caused views, does not blindly copy competitors' brands,
+does not scrape, and never modifies verified script or release metadata).
+Descriptions intentionally contain placeholders for verified footage, claims, credits
+and links. For a given verified draft, the original title and hook are preserved
+for reference and are not overwritten.
+
+Telegram: use the same existing owner-only Alan7 bot, which now supports:
+
+    /seopack es documentary ballenas jorobadas
+    /seopack en tutorial Excel expense tracker
+
+The shortened alias doc is also accepted; default Spanish mode is documentary,
+default English mode is tutorial. Each owner-requested run reads at most one
+search and one video stats lookup from the official API. No scheduled searches,
+GitHub Action dispatch, change to Telegram queue, publication, added subscriptions
+or paid LLM calls. Owner must approve titles, hook, metadata and footage separately.
+The main engine's source-backed metadata generator and YouTube upload digest gate
+remain the only paths to approved release packaging.
+
+Both CLI and Telegram paths are additionally covered by offline mock tests.
