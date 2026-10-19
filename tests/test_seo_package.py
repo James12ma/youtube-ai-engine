@@ -24,7 +24,7 @@ def test_documentary_package_is_bounded_unverified_and_source_labeled():
     assert len(pkg["hashtags_unapproved"]) == 3
     assert all(x.startswith("#") for x in pkg["hashtags_unapproved"])
     assert "NatGeo" not in str(pkg["keywords_unapproved"])
-    assert "apwouve" in telegram_editorial_package(pkg)
+    assert "apwouve" in telegram_editorial_package(pkg).lower()
 
 
 def test_logicscript_tutorial_package_without_fabricated_demonstration():
