@@ -136,6 +136,19 @@ def chrome(canvas,t,scene):
         line(l,(x,1135,x,1142 if i%5 else 1148),'#525D6C',1,90)
     x=42+min(30,t/15*30)*21
     rect(l,(42,1129,x,1132),ORANGE,radius=2)
+    # A small always-live visual meter prevents static hold frames. The bar heights
+    # are procedural, deterministic and signal activity rather than real AI data.
+    label(l,(76,923),'LIVE MOTION  /  SIGNAL FLOW',13,MUTE,True,spacing=1)
+    for idx in range(44):
+        x=78+idx*13
+        energy=.5+.5*math.sin(t*4.7 + idx*.55)
+        slower=.5+.5*math.sin(t*2.1 - idx*.29)
+        hh=int(16+34*energy+12*slower)
+        rect(l,(x,1019-hh,x+6,1019),ORANGE if idx%9==0 else '#667387',radius=2,
+             opacity=int(60 + 170*energy))
+    # Sliding trace shows tempo and supplies continuous purposeful 2D motion.
+    x=78+int((t*.65%1)*561)
+    rect(l,(max(76,x-14),1026,min(654,x+14),1030),ORANGE,radius=2)
     # Scene navigation appears as a persistent motif, not a hard cut.
     for j,text in enumerate(('PROMPT','PREDICT','OUTPUT')):
         ox=76+j*214
