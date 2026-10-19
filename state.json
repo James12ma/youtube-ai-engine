@@ -61,6 +61,79 @@
       },
       "task_type": "pipeline.verify"
     },
+    "6763a91353c7fcd00e8fea8518fcf6acc0a7f3df0ef958e176d649715fb419f5": {
+      "completed_at": "2026-10-19T22:51:51.061886+00:00",
+      "result": {
+        "cta": "Start building your expense tracker today and take control of your finances with confidence.",
+        "hook": "Transform your financial tracking with a simple Excel table that organizes expenses effortlessly.",
+        "sections": [
+          {
+            "claim_ids": [
+              "1ae2b61bb2394e8a"
+            ],
+            "heading": "Creating a Table for Expenses",
+            "narration": "Start by selecting the range where you want your expense data. Click Insert > Table and confirm the selected area. If the sheet already contains data, ensure the range includes all columns you plan to use. This step creates a structured table that Excel can recognize and format automatically. The table will have built\u2011in formatting that makes adding new rows easy and keeps data organized.",
+            "on_screen_text": "Insert > Table"
+          },
+          {
+            "claim_ids": [
+              "6195082747115e20"
+            ],
+            "heading": "Adding Headers to Your Table",
+            "narration": "When the Create Table dialog appears, check the box labeled My table has headers if your data already includes column titles. If you skip this step, Excel for the web will generate default headers like Column1 and Column2, which may require renaming. Properly labeled headers improve readability and enable features like filtering and sorting. Use clear names such as Date, Description, Category, and Amount to keep your expense tracker intuitive.",
+            "on_screen_text": "My table has headers"
+          },
+          {
+            "claim_ids": [
+              "c2d665d7b07a2e7d"
+            ],
+            "heading": "Applying a Table Style",
+            "narration": "Select any cell inside the table and go to Home > Format as Table. Choose a style that highlights rows and columns for easy scanning. The style applies banding and formatting that alternates between rows, making it simple to distinguish individual entries. This visual cue helps when reviewing large lists of expenses and reduces the chance of misreading amounts.",
+            "on_screen_text": "Home > Format as Table"
+          },
+          {
+            "claim_ids": [],
+            "heading": "Entering Expense Data",
+            "narration": "Begin typing expense details in the appropriate columns. Fill in the Date column with the day of each transaction, the Description column with a brief note about the purchase, the Category column to group spending (like groceries or entertainment), and the Amount column with the monetary value. As you press Enter after each entry, the table automatically extends to a new row, preserving formatting and ensuring consistency across the dataset.",
+            "on_screen_text": "Date, Description, Category, Amount"
+          },
+          {
+            "claim_ids": [
+              "7c2f8388ef92beff"
+            ],
+            "heading": "Using Formulas for Totals",
+            "narration": "To calculate totals, click in a blank cell below the Amount column and type a formula that sums the values. Excel allows up to 8192 characters in a formula, so you can combine multiple functions if needed. For a simple total, use =SUM(Amount:Amount) to add all expenses. This provides a quick overview of overall spending and helps identify trends over time.",
+            "on_screen_text": "=SUM(Amount:Amount)"
+          },
+          {
+            "claim_ids": [],
+            "heading": "Filtering and Sorting Expenses",
+            "narration": "Enable filtering by clicking the dropdown arrow on any column header. Use filters to isolate specific categories or date ranges, making it easier to analyze spending patterns. Sorting allows you to order entries chronologically or by amount, which can highlight large purchases or recent transactions. These tools are built into the table structure and require no additional setup.",
+            "on_screen_text": "Filter and Sort options"
+          },
+          {
+            "claim_ids": [],
+            "heading": "Common Mistakes to Avoid",
+            "narration": "A frequent error is forgetting to mark the header row, which leads to generic column names and extra manual work. Another pitfall is typing amounts with inconsistent formatting, such as mixing currency symbols or using commas incorrectly. Also, avoid entering data outside the table boundaries, as this breaks the structured format and may cause formulas to miss entries. Double\u2011check each step to maintain a clean expense tracker.",
+            "on_screen_text": "Check headers, consistent formatting, stay inside table"
+          },
+          {
+            "claim_ids": [],
+            "heading": "Practical Exercise: Build Your Own Tracker",
+            "narration": "Create a new sheet and input sample expenses: a grocery purchase on Monday, a movie ticket on Wednesday, and a utility bill on Friday. Assign each a category and amount. Apply a table style, add headers, and calculate the total. Then filter to show only the entertainment category. This hands\u2011on practice reinforces each step and demonstrates how quickly you can organize and review spending.",
+            "on_screen_text": "Sample entries and total calculation"
+          },
+          {
+            "claim_ids": [],
+            "heading": "Conclusion and Next Steps",
+            "narration": "You now have a functional expense tracker that automates data entry, calculations, and analysis. Regularly updating the table ensures accurate financial insight. Consider adding conditional formatting to highlight overspending or using charts to visualize monthly trends. These enhancements build on the foundation you just created, turning a simple list into a powerful budgeting tool.",
+            "on_screen_text": "Enhance with conditional formatting and charts"
+          }
+        ],
+        "title": "Excel Expense Tracker Tutorial"
+      },
+      "task_type": "pipeline.script"
+    },
     "d7652e9fa9e200a258e7a7ad904fe670fa29c761af215bef70da869e28843782": {
       "completed_at": "2026-10-19T22:51:10.788148+00:00",
       "result": {
