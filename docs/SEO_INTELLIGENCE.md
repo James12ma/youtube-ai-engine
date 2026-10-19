@@ -145,3 +145,34 @@ replace the existing Router, start a video render or upload, or modify approved 
 End-to-end Telegram execution of a new verified script is a separate orchestration
 step not yet implemented; it requires reviewed URLs, free-only provider authorization
 and available quotas. No hidden paid model is used.
+
+## Source-backed script creation from Telegram (explicit owner action only)
+
+Existing /director en tutorial ... remains a read-only public SEO preflight.
+To start an actual script job, the owner must approve two distinct HTTPS
+research sources in the same private Telegram command:
+
+    /director draft en tutorial Excel expense tracker | https://APPROVED_SOURCE_1 | https://APPROVED_SOURCE_2
+
+For Alan7: /director draft es doc ballenas jorobadas | URL1 | URL2
+
+This dispatches the existing free-only verified research -> script -> storyboard
+pipeline through separate alan7-director-draft.yml (not the video renderer).
+The branch adds explicit Spanish support to the existing ContentPipeline thresholds;
+if providers or sources fail the pipeline fails closed and never invents a draft.
+
+Workflow gates: ZERO_COST_ACTIONS_CONFIRMED=1,
+FREE_PROVIDER_ACCOUNTS_CONFIRMED=1, at least one configured free-tier provider.
+It does not fall back to billable accounts. GitHub runners, free-tier provider
+quotas and availability must be validated separately; no live job is dispatched
+by code merge or scheduled cron. Only the exact owner command authorizes a run.
+
+Success stores the original research.json, verification_gate.json, script.json,
+storyboard.json, director_review.json, all source artifact digests and
+script_full_review.txt in a private GitHub Actions artifact. The script document
+is also sent to the owner in Telegram when bot secrets are available. D1 tracks
+job state. Script and storyboard are drafts, not confirmed real recordings.
+Human approval of footage, full rendering and YouTube upload remains required.
+
+No project is restarted, no auto-merge of owner edits, no old LogicScript modules
+removed and no project-specific subscription or paid API turned on.
