@@ -403,6 +403,8 @@ function seoAPIError(stage, failure) {
     help = 'Quota oswa limit API Google la rive; pa lanse plizyè nouvo rechèch.';
   } else if (status === 403) {
     help = 'Google refize aksè a. Verifye pwojè, sèvis ki aktive, ak restriksyon kle a.';
+  } else if (reason === 'REDIRECT') {
+    help = 'Google voye yon redireksyon; Worker la pa swiv li pou pwoteje kle API a.';
   } else if (status === 400) {
     help = 'Google rejte paramèt apèl la. Verifye API a ak kle li.';
   } else if (status >= 500 || !status) {
@@ -420,8 +422,12 @@ async function publicAPI(env, endpoint, params) {
   for (const [key, val] of Object.entries(params)) url.searchParams.set(key, String(val));
   url.searchParams.set('key', env.YOUTUBE_API_KEY);
   try {
-    const result = await fetch(url, { method: 'GET', redirect: 'error',
+    const result = await fetch(url.toString(), { method: 'GET', redirect: 'manual',
       headers: { accept: 'application/json' } });
+    if (result.status >= 300 && result.status < 400) {
+      // Do not automatically forward the API key to another host.
+      return { failure: true, status: result.status, reason: 'REDIRECT' };
+    }
     if (!result.ok) {
       let reason = 'unknown';
       try {
@@ -435,8 +441,10 @@ async function publicAPI(env, endpoint, params) {
     const payload = await result.json();
     return payload && Array.isArray(payload.items) ? payload.items :
       { failure: true, status: result.status, reason: 'BAD_RESPONSE' };
-  } catch {
-    return { failure: true, status: 0, reason: 'NETWORK_ERROR' };
+  } catch (error) {
+    // Never echo raw exception messages or URL query strings containing credentials.
+    const reason = error?.name === 'TypeError' ? 'NETWORK_TYPE_ERROR' : 'NETWORK_ERROR';
+    return { failure: true, status: 0, reason };
   }
 }
 
@@ -455,7 +463,7 @@ export async function seoCommand(env, raw) {
     return '⚠️ SEO live poko aktive: mete YOUTUBE_API_KEY nan Cloudflare Secrets. Pa voye kle a sou Telegram.';
   }
   const search = await publicAPI(env, 'search', {
-    part: 'id', type: 'video', maxResults: '5', q: topic, regionCode: 'US',
+    part: 'snippet', type: 'video', maxResults: '5', q: topic, regionCode: 'US',
     relevanceLanguage: lang, safeSearch: 'moderate',
   });
   if (!Array.isArray(search)) return seoAPIError('search', search);
