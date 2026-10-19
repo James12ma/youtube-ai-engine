@@ -37,6 +37,15 @@ jobs:
           node-version: '22'
       - name: Install minimal free test dependencies
         run: python -m pip install -r requirements.txt -r requirements-production.txt pytest
+      - name: Validate Director stdlib preflight without third-party site packages
+        run: |
+          python -S - <<'PY'
+          import json
+          from scripts.director_job import validate_job
+          data=json.dumps({"language":"en","mode":"tutorial","topic":"Excel expense tracker",
+                           "urls":["https://example.org/a","https://example.com/b"]})
+          assert validate_job(data,"f5d48791")["mode"]=="tutorial"
+          PY
       - name: Compile new Python SEO integration
         run: python -m compileall -q channel/seo_intelligence.py channel/seo_package.py channel/director.py channel/research.py scripts/director_job.py channel/cli.py tests/test_seo_intelligence.py tests/test_seo_package.py tests/test_director_review.py tests/test_director_job.py
       - name: Python SEO safety and mock-API tests
