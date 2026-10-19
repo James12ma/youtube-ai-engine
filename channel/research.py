@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 from adapters import GroqAdapter,GeminiAdapter,OpenRouterAdapter
-from pipeline import ContentPipeline,HttpSourceFetcher
+from pipeline import ContentPipeline,HttpSourceFetcher,QualityThresholds
 from router import Router
 from state_store import StateStore
 from verification import VerificationGate
@@ -13,7 +13,9 @@ from verification.integrated import VerifiedContentPipeline
 
 
 def generate_draft(repo:Path,topic:str,urls:list[str],out_dir:Path,*,
-                   allow_live:bool=False)->dict:
+                   allow_live:bool=False,language:str='en',mode:str='tutorial')->dict:
+    if language not in ('en','es') or mode not in ('tutorial','documentary'):
+        raise ValueError('Unsupported language or content mode')
     if not allow_live or os.environ.get('ROUTER_ALLOW_LIVE_API')!='1':
         raise RuntimeError('LLM calls disabled; explicitly authorize free-only live API access')
     # These are the sources explicitly supplied by the owner, not a global
@@ -32,8 +34,17 @@ def generate_draft(repo:Path,topic:str,urls:list[str],out_dir:Path,*,
     if not adapters:raise RuntimeError('No free-tier provider API key configured')
     try:
         router=Router(state,adapters)
-        pipeline=VerifiedContentPipeline(ContentPipeline(state,router,HttpSourceFetcher(allowed_hosts=trusted_hosts)),
-                                         VerificationGate(router))
+        fetcher = HttpSourceFetcher(allowed_hosts=trusted_hosts)
+        if language == 'en' and mode == 'tutorial':
+            # Keep the exact original LogicScript path and test doubles untouched.
+            engine = ContentPipeline(state, router, fetcher)
+        else:
+            engine = ContentPipeline(
+                state, router, fetcher,
+                thresholds=QualityThresholds(
+                    language=language,
+                    packaging_style='growth' if mode=='documentary' else 'standard'))
+        pipeline = VerifiedContentPipeline(engine, VerificationGate(router))
         result=pipeline.run(topic,urls)
     finally:
         for adapter in adapters.values():adapter.close()

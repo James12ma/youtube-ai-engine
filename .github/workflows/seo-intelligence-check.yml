@@ -5,12 +5,17 @@ on:
       - 'channel/seo_intelligence.py'
       - 'channel/seo_package.py'
       - 'channel/director.py'
+      - 'channel/research.py'
+      - 'scripts/director_job.py'
+      - '.github/workflows/alan7-director-draft.yml'
       - 'channel/cli.py'
       - 'tests/test_seo_intelligence.py'
       - 'tests/test_seo_package.py'
       - 'tests/test_director_review.py'
+      - 'tests/test_director_job.py'
       - 'alan7_bot/test/seo_pack.test.mjs'
       - 'alan7_bot/test/director.test.mjs'
+      - 'alan7_bot/test/director_draft.test.mjs'
       - 'alan7_bot/src/index.js'
       - 'alan7_bot/test/seo.test.mjs'
       - '.github/workflows/seo-intelligence-check.yml'
@@ -33,12 +38,12 @@ jobs:
       - name: Install minimal free test dependencies
         run: python -m pip install -r requirements.txt -r requirements-production.txt pytest
       - name: Compile new Python SEO integration
-        run: python -m compileall -q channel/seo_intelligence.py channel/seo_package.py channel/director.py channel/cli.py tests/test_seo_intelligence.py tests/test_seo_package.py tests/test_director_review.py
+        run: python -m compileall -q channel/seo_intelligence.py channel/seo_package.py channel/director.py channel/research.py scripts/director_job.py channel/cli.py tests/test_seo_intelligence.py tests/test_seo_package.py tests/test_director_review.py tests/test_director_job.py
       - name: Python SEO safety and mock-API tests
-        run: python -m pytest -q tests/test_seo_intelligence.py tests/test_seo_package.py tests/test_director_review.py
+        run: python -m pytest -q tests/test_seo_intelligence.py tests/test_seo_package.py tests/test_director_review.py tests/test_director_job.py
       - name: CLI SEO command help smoke test
         run: python -m channel.cli seo-review --help
       - name: Node syntax and fake YouTube API tests
         run: |
           node --check alan7_bot/src/index.js
-          node --test alan7_bot/test/seo.test.mjs alan7_bot/test/seo_pack.test.mjs alan7_bot/test/director.test.mjs
+          node --test alan7_bot/test/seo.test.mjs alan7_bot/test/seo_pack.test.mjs alan7_bot/test/director.test.mjs alan7_bot/test/director_draft.test.mjs

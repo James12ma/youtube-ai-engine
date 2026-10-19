@@ -20,6 +20,7 @@ const MAX_ATTEMPTS = 12;
 const KINDS = {
   test: { label: 'Tès sistèm (GitHub Actions, san GPU)', dispatch: true },
   lena: { label: 'Plan IA LENA 3 s (Kaggle GPU gratis, ~1 è)', dispatch: true, workflow: 'alan7-daily.yml' },
+  director_draft: { label: 'Script verifye pou revizyon (resous gratis sèlman)', dispatch: true, workflow: 'alan7-director-draft.yml' },
 };
 
 const HELP = [
@@ -28,6 +29,7 @@ const HELP = [
   '/seo es <sijè> oswa /seo en <topic> — analize videyo ak chanèl konpetitè (US, done piblik)',
   '/seopack es documentary <sijè> oswa /seopack en tutorial <topic> — 5 tit, hook, deskripsyon, tags pou apwobasyon',
   '/director es doc <sijè> oswa /director en tutorial <topic> — brief SEO + kondisyon script verifye',
+  '/director draft en tutorial <topic> | <URL1> | <URL2> — mande script verifye (de sous HTTPS apwouve, Free only)',
   '/create test — lanse yon tès sistèm (san GPU)',
   '/create lena [0-4] — jenere yon plan IA LENA 3 s sou Kaggle (~1 è); videyo a rive isit la',
   '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
@@ -105,7 +107,8 @@ export async function dispatchJob(env, job) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 0, detail: 'GITHUB_TOKEN pa konfigire' };
   try {
     const wf = workflowFor(job.kind);
-    const inputs = wf === JOB_WORKFLOW ? { job_id: job.id, kind: job.kind, arg: job.arg || '' }
+    const inputs = job.kind === 'director_draft' ? { job_id: job.id, payload: job.arg || '' }
+      : wf === JOB_WORKFLOW ? { job_id: job.id, kind: job.kind, arg: job.arg || '' }
       : { job_id: job.id, shot: /^[0-4]$/.test((job.arg || '').trim()) ? job.arg.trim() : '' };
     const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${wf}/dispatches`, {
       method: 'POST',
@@ -169,7 +172,7 @@ async function cmdStatus(env) {
 async function cmdCreate(env, arg) {
   const [kindRaw, ...rest] = (arg || '').trim().split(/\s+/);
   const kind = (kindRaw || '').toLowerCase();
-  if (!KINDS[kind]) {
+  if (!KINDS[kind] || kind === 'director_draft') {
     return `Mwen pa konnen "<code>${esc(kindRaw || '')}</code>". Sa ki disponib: ${Object.keys(KINDS).map((k) => `<code>${k}</code>`).join(', ')}.`;
   }
   const id = newId();
@@ -237,7 +240,7 @@ export async function handleCommand(env, text) {
     case 'seopack':
       return seoPackCommand(env, arg);
     case 'director':
-      return directorPreflightCommand(env, arg);
+      return /^draft(?:\s|$)/i.test(arg.trim()) ? directorDraftCommand(env, arg.trim().replace(/^draft\s*/i, '')) : directorPreflightCommand(env, arg);
     case 'create':
       return cmdCreate(env, arg);
     case 'queue':
@@ -781,4 +784,63 @@ export async function directorPreflightCommand(env, raw) {
   const videos = await publicAPI(env,'videos',{part:'snippet,statistics',id:ids.join(',')});
   if (!Array.isArray(videos)) return seoAPIError('videos',videos);
   return formatDirectorPreflight(directorPreflight(topic,lang,mode,videos));
+}
+
+
+// Owner-only explicit source request. A mere /director preview NEVER incurs
+// LLM traffic; only the separate 'draft' command dispatches a gated workflow.
+export function parseDirectorDraftRequest(raw) {
+  const parts = String(raw || '').split('|').map(x => x.trim());
+  if (parts.length !== 3) return {error: 'Bezwen 2 URL sous piblik. Egzanp: /director draft en tutorial Excel expense tracker | https://source.example/a | https://source.example/b'};
+  const match = /^(en|es)\s+(tutorial|doc|documentary)\s+(.{8,120})$/i.exec(parts[0]);
+  if (!match) return {error: 'Fòma: /director draft en tutorial <sijè> | <URL1> | <URL2>'};
+  const lang = match[1].toLowerCase();
+  const mode = match[2].toLowerCase() === 'doc' ? 'documentary' : match[2].toLowerCase();
+  const topic = match[3].replace(/\s+/g,' ').trim();
+  if (/[<>|\r\n]/.test(topic)) return {error:'Sijè a gen karaktè entèdi.'};
+  const urls = parts.slice(1);
+  if (urls[0] === urls[1]) return {error:'Ou bezwen de sous diferan.'};
+  for (const source of urls) {
+    try {
+      if(source.length > 280 || /[\s<>]/.test(source)) throw Error();
+      const url = new URL(source);
+      const hostname = url.hostname.toLowerCase();
+      if (url.protocol !== 'https:' || (url.port && url.port !== '443') ||
+          url.username || url.password || !hostname || hostname === 'localhost' ||
+          /\.(localhost|local|internal|test)$/.test(hostname) ||
+          /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(':')) throw Error();
+    } catch {
+      return {error:'Sous yo dwe 2 lyen HTTPS piblik, san IP prive, login oswa non domèn lokal.'};
+    }
+  }
+  return {language:lang,mode,topic,urls};
+}
+
+export async function directorDraftCommand(env, raw) {
+  const payload = parseDirectorDraftRequest(raw);
+  if (payload.error) return '⚠️ ' + escapeHTML(payload.error);
+  if (!env.GITHUB_TOKEN) return '⚠️ GitHub pa konekte; okenn draft pa lanse.';
+  const id = newId();
+  const spec = KINDS.director_draft;
+  const serialized = JSON.stringify(payload);
+  if (serialized.length > 2200) return '⚠️ Demann nan twò long.';
+  await env.DB.prepare('INSERT INTO jobs(id, kind, arg, state, attempts, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 0, ?5, ?5)')
+    .bind(id, 'director_draft', serialized, 'queued', now()).run();
+  await logEvent(env, id, 'created', 'director_draft owner supplied HTTPS sources');
+  const d = await dispatchJob(env, {id,kind:'director_draft',arg:serialized});
+  await setMeta(env, 'github_last', d.ok ? 'OK' : d.detail);
+  if (d.ok) {
+    await env.DB.prepare("UPDATE jobs SET state='running', attempts=1, updated_at=?2 WHERE id=?1")
+      .bind(id,now()).run();
+    await logEvent(env,id,'dispatched','director_draft');
+    return '📝 Draft <code>'+id+'</code> voye nan workflow verifye a.\n' +
+      'Li pral pwodwi rechèch + script + storyboard sèlman si kont gratis yo otorize epi provider la disponib.\n' +
+      'Si li reyisi, ou ap resevwa yon fichye script pou revizyon sou Telegram. ' +
+      'Pa gen rendering final ni piblikasyon. /queue pou swiv li.';
+  }
+  await env.DB.prepare("UPDATE jobs SET attempts=1,last_error=?2,next_try_at=?3,updated_at=?3 WHERE id=?1")
+    .bind(id,d.detail,now()+300).run();
+  await logEvent(env,id,'dispatch_failed',d.detail);
+  return '🕒 Demann <code>'+id+'</code> anrejistre, men GitHub pa disponib ('+escapeHTML(d.detail)+'). '+
+    'Li rete nan file atant pou reeseye; pa gen okenn script envante.';
 }

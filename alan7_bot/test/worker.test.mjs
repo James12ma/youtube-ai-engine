@@ -180,3 +180,33 @@ test('a video without a caption asks for the narration', async () => {
   });
   assert.match((await res.json()).text, /caption/);
 });
+
+
+test('/director draft dispatches only to gated separate workflow with owner-approved sources',async()=>{
+  github.mode='up';
+  const text='/director draft en tutorial Excel expense tracker | https://support.microsoft.com/en-us/excel | https://learn.microsoft.com/en-us/office/';
+  const r=await say(text);
+  assert.equal(r.status,200);
+  assert.match(r.json.text,/Draft.*voye nan workflow verifye/);
+  const entry=(await jobs()).find(x=>x.kind==='director_draft');
+  assert.ok(entry);
+  assert.equal(entry.state,'running');
+  const payload=JSON.parse(entry.arg);
+  assert.deepEqual(payload.urls,[
+    'https://support.microsoft.com/en-us/excel','https://learn.microsoft.com/en-us/office/'
+  ]);
+  const dispatch=calls.filter(c=>c.path.endsWith('/dispatches') && c.path.includes('alan7-director-draft')).pop();
+  assert.ok(dispatch);
+  const inputs=JSON.parse(dispatch.body).inputs;
+  assert.equal(inputs.job_id,entry.id);
+  assert.equal(JSON.parse(inputs.payload).mode,'tutorial');
+  assert.match((await say('/create director_draft test')).json.text,/Mwen pa konnen/);
+});
+
+test('/director plain preview never dispatches a new research job',async()=>{
+  const before=calls.filter(x=>x.path.endsWith('/dispatches')).length;
+  const result=await say('/director en tutorial Excel expense tracker');
+  assert.equal(result.status,200);
+  const after=calls.filter(x=>x.path.endsWith('/dispatches')).length;
+  assert.equal(after,before);
+});
