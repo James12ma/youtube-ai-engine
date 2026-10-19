@@ -247,7 +247,7 @@ def build_review(
         "captured_at_utc": datetime.now(timezone.utc).isoformat(),
         "topic": _normal(topic),
         "target_region": region, "preferred_language": language,
-        "region_note": "regionCode filters video availability; it does not measure US audience location",
+        "region_note": "regionCode filters video availability; it does not measure where viewers are located",
         "title_candidates_not_verified": _titles(topic, language, original_title),
         "suggested_tags_from_own_topic": suggested_tags,
         "observed_competitor_tags_not_recommended_automatically": observed_tags,
