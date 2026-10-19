@@ -103,7 +103,7 @@ def run_job(raw: str, job_id: str, *, repo: Path, output_root: Path) -> dict:
                           "This text is not an approved or fact-checked script.",
                           "No final verification, storyboard, recording, render or upload."])
             (out / "unverified_candidate_review.txt").write_text(
-                "\\n".join(parts),encoding="utf-8")
+                "\n".join(parts),encoding="utf-8")
         raise
 
     final = director_cli(draft, director, payload["mode"])
