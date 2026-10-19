@@ -14,6 +14,79 @@
       },
       "task_type": "pipeline.research"
     },
+    "e5ac4009fbc56bc15ab5d46c60134bd26bac8f5c91e8b5df3d1f1ff9dcf71d1d": {
+      "completed_at": "2026-10-19T22:51:35.304134+00:00",
+      "result": {
+        "claims": [
+          {
+            "id": "c2d665d7b07a2e7d",
+            "source_ids": [
+              "6c74053a3448"
+            ],
+            "supporting_snippets": [
+              "Select a cell within your data. Select Home > Format as Table. Choose a style for your table. In the Create Table dialog box, set your cell range. Mark if your table has headers. Select OK ."
+            ],
+            "text": "Select a cell within your data, then select Home > Format as Table, choose a style, set the cell range in the Create Table dialog box, mark if your table has headers, and select OK."
+          },
+          {
+            "id": "1ae2b61bb2394e8a",
+            "source_ids": [
+              "6c74053a3448"
+            ],
+            "supporting_snippets": [
+              "To add a blank table, select the cells you want included in the table and click Insert > Table ."
+            ],
+            "text": "To add a blank table, select the cells you want included in the table and click Insert > Table."
+          },
+          {
+            "id": "7c2f8388ef92beff",
+            "source_ids": [
+              "0559be5f521e"
+            ],
+            "supporting_snippets": [
+              "You can enter as many constants and operators in a formula as you need, up to 8192 characters."
+            ],
+            "text": "You can enter as many constants and operators in a formula as you need, up to 8192 characters."
+          },
+          {
+            "id": "6195082747115e20",
+            "source_ids": [
+              "6c74053a3448"
+            ],
+            "supporting_snippets": [
+              "If you don't check the My table has headers box, Excel for the web adds headers with default names like Column1 and Column2 above the data."
+            ],
+            "text": "If you don't check the My table has headers box, Excel for the web adds headers with default names like Column1 and Column2 above the data."
+          }
+        ],
+        "rejected_claims": [
+          {
+            "reason": "snippet not found verbatim in source",
+            "source_id": "0559be5f521e",
+            "text": "Simple formulas always start with an equal sign (=), followed by constants that are numeric values and calculation operators such as plus (+), minus (-), asterisk(*), or forward slash (/) signs."
+          }
+        ],
+        "retrieved_at": "2026-10-19T22:51:35.005505+00:00",
+        "sources": [
+          {
+            "retrieved_at": "2026-10-19T22:51:01.652841+00:00",
+            "source_id": "6c74053a3448",
+            "text": "Create and format tables Applies To Excel for Microsoft 365 Excel for Microsoft 365 for Mac Excel 2024 Excel 2024 for Mac Excel 2021 Excel 2021 for Mac Excel 2019 Excel 2016 Get help with Copilot How do I create and format tables in Excel? What are the elements of an Excel table? Provide a quick guide to create and format tables. Create and format a table to visually group and analyze data. Note Excel tables shouldn't be confused with the data tables that are part of a suite of What-If Analysis commands ( Forecast , on the Data tab). See Introduction to What-If Analysis for more information. Windows macOS Web Select a cell within your data. Select Home > Format as Table. Choose a style for your table. In the Create Table dialog box, set your cell range. Mark if your table has headers. Select OK . Select the cell or the range in the data. In the Home menu, select Format as Table . Choose a style for your table. In the Format as Table dialog box, set your cell range. Mark if your table has headers. Select OK . See Overview of Excel tables for more information. To add a blank table, select the cells you want included in the table and click Insert > Table . To format existing data as a table by using the default table style, do this: Select the cells containing the data. Click Home > Table > Format as Table . If you don't check the My table has headers box, Excel for the web adds headers with default names like Column1 and Column2 above the data. To rename a default header, double-click it and type a new name. Note You can't change the default table formatting in Excel for the web. Want more? Overview of Excel tables Total the data in an Excel table Format an Excel table Resize a table by adding or removing rows and columns Filter data in a range or table Convert a table to a range Using structured references with Excel tables Excel table compatibility issues Export an Excel table to SharePoint More Excel Templates",
+            "title": "Create and format tables | Microsoft Support",
+            "url": "https://support.microsoft.com/en-us/excel/get-started/create-and-format-tables?utm_source=chatgpt.com"
+          },
+          {
+            "retrieved_at": "2026-10-19T22:51:01.797861+00:00",
+            "source_id": "0559be5f521e",
+            "text": "Create a simple formula You can create a simple formula to add, subtract, multiply, or divide values in your worksheet. Simple formulas always start with an equal sign ( \u2060=\u2060 ), followed by constants that are numeric values and calculation operators such as plus ( \u2060+\u2060 ), minus ( \u2060-\u2060 ), asterisk( * ), or forward slash ( \u2060/\u2060 ) signs. For example, when you enter the formula =5+2*3 , the last two numbers are multiplied and added to the first number to get the result. Following the standard order of mathematical operations, multiplication is performed before addition. On the worksheet, click the cell where you want to enter the formula. Type the \u2060=\u2060 (equal sign) followed by the constants and operators you want to use in the calculation. You can enter as many constants and operators in a formula as you need, up to 8192 characters. Tip Instead of typing the constants into your formula, you can select the cells (like B12:B15) that contain the values you want to use and enter the operators in between selecting cells. Press Enter. Note To quickly add values, you can use AutoSum instead of entering the formula manually ( Home tab, Editing group). You can also use a function (like the SUM function) to calculate values in your worksheet. To take it one step further, you can use cell references in a formula instead of the actual values in a simple formula. Examples The workbook below shows examples simple formulas. You can change any of the existing formulas, or enter your own formulas to learn how they work and see their results. Data 2 5 Formula Description Result '=A2+A3 Adds the values in cells A1 and A2 =A2+A3 '=A2-A3 Subtracts the value in cell A2 from the value in A1 =A2-A3 '=A2/A3 Divides the value in cell A1 by the value in A2 =A2/A3 '=A2*A3 Multiplies the value in cell A1 times the value in A2 =A2*A3 '=A2^A3 Raises the value in cell A1 to the exponential value specified in A2 =A2^A3 Formula Description Result '=5+2 Adds 5 and 2 =5+2 '=5-2 Subtracts 2 from 5 =5-2 '=5/2 Divides 5 by 2 =5/2 '=5*2 Multiplies 5 times 2 =5*2 '=5^2 Raises 5 to the 2nd power =5^2",
+            "title": "Create a simple formula | Microsoft Support",
+            "url": "https://support.microsoft.com/en-us/excel/create-a-simple-formula?utm_source=chatgpt.com"
+          }
+        ],
+        "topic": "Excel expense tracker"
+      },
+      "task_type": "pipeline.research"
+    },
     "f569c24c72a008188b6b1a039d489e50f28f78b3973c1e49497d515f075cdb40": {
       "completed_at": "2026-10-19T22:51:32.941688+00:00",
       "result": {
