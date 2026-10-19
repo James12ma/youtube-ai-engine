@@ -7,8 +7,8 @@ from pathlib import Path
 import re
 from urllib.parse import urlparse
 
-from channel.director import director_cli
-from channel.research import generate_draft
+# Keep module imports stdlib-only: this function is imported BEFORE pip install.
+# The verified research/director modules require pydantic and are imported at run time.
 
 _JOB_ID = re.compile(r"^[a-f0-9]{8}$")
 
@@ -56,6 +56,8 @@ def run_job(raw: str, job_id: str, *, repo: Path, output_root: Path) -> dict:
         raise RuntimeError("Free-only provider and Actions authorization not confirmed")
     if not any(os.environ.get(k) for k in ("GROQ_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY")):
         raise RuntimeError("No configured free-tier provider API key; no new draft generated")
+    from channel.director import director_cli
+    from channel.research import generate_draft
     out = Path(output_root) / job_id
     if out.exists():
         raise RuntimeError("Director job output already exists")
