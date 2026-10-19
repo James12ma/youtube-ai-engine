@@ -110,3 +110,38 @@ The main engine's source-backed metadata generator and YouTube upload digest gat
 remain the only paths to approved release packaging.
 
 Both CLI and Telegram paths are additionally covered by offline mock tests.
+
+## Verified Script Director Bridge (v3)
+
+The earlier seopack command only sees public competitor metadata. It cannot produce a verified script.
+
+New owner-only on-demand Telegram preflight:
+
+    /director en tutorial Excel expense tracker
+    /director es doc ballenas jorobadas
+
+It reports observed competitor title phrases with counts and an editorial production plan,
+but clearly says no verified script, real capture, or footage was generated.
+
+The existing source-backed research pipeline creates research.json, script.json,
+storyboard.json, and verification_gate.json, using owner-approved HTTPS sources and
+an explicitly authorized free provider. To connect these source-verified artifacts:
+
+    python -m channel.cli director-review --draft outputs/drafts/existing-draft \
+      --mode tutorial --seo-snapshot observations.json --out outputs/director-review-1
+
+Choose documentary for Alan7; --seo-snapshot is optional. Files written:
+director_review.json and telegram_review.txt.
+
+This bundles the exact existing source-verified script sections and narration,
+provenance hashes of all four source artifacts, the existing verified metadata
+and source URLs, editorial candidate titles from its own section headings, and a
+planned storyboard explicitly marked as not a real recording.
+
+If source-verification or script/storyboard evidence is absent or inconsistent,
+the Director fails closed. It does NOT synthesize factual narration from rivals,
+replace the existing Router, start a video render or upload, or modify approved metadata.
+
+End-to-end Telegram execution of a new verified script is a separate orchestration
+step not yet implemented; it requires reviewed URLs, free-only provider authorization
+and available quotas. No hidden paid model is used.

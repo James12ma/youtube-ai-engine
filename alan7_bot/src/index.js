@@ -27,6 +27,7 @@ const HELP = [
   '/status — eta bot la, GitHub ak file atant lan',
   '/seo es <sijè> oswa /seo en <topic> — analize videyo ak chanèl konpetitè (US, done piblik)',
   '/seopack es documentary <sijè> oswa /seopack en tutorial <topic> — 5 tit, hook, deskripsyon, tags pou apwobasyon',
+  '/director es doc <sijè> oswa /director en tutorial <topic> — brief SEO + kondisyon script verifye',
   '/create test — lanse yon tès sistèm (san GPU)',
   '/create lena [0-4] — jenere yon plan IA LENA 3 s sou Kaggle (~1 è); videyo a rive isit la',
   '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
@@ -235,6 +236,8 @@ export async function handleCommand(env, text) {
       return seoCommand(env, arg);
     case 'seopack':
       return seoPackCommand(env, arg);
+    case 'director':
+      return directorPreflightCommand(env, arg);
     case 'create':
       return cmdCreate(env, arg);
     case 'queue':
@@ -679,4 +682,103 @@ export async function seoPackCommand(env, raw) {
   if (!Array.isArray(videos)) return seoAPIError('videos', videos);
   const p = buildSEOPackage(topic, lang, mode, videos);
   return formatSEOPackage(p);
+}
+
+
+// ---------------------------------------------------------------- director preflight (owner-only, no paid LLM)
+// A public SEO query cannot itself prove an instructional demo, source-backed
+// narration, or approved footage. The verified-artifact bridge is channel/director.py.
+// This command tells the owner exactly what is available and what remains blocked.
+const DIRECTOR_THEME_TERMS = {
+  en: ['build', 'automate', 'from scratch', 'in minutes', 'template', 'tutorial',
+       'budget', 'tracker', 'dashboard', 'formulas', 'step by step'],
+  es: ['construir', 'automatizar', 'desde cero', 'en minutos', 'plantilla',
+       'documental', 'viaje', 'acrobacias', 'alimentación', 'comportamiento'],
+};
+
+export function directorPreflight(topic, lang, mode, videos) {
+  if (!['es', 'en'].includes(lang) || !['tutorial', 'documentary'].includes(mode))
+    throw new Error('Unsupported director mode');
+  const p = buildSEOPackage(topic, lang, mode, videos);
+  const names = (videos || []).slice(0, 5)
+    .map(v => String(v?.snippet?.title || '').toLocaleLowerCase());
+  const themes = DIRECTOR_THEME_TERMS[lang].map(theme => ({
+    theme, count: names.filter(s => s.includes(theme)).length,
+  })).filter(x => x.count).sort((a,b) => b.count-a.count || a.theme.localeCompare(b.theme));
+  const title = p.titles[0];
+  const plan = mode === 'tutorial' ?
+    (lang === 'es' ? [
+      'Identificar el resultado concreto que debe mostrar la pantalla',
+      'Revisar guion, pasos y afirmaciones con fuentes verificadas',
+      'Grabar clics, escritura y resultado real',
+      'Preparar el título definitivo después de revisar la demostración',
+    ] : [
+      'Define the concrete outcome the screen must demonstrate',
+      'Check script claims and steps against trusted sources',
+      'Capture actual clicks, typing, and the final result',
+      'Choose the final headline only after reviewing the recording',
+    ]) :
+    (lang === 'es' ? [
+      'Elegir un hilo narrativo que pueda respaldarse con hechos',
+      'Verificar las afirmaciones con fuentes originales',
+      'Revisar imágenes en movimiento y derechos de uso',
+      'Elegir el título final después de examinar las escenas',
+    ] : [
+      'Choose a story angle supported by verified facts',
+      'Confirm claims against reliable source documents',
+      'Check real moving footage and usage rights',
+      'Choose a title only after reviewing available footage',
+    ]);
+  return {
+    status: 'AWAITING_VERIFIED_SCRIPT_AND_VISUALS',
+    language: lang, mode, topic: p.topic,
+    observedThemes: themes.slice(0, 6),
+    titleDraft: title,
+    provisionalHook: p.hook,
+    plan, scriptGenerated: false,
+    sourcesVerified: false, realScreenRecordingVerified: false,
+    realFootageVerified: false, published: false,
+    integration: 'Use channel.cli director-review with an existing verified draft for full script and SEO.',
+  };
+}
+
+export function formatDirectorPreflight(r) {
+  const text = [
+    '<b>AI DIRECTOR — EDITORIAL PREFLIGHT</b>',
+    escapeHTML(r.topic) + ' | ' + r.language + ' | ' + r.mode,
+    'Echantiyon konpetitè: <b>tèm ki nan tit piblik yo</b> (pa prediksyon):',
+    ...(r.observedThemes.length ?
+      r.observedThemes.map(x => '- ' + escapeHTML(x.theme) + ': ' + x.count + ' tit') :
+      ['Pa gen tèm komen detekte']),
+    '\n<b>Direksyon travay</b>',
+    ...r.plan.map((x,i) => (i + 1) + '. ' + escapeHTML(x)),
+    '\n<b>Premye tit pwovizwa</b>',
+    escapeHTML(r.titleDraft),
+    '\n<b>HOOK pwovizwa (pa yon script verifye)</b>',
+    escapeHTML(r.provisionalHook),
+    '\n<b>ETAP BLOKE</b>',
+    'Script konplè poko jenere ni verifye. Rechèch konpetitè PA ranplase sous serye, script ak storyboard.',
+    'Koneksyon reyèl: channel.cli director-review — li pran script/research/verification_gate/storyboard ki deja pase kontrol.',
+    'Apwobasyon, demonstrasyon oswa footage reyèl, rendering final ak upload rete bloke.',
+  ];
+  return text.join('\n').slice(0, 3900);
+}
+
+export async function directorPreflightCommand(env, raw) {
+  const match = /^(?:(en|es)\s+)?(?:(documentary|doc|tutorial)\s+)?([\s\S]{3,120})$/i.exec(String(raw || '').trim());
+  if (!match) return 'Egzanp: <code>/director en tutorial Excel expense tracker</code> oswa <code>/director es doc ballenas jorobadas</code>.';
+  const lang = (match[1] || 'es').toLowerCase();
+  const mode = match[2] ? (match[2].toLowerCase() === 'doc' ? 'documentary' : match[2].toLowerCase()) :
+    (lang === 'es' ? 'documentary' : 'tutorial');
+  const topic = match[3].trim();
+  if (topic.length < 3 || topic.length > 120 || /[<>]/.test(topic)) return 'Sijè pa valab (3–120 karaktè).';
+  if (!env.YOUTUBE_API_KEY) return '⚠️ YOUTUBE_API_KEY poko konfigire.';
+  const search = await publicAPI(env, 'search', {part:'snippet',type:'video',maxResults:'5',
+    q:topic,regionCode:'US',relevanceLanguage:lang,safeSearch:'moderate'});
+  if (!Array.isArray(search)) return seoAPIError('search',search);
+  const ids = [...new Set(search.map(x=>x?.id?.videoId).filter(x=>typeof x==='string'&&/^[\w-]{11}$/.test(x)))].slice(0,5);
+  if (!ids.length) return 'Pa gen rezilta YouTube nan rechèch sa a. Pa gen done envante.';
+  const videos = await publicAPI(env,'videos',{part:'snippet,statistics',id:ids.join(',')});
+  if (!Array.isArray(videos)) return seoAPIError('videos',videos);
+  return formatDirectorPreflight(directorPreflight(topic,lang,mode,videos));
 }
