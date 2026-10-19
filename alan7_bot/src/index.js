@@ -26,6 +26,7 @@ const HELP = [
   '<b>Alan7 — kòmand</b>',
   '/status — eta bot la, GitHub ak file atant lan',
   '/seo es <sijè> oswa /seo en <topic> — analize videyo ak chanèl konpetitè (US, done piblik)',
+  '/seopack es documentary <sijè> oswa /seopack en tutorial <topic> — 5 tit, hook, deskripsyon, tags pou apwobasyon',
   '/create test — lanse yon tès sistèm (san GPU)',
   '/create lena [0-4] — jenere yon plan IA LENA 3 s sou Kaggle (~1 è); videyo a rive isit la',
   '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
@@ -232,6 +233,8 @@ export async function handleCommand(env, text) {
       return cmdStatus(env);
     case 'seo':
       return seoCommand(env, arg);
+    case 'seopack':
+      return seoPackCommand(env, arg);
     case 'create':
       return cmdCreate(env, arg);
     case 'queue':
@@ -508,3 +511,172 @@ export async function seoCommand(env, raw) {
   return result.join('\n').slice(0, 3800);
 }
 
+
+
+// ---------------------------------------------------------------- editorial SEO package
+// New standalone on-demand command, intentionally independent of video upload.
+// Templates are NOT an LLM response or verified research. Data points are sampled
+// from official YouTube API; public engagement does not prove what drives ranking.
+function seoPackTitles(subject, lang, mode) {
+  const suffixes = mode === 'documentary'
+    ? (lang === 'es' ? [
+      'lo que muestran las imágenes', 'preguntas para investigar',
+      'una mirada más cercana', 'guía visual', 'más allá del primer vistazo',
+    ] : [
+      'what the footage can show', 'questions worth exploring',
+      'a closer look', 'a visual field guide', 'beyond the first glance',
+    ])
+    : (lang === 'es' ? [
+      'guía paso a paso', 'por dónde empezar', 'ejemplo práctico',
+      'lista de verificación', 'preguntas frecuentes',
+    ] : [
+      'step-by-step walkthrough', 'where to start', 'a practical example',
+      'a useful checklist', 'common questions answered',
+    ]);
+  return suffixes.map(suffix => (subject + ': ' + suffix).slice(0, 100).trim());
+}
+
+function seoPackText(subject, lang, mode) {
+  const topic = subject[0].toLowerCase() + subject.slice(1);
+  if (mode === 'documentary') {
+    return lang === 'es'
+      ? {
+        hook: '¿Qué podemos descubrir al observar ' + topic + ' de cerca? Examinaremos las imágenes y contrastaremos los detalles con fuentes verificadas.',
+        desc: 'Exploramos ' + topic + ' a través de imágenes y preguntas que requieren verificación.\n\nQué veremos: [añadir escenas y hechos comprobados del episodio].',
+        footer: 'Fuentes: [añadir enlaces comprobados].',
+      }
+      : {
+        hook: 'What can careful observation tell us about ' + topic + '? We will examine the footage and check each detail against reliable sources.',
+        desc: 'We explore ' + topic + ' through footage and questions that require verification.\n\nWhat you will see: [insert verified scenes and facts from the episode].',
+        footer: 'Sources: [insert verified URLs].',
+      };
+  }
+  return lang === 'es'
+    ? {
+      hook: '¿Quieres aprender ' + topic + ' sin adivinar los pasos? Vamos a revisar el proceso en pantalla y comprobar el resultado.',
+      desc: 'Guía práctica sobre ' + topic + ', con revisión de pasos y resultados.\n\nPasos y archivos: [añadir demostración real revisada].',
+      footer: 'Fuentes: [añadir enlaces comprobados].',
+    }
+    : {
+      hook: 'Want to learn ' + topic + ' without guessing? We will work through the steps on screen and check the result.',
+      desc: 'A practical walkthrough of ' + topic + ', with steps and results reviewed.\n\nSteps and files: [insert a reviewed screen demonstration].',
+      footer: 'Sources: [insert verified URLs].',
+    };
+}
+
+function seoPackKeywords(topic, lang, mode) {
+  const lower = topic.toLocaleLowerCase();
+  const candidates = [
+    lower,
+    lower + (mode === 'documentary' ? (lang === 'es' ? ' documental' : ' documentary') : ' tutorial'),
+    lower + (lang === 'es' ? ' guía' : ' guide'),
+  ];
+  const stop = new Set(['los','las','para','una','por','del','con','que','and','the','with','from','for','sobre','video']);
+  for (const word of lower.split(/\s+/).slice(0, 6)) {
+    if (word.length >= 4 && !stop.has(word)) candidates.push(word);
+  }
+  return [...new Set(candidates.filter(x => x.length <= 60))].slice(0, 8);
+}
+
+function seoPackHashtags(subject, mode, lang) {
+  const ascii = subject.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const words = ascii.match(/[A-Za-z0-9]+/g) || [];
+  const join = words.slice(0, 5).map(w => w[0].toUpperCase() + w.slice(1)).join('').slice(0, 42);
+  return [...new Set([
+    join ? '#' + join : '',
+    words.length ? '#' + words[0][0].toUpperCase() + words[0].slice(1) : '',
+    mode === 'documentary' ? (lang === 'es' ? '#Documental' : '#Wildlife') :
+      (lang === 'es' ? '#Tutorial' : '#HowTo'),
+  ].filter(Boolean))].slice(0, 3);
+}
+
+export function buildSEOPackage(topic, lang, mode, videos) {
+  if (!['en', 'es'].includes(lang) || !['documentary', 'tutorial'].includes(mode)) {
+    throw new Error('INVALID_SEO_PACK_MODE');
+  }
+  const subject = String(topic || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 95);
+  if (subject.length < 3) throw new Error('INVALID_TOPIC');
+  const pretty = subject[0].toUpperCase() + subject.slice(1);
+  const candidates = seoPackTitles(pretty, lang, mode);
+  const text = seoPackText(pretty, lang, mode);
+  const keywords = seoPackKeywords(pretty, lang, mode);
+  const hashtags = seoPackHashtags(pretty, mode, lang);
+  const phraseMap = {
+    es: {
+      documentary: ['naturaleza', 'vida', 'acrobacias', 'viaje', 'alimentación', 'comportamiento', 'documental'],
+      tutorial: ['tutorial', 'guía', 'paso a paso', 'explicado', 'ejemplo', 'práctica'],
+    },
+    en: {
+      documentary: ['nature', 'wildlife', 'journey', 'behavior', 'feeding', 'documentary'],
+      tutorial: ['tutorial', 'guide', 'step by step', 'explained', 'demo', 'walkthrough'],
+    },
+  };
+  const sample = Array.isArray(videos) ? videos.slice(0, 5) : [];
+  const angles = phraseMap[lang][mode].map(term => ({
+    term, count: sample.filter(v => String(v?.snippet?.title || '').toLowerCase().includes(term)).length,
+  })).filter(v => v.count > 0).sort((a, b) => b.count - a.count).slice(0, 3);
+  const examples = sample.slice(0, 2).filter(v => /^[\w-]{11}$/.test(v?.id || '')).map(v => ({
+    title: String(v.snippet?.title || '').slice(0, 100),
+    url: 'https://www.youtube.com/watch?v=' + v.id,
+    views: /^\d+$/.test(String(v.statistics?.viewCount ?? '')) ? String(v.statistics.viewCount) : null,
+  }));
+  return {
+    status: 'NEEDS_OWNER_REVIEW', generator: 'deterministic_templates_no_llm',
+    topic: pretty, lang, mode, titles: candidates, hook: text.hook,
+    description: text.desc + '\n\n' + hashtags.join(' ') + '\n\n' + text.footer,
+    keywords, hashtags, angles, examples, sampleSize: sample.length,
+    appliedToRelease: false, published: false,
+  };
+}
+
+export function formatSEOPackage(p) {
+  const lines = [
+    '<b>SEO EDITORIAL PACKAGE — OWNER REVIEW</b>',
+    'Sijè: ' + escapeHTML(p.topic) + ' | ' + p.lang + ' | ' + p.mode,
+    '⚠️ Pwopozisyon otomatik pa yon AI LLM; okenn tit pa apwouve.',
+    '<b>5 tit pwopoze</b>',
+    ...p.titles.map((title, i) => (i + 1) + '. ' + escapeHTML(title)),
+    '\n<b>HOOK</b>\n' + escapeHTML(p.hook),
+    '\n<b>DESKRIPSYON (DRAFT)</b>\n' + escapeHTML(p.description),
+    '\n<b>KEYWORDS / TAGS</b>\n' + escapeHTML(p.keywords.join(', ')),
+    '\n<b>HASHTAGS</b>\n' + escapeHTML(p.hashtags.join(' ')),
+    '\n<b>Ang ki parèt nan tit echantiyon konpetitè yo</b>',
+  ];
+  lines.push(...(p.angles.length ? p.angles.map(a => '- ' + escapeHTML(a.term) + ': ' + a.count + ' tit') :
+    ['Pa gen ang komen detekte nan echantiyon an.']));
+  lines.push('\n<b>Egzanp videyo piblik</b>');
+  for (const v of p.examples) {
+    lines.push('- ' + escapeHTML(v.title) + ' | views: ' +
+      (v.views ?? 'pa disponib'), v.url);
+  }
+  lines.push('\nPa gen okenn garanti views/RPM. Fòk verifye faits, vizyèl, sous, epi apwouve avan piblikasyon.');
+  return lines.join('\n').slice(0, 3900);
+}
+
+export async function seoPackCommand(env, raw) {
+  const rawText = String(raw || '').trim();
+  const match = /^(?:(en|es)\s+)?(?:(documentary|doc|tutorial)\s+)?([\s\S]{3,120})$/i.exec(rawText);
+  if (!match) return 'Egzanp: <code>/seopack es documentary ballenas jorobadas</code> oswa <code>/seopack en tutorial cybersecurity</code>.';
+  const lang = (match[1] || 'es').toLowerCase();
+  const mode = !match[2] ? (lang === 'es' ? 'documentary' : 'tutorial') :
+    (match[2].toLowerCase() === 'doc' ? 'documentary' : match[2].toLowerCase());
+  const topic = match[3].trim();
+  if (topic.length < 3 || topic.length > 120 || /[<>]/.test(topic)) {
+    return 'Sijè a dwe gen 3–120 karaktè, san HTML.';
+  }
+  if (!env.YOUTUBE_API_KEY) return '⚠️ YOUTUBE_API_KEY poko konfigire nan Cloudflare Secrets.';
+  const search = await publicAPI(env, 'search', {
+    part: 'snippet', type: 'video', maxResults: '5', q: topic,
+    regionCode: 'US', relevanceLanguage: lang, safeSearch: 'moderate',
+  });
+  if (!Array.isArray(search)) return seoAPIError('search', search);
+  const ids = [...new Set(search.map(v => v?.id?.videoId).filter(id =>
+    typeof id === 'string' && /^[\w-]{11}$/.test(id)))].slice(0, 5);
+  if (!ids.length) return 'Pa gen rezilta piblik pou sijè sa a. Pa gen analiz konpetitè envante.';
+  const videos = await publicAPI(env, 'videos', {
+    part: 'snippet,statistics', id: ids.join(','),
+  });
+  if (!Array.isArray(videos)) return seoAPIError('videos', videos);
+  const p = buildSEOPackage(topic, lang, mode, videos);
+  return formatSEOPackage(p);
+}
