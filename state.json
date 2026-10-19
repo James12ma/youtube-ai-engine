@@ -75,6 +75,21 @@
       },
       "task_type": "pipeline.script_section"
     },
+    "55963a0b82a9fa035ff5819fa8d3d01e91ad97202290cf2ea9bcfda08267076d": {
+      "completed_at": "2026-10-19T22:52:38.439830+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "1ae2b61bb2394e8a",
+          "7c2f8388ef92beff",
+          "6195082747115e20"
+        ],
+        "heading": "Entering Expense Data",
+        "narration": "Begin typing expense details in the appropriate columns. Fill in the Date column with the day of each transaction, the Description column with a brief note about the purchase, the Category column to group spending (like groceries or entertainment), and the Amount column with the monetary value. As you press Enter after each entry, the table automatically extends to a new row, preserving formatting and ensuring consistency across the dataset. When you start a new entry, the cursor moves to the next row, and the formatting you selected for the table remains applied. This seamless extension helps keep your expense tracker organized without manual adjustments. To practice, create a small sample table with a few rows of dummy data, entering varied dates, descriptions, categories, and amounts. Observe how each new row inherits the table style and how the headers remain fixed at the top. This hands\u2011on exercise reinforces the automatic row addition feature and familiarizes you with the layout before entering real expenses.",
+        "on_screen_text": "Enter Date, Description, Category, Amount; press Enter to add a new row automatically."
+      },
+      "task_type": "pipeline.script_section"
+    },
     "6763a91353c7fcd00e8fea8518fcf6acc0a7f3df0ef958e176d649715fb419f5": {
       "completed_at": "2026-10-19T22:51:51.061886+00:00",
       "result": {
