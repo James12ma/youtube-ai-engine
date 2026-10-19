@@ -176,3 +176,25 @@ Human approval of footage, full rendering and YouTube upload remains required.
 
 No project is restarted, no auto-merge of owner edits, no old LogicScript modules
 removed and no project-specific subscription or paid API turned on.
+
+## Fail-closed script-candidate preservation
+
+If an approved free-only AI provider returns a real ScriptOutput which subsequently
+fails the existing 8–12 minute or claim-citation quality gate, the owner-only
+Director workflow now preserves an explicitly labeled **UNVERIFIED_CANDIDATE**
+outside the approved draft directory. If subsequent provider quota exhaustion
+prevents completion, the workflow keeps these files in a private 7-day artifact:
+
+- unverified_script_candidate.json — exact initial model output (not fabricated)
+- unverified_candidate_review.txt — readable draft with original cited claim IDs
+- failure_review.json — sanitized failure category, no API credentials or promises
+
+A failed pipeline stays FAILED, never falls through to director_review, rendering,
+metadata approval, YouTube uploads or publication. The Telegram document, when
+delivered, carries a clear FAILED QA / NOT APPROVED caption and may not be
+interpreted as a verified script. Existing LogicScript and Alan7 defaults remain
+unchanged; preservation is opt-in through the specific Director workflow.
+
+Do not repeatedly dispatch jobs during free-tier API rate limits or account
+cooldowns. Saved Router state and completed section caches must be respected.
+Removing limits or forcing approval to bypass failed quality checks is prohibited.
