@@ -97,8 +97,16 @@ def replace_with_chatterbox(
         duration = float(p.stdout.strip())
         if abs(duration-DURATION) > 0.25:
             raise RuntimeError(f"Unexpected MP4 duration {duration:.3f}s")
-        # Move only after full voice & mux QA: no partial output is left behind.
-        draft.replace(output)
+        # Copy to a temp file beside output, then atomically replace. The
+        # working temp dir and destination may be on different filesystems.
+        with tempfile.NamedTemporaryFile(dir=output.parent, prefix=".chatterbox-",
+                                         suffix=".mp4", delete=False) as fh:
+            staged = Path(fh.name)
+        try:
+            shutil.copyfile(draft, staged)
+            staged.replace(output)
+        finally:
+            staged.unlink(missing_ok=True)
     report = {
         "status": "technical_pass_owner_review_pending",
         "duration_seconds": round(duration, 3),
