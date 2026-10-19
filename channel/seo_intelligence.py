@@ -106,7 +106,7 @@ def collect_public_videos(
     try:
         ids: list[str] = []
         if query:
-            response = _get(client, api_key, "search", part="id", type="video",
+            response = _get(client, api_key, "search", part="snippet", type="video",
                             q=query.strip(), maxResults=max_results, regionCode=region,
                             relevanceLanguage=language, safeSearch="moderate")
             ids = [item.get("id", {}).get("videoId", "") for item in response["items"]]
@@ -114,7 +114,7 @@ def collect_public_videos(
         elif video_url:
             ids = [video_id_from_url(video_url)]
         else:
-            response = _get(client, api_key, "search", part="id", type="video",
+            response = _get(client, api_key, "search", part="snippet", type="video",
                             channelId=channel_id, maxResults=max_results,
                             order="date", safeSearch="moderate")
             ids = [item.get("id", {}).get("videoId", "") for item in response["items"]]
