@@ -125,16 +125,55 @@ def replace_with_chatterbox(
     return report
 
 
+
+def sample_english_voice(
+    output: Path, *, backend: str = "chatterbox-en", device: str = "cpu"
+) -> dict:
+    """Generate a short English voice audition before scheduling a 98s render.
+
+    Runs the same existing English Chatterbox as the full movie. No video
+    rendering, no upload, no robotics fallback. Audio stays unapproved.
+    """
+    settings = engine_kwargs(backend, device)
+    from scripts.voice_compare import _voices
+    voices = _voices()
+    engine = voices.ChatterboxEngine(**settings)
+    output = Path(output).resolve()
+    if output.suffix.lower() != ".wav":
+        raise ValueError("Sample output must be a .wav file")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    detail = voices.narrate(engine, SCENES[0][2], output, sentence_level=True)
+    return {
+        "status": "voice_audition_owner_review_pending",
+        "backend": backend,
+        "language": "en",
+        "model": engine.loaded,
+        "seconds": detail["seconds"],
+        "sample": str(output),
+        "owner_approved": False,
+        "auto_publish": False,
+        "paid_service_used": False,
+    }
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Revoice the existing 98s video with English Chatterbox")
-    parser.add_argument("--input", required=True, type=Path)
-    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--input", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--sample-out", type=Path,
+                        help="10s-ish English voice audition WAV only; no video")
     parser.add_argument("--backend", choices=BACKENDS, default="chatterbox-en")
     parser.add_argument("--device", choices=("cpu","cuda"), default="cpu")
     args = parser.parse_args()
-    print(json.dumps(replace_with_chatterbox(args.input, args.output,
-                                            backend=args.backend, device=args.device),
-                     indent=2))
+    if args.sample_out is not None:
+        if args.input is not None or args.output is not None:
+            parser.error("--sample-out cannot be combined with --input/--output")
+        result=sample_english_voice(args.sample_out, backend=args.backend, device=args.device)
+    else:
+        if args.input is None or args.output is None:
+            parser.error("--input and --output are required for full video")
+        result=replace_with_chatterbox(args.input, args.output,
+                                       backend=args.backend, device=args.device)
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":
