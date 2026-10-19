@@ -25,6 +25,7 @@ const KINDS = {
 const HELP = [
   '<b>Alan7 — kòmand</b>',
   '/status — eta bot la, GitHub ak file atant lan',
+  '/script &lt;script&gt; — kole script videyo ou a pou revizyon, pa pou piblikasyon',
   '/create test — lanse yon tès sistèm (san GPU)',
   '/create lena [0-4] — jenere yon plan IA LENA 3 s sou Kaggle (~1 è); videyo a rive isit la',
   '🎬 Voye yon klip videyo (MP4, &lt; 20 MB) ak yon tèks an panyòl kòm caption: m ap retounen l ak narasyon, soutit ak etikèt IA.',
@@ -193,6 +194,35 @@ async function cmdCreate(env, arg) {
     'Li rete nan file atant; m ap eseye ankò otomatikman chak 5 minit.';
 }
 
+
+// Owner-submitted script intake only. The current Worker cannot render media,
+// and GitHub Actions minutes may be unavailable; never claim a video was made.
+export async function handleOwnerScript(env, rawText) {
+  const script = String(rawText || '').trim();
+  if (script.length < 80) return '✍️ Script la twò kout. Voye script konplè a apre /script oswa kole yon script ak tan [00:00–00:05].';
+  if (script.length > 3500) return '⚠️ Script la depase 3500 karaktè. Fann li an pati anvan ou voye li.';
+  const timestamps = [...script.matchAll(/\[(\d{2}):(\d{2})\s*[\u2013\u2014-]\s*(\d{2}):(\d{2})\]/g)];
+  if (!timestamps.length) return '✍️ Mete tan yo nan script la: [00:00–00:05], [00:05–00:15], elatriye.';
+  let lastEnd = 0;
+  for (const item of timestamps) {
+    const start = Number(item[1])*60 + Number(item[2]);
+    const end = Number(item[3])*60 + Number(item[4]);
+    if (start !== lastEnd || end <= start || end > 600) return '⚠️ Tan sekans yo dwe kontinyèl, san espas oswa retou dèyè (maksimòm 10 minit).';
+    lastEnd = end;
+  }
+  const id = newId();
+  const arg = JSON.stringify({
+    script, source: 'telegram_owner_message', language: 'en',
+    duration_seconds: lastEnd, owner_review_required: true, auto_publish: false
+  });
+  await env.DB.prepare("INSERT INTO jobs(id, kind, arg, state, attempts, created_at, updated_at) VALUES (?1, 'owner_script', ?2, 'awaiting_approval', 0, ?3, ?3)")
+    .bind(id, arg, now()).run();
+  await logEvent(env, id, 'script_received', 'Owner script stored for review; no render or upload dispatched');
+  return '📝 Script ou anresevwa! ID: <code>'+id+'</code>. '+timestamps.length+
+    ' sekans, '+lastEnd+' segonn. Pawòl ou yo konsève. '+
+    '⏸ Eta: tann koneksyon ak motè rann lan. Pa gen videyo ki lanse, pa gen depans ni piblikasyon.';
+}
+
 async function cmdQueue(env) {
   const rows = await env.DB.prepare('SELECT id, kind, state, attempts, created_at FROM jobs ORDER BY created_at DESC LIMIT 10').all();
   const list = rows.results || [];
@@ -231,6 +261,8 @@ export async function handleCommand(env, text) {
       return cmdStatus(env);
     case 'create':
       return cmdCreate(env, arg);
+    case 'script':
+      return handleOwnerScript(env, arg);
     case 'queue':
       return cmdQueue(env);
     case 'cancel':
@@ -349,8 +381,13 @@ export default {
       await setMeta(env, 'webhook_last', 'OK');
       let reply;
       try {
-        reply = msg.text ? await handleCommand(env, msg.text)
-          : (await handleClip(env, msg)) || 'Mwen aksepte sèlman kòmand oswa klip videyo.';
+        const plain = typeof msg.text === 'string' ? msg.text.trim() : '';
+        // Accept a pasted timestamped script directly, no slash command needed.
+        const isPastedScript = !plain.startsWith('/') && plain.length >= 80 &&
+          /\[\d{2}:\d{2}\s*[\u2013\u2014-]\s*\d{2}:\d{2}\]/.test(plain);
+        reply = isPastedScript ? await handleOwnerScript(env, plain)
+          : msg.text ? await handleCommand(env, msg.text)
+          : (await handleClip(env, msg)) || 'Mwen aksepte kòmand, script oswa klip videyo.';
       } catch (e) {
         reply = '⚠️ Erè entèn — mesaj ou a resevwa, men mwen pa t ka trete l. Eseye ankò.';
       }
