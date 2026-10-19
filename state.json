@@ -13,6 +13,39 @@
         ]
       },
       "task_type": "pipeline.research"
+    },
+    "f569c24c72a008188b6b1a039d489e50f28f78b3973c1e49497d515f075cdb40": {
+      "completed_at": "2026-10-19T22:51:32.941688+00:00",
+      "result": {
+        "claims": [
+          {
+            "source_id": "6c74053a3448",
+            "supporting_snippet": "Select a cell within your data. Select Home > Format as Table. Choose a style for your table. In the Create Table dialog box, set your cell range. Mark if your table has headers. Select OK .",
+            "text": "Select a cell within your data, then select Home > Format as Table, choose a style, set the cell range in the Create Table dialog box, mark if your table has headers, and select OK."
+          },
+          {
+            "source_id": "0559be5f521e",
+            "supporting_snippet": "Simple formulas always start with an equal sign ( = ), followed by constants that are numeric values and calculation operators such as plus ( + ), minus ( - ), asterisk( * ), or forward slash ( / ) signs.",
+            "text": "Simple formulas always start with an equal sign (=), followed by constants that are numeric values and calculation operators such as plus (+), minus (-), asterisk(*), or forward slash (/) signs."
+          },
+          {
+            "source_id": "6c74053a3448",
+            "supporting_snippet": "To add a blank table, select the cells you want included in the table and click Insert > Table .",
+            "text": "To add a blank table, select the cells you want included in the table and click Insert > Table."
+          },
+          {
+            "source_id": "0559be5f521e",
+            "supporting_snippet": "You can enter as many constants and operators in a formula as you need, up to 8192 characters.",
+            "text": "You can enter as many constants and operators in a formula as you need, up to 8192 characters."
+          },
+          {
+            "source_id": "6c74053a3448",
+            "supporting_snippet": "If you don't check the My table has headers box, Excel for the web adds headers with default names like Column1 and Column2 above the data.",
+            "text": "If you don't check the My table has headers box, Excel for the web adds headers with default names like Column1 and Column2 above the data."
+          }
+        ]
+      },
+      "task_type": "pipeline.research"
     }
   }
 }
