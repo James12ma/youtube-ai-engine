@@ -148,6 +148,19 @@
       },
       "task_type": "pipeline.script"
     },
+    "968d1129930e7382b1778420cea08ba85f7699b746049d33183fb354fc5d7290": {
+      "completed_at": "2026-10-19T22:52:20.895737+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "6195082747115e20"
+        ],
+        "heading": "Applying a Table Style",
+        "narration": "Select any cell inside the table and go to Home > Format as Table. Choose a style that highlights rows and columns for easy scanning. The style applies banding and formatting that alternates between rows, making it simple to distinguish individual entries. This visual cue helps when reviewing large lists of expenses and reduces the chance of misreading amounts. To illustrate, imagine a table where each row is shaded alternately, allowing you to quickly compare amounts across different categories. This banding also aids in spotting totals or outliers at a glance. After selecting a style, you can further customize the design by adjusting colors or adding borders to match your personal preference. The applied style will automatically update if you insert new rows or columns, ensuring consistency throughout your expense tracker. If you later decide to change the style, simply return to Home > Format as Table, select a new option, and the entire table will be refreshed with the new formatting. This dynamic updating saves time and maintains a professional appearance for your financial records. A suggested exercise: create a small sample table with a few expense entries, apply two different table styles, and observe how the banding changes the readability of the data. Compare the visual impact of each style and note which one you prefer for your own tracker. This hands\u2011on practice reinforces the concept and helps you become comfortable with the formatting options available in Excel for the web.",
+        "on_screen_text": "Select any cell inside the table and go to Home > Format as Table. Choose a style that highlights rows and columns for easy scanning."
+      },
+      "task_type": "pipeline.script_section"
+    },
     "d7652e9fa9e200a258e7a7ad904fe670fa29c761af215bef70da869e28843782": {
       "completed_at": "2026-10-19T22:51:10.788148+00:00",
       "result": {
