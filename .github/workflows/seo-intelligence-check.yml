@@ -1,0 +1,38 @@
+name: SEO Intelligence isolated offline tests
+on:
+  pull_request:
+    paths:
+      - 'channel/seo_intelligence.py'
+      - 'channel/cli.py'
+      - 'tests/test_seo_intelligence.py'
+      - 'alan7_bot/src/index.js'
+      - 'alan7_bot/test/seo.test.mjs'
+      - '.github/workflows/seo-intelligence-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  seo-offline:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install minimal free test dependencies
+        run: python -m pip install -r requirements.txt -r requirements-production.txt pytest
+      - name: Compile new Python SEO integration
+        run: python -m compileall -q channel/seo_intelligence.py channel/cli.py tests/test_seo_intelligence.py
+      - name: Python SEO safety and mock-API tests
+        run: python -m pytest -q tests/test_seo_intelligence.py
+      - name: CLI SEO command help smoke test
+        run: python -m channel.cli seo-review --help
+      - name: Node syntax and fake YouTube API tests
+        run: |
+          node --check alan7_bot/src/index.js
+          node --test alan7_bot/test/seo.test.mjs
