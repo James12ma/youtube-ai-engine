@@ -61,6 +61,7 @@ def main(argv=None):
     s.add_argument('--token-file',type=Path,required=True)
     z=sub.add_parser('seo-review',help='Read-only official YouTube SEO competitor review; no uploads')
     z.add_argument('--topic',required=True);z.add_argument('--region',default='US')
+    z.add_argument('--mode',choices=('documentary','tutorial'))
     z.add_argument('--language',default='en');z.add_argument('--max-results',type=int,default=8)
     z.add_argument('--video-url',default='');z.add_argument('--channel-id',default='')
     z.add_argument('--snapshot',type=Path);z.add_argument('--live',action='store_true')
@@ -70,6 +71,7 @@ def main(argv=None):
         from .seo_intelligence import main as seo_main
         opts=['--topic',args.topic,'--region',args.region,'--language',args.language,
               '--max-results',str(args.max_results),'--out',str(args.out)]
+        if args.mode:opts.extend(['--mode',args.mode])
         if args.video_url:opts.extend(['--video-url',args.video_url])
         if args.channel_id:opts.extend(['--channel-id',args.channel_id])
         if args.snapshot:opts.extend(['--snapshot',str(args.snapshot)])
