@@ -20,7 +20,7 @@ test('official bounded API search includes region and returns real observed stat
   const CH = 'UC' + 'a'.repeat(22);
   globalThis.fetch = async (url) => {
     const u = new URL(String(url));
-    called.push(u);
+    called.push({url, u});
     if (u.pathname.endsWith('/search')) return Response.json({ items: [{ id: { videoId: ID } }] });
     if (u.pathname.endsWith('/videos')) return Response.json({ items: [{
       id: ID, snippet: { title: '<b>Practical SEO</b>', channelId: CH,
@@ -35,8 +35,10 @@ test('official bounded API search includes region and returns real observed stat
   try {
     const response = await seoCommand({ YOUTUBE_API_KEY: 'SECRET_VALUE' }, 'en cybersecurity');
     assert.equal(called.length, 3);
-    assert.equal(called[0].searchParams.get('regionCode'), 'US');
-    assert.equal(called[0].searchParams.get('relevanceLanguage'), 'en');
+    assert.equal(typeof called[0].url, 'string');
+    assert.equal(called[0].u.searchParams.get('part'), 'snippet');
+    assert.equal(called[0].u.searchParams.get('regionCode'), 'US');
+    assert.equal(called[0].u.searchParams.get('relevanceLanguage'), 'en');
     assert.match(response, /Views: 1200/);
     assert.match(response, /Channel subs: 55/);
     assert.doesNotMatch(response, /SECRET_VALUE|<bad>|<b>Practical SEO<\/b>/);
@@ -107,5 +109,33 @@ test('Malformed error body never gets copied into the user-visible response', as
     const response = await seoCommand({ YOUTUBE_API_KEY: 'SECRET_VALUE' }, 'es selva');
     assert.match(response, /reason=unknown/);
     assert.doesNotMatch(response, /<script>|SECRET_VALUE/);
+  } finally { globalThis.fetch = old; }
+});
+
+
+test('redirects never forward API key and show HTTP 3xx instead of generic NETWORK', async () => {
+  const old = globalThis.fetch;
+  let count = 0;
+  globalThis.fetch = async (url, options) => {
+    count++;
+    assert.equal(typeof url, 'string');
+    assert.equal(options.redirect, 'manual');
+    return new Response(null, {status: 302, headers: { location: 'https://outside.invalid/collect' }});
+  };
+  try {
+    const response = await seoCommand({YOUTUBE_API_KEY:'NEVER_EXPOSE_KEY'}, 'es ballenas');
+    assert.equal(count, 1);
+    assert.match(response, /HTTP 302.*REDIRECT/);
+    assert.doesNotMatch(response, /NEVER_EXPOSE_KEY|outside\.invalid/);
+  } finally { globalThis.fetch = old; }
+});
+
+test('network TypeError exposes safe class but no URL or key', async () => {
+  const old = globalThis.fetch;
+  globalThis.fetch = async () => { throw new TypeError('sensitive-secret-EXPOSE'); };
+  try {
+    const response = await seoCommand({YOUTUBE_API_KEY:'SENSITIVEKEY'}, 'es ballenas');
+    assert.match(response, /NETWORK_TYPE_ERROR/);
+    assert.doesNotMatch(response, /sensitive-secret-EXPOSE|SENSITIVEKEY/);
   } finally { globalThis.fetch = old; }
 });

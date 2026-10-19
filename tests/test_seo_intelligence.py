@@ -52,6 +52,7 @@ def test_read_only_official_api_max_three_calls():
         )
     assert len(calls) == 3
     assert [path.rsplit("/", 1)[-1] for path, _ in calls] == ["search", "videos", "channels"]
+    assert calls[0][1]["part"] == "snippet"
     assert calls[0][1]["regionCode"] == "US"
     assert calls[0][1]["relevanceLanguage"] == "en"
     assert data["videos"][0]["view_count"] == 240
