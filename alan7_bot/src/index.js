@@ -377,19 +377,66 @@ const ROOT = 'https://www.googleapis.com/youtube/v3';
 const escapeHTML = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// Only display known Google status/reason codes; never echo raw Google responses,
+// request URLs or the API key in Telegram, error messages or logs.
+const SAFE_GOOGLE_REASONS = new Set([
+  'API_KEY_INVALID', 'API_KEY_SERVICE_BLOCKED', 'API_KEY_HTTP_REFERRER_BLOCKED',
+  'API_KEY_IP_ADDRESS_BLOCKED', 'SERVICE_DISABLED', 'PERMISSION_DENIED',
+  'RESOURCE_EXHAUSTED', 'UNAUTHENTICATED', 'FAILED_PRECONDITION',
+  'keyInvalid', 'accessNotConfigured', 'quotaExceeded', 'dailyLimitExceeded',
+  'rateLimitExceeded', 'forbidden', 'badRequest',
+]);
+
+function seoAPIError(stage, failure) {
+  const { status = 0, reason = 'unknown' } = failure || {};
+  const code = status ? 'HTTP ' + status : 'NETWORK';
+  let help = 'Verifye estati Google Cloud ak YouTube Data API v3.';
+  if (['API_KEY_INVALID', 'keyInvalid', 'UNAUTHENTICATED'].includes(reason)) {
+    help = 'Kle a pa valab. Verifye API key nan pwojè Google Cloud la; ranplase li si sa nesesè.';
+  } else if (['SERVICE_DISABLED', 'accessNotConfigured'].includes(reason)) {
+    help = 'YouTube Data API v3 pa aktive nan pwojè kote kle a soti a.';
+  } else if (['API_KEY_SERVICE_BLOCKED', 'API_KEY_HTTP_REFERRER_BLOCKED',
+              'API_KEY_IP_ADDRESS_BLOCKED'].includes(reason)) {
+    help = 'Restriksyon sou kle Google la bloke apèl Cloudflare Worker la.';
+  } else if (status === 429 || ['RESOURCE_EXHAUSTED', 'quotaExceeded',
+                 'dailyLimitExceeded', 'rateLimitExceeded'].includes(reason)) {
+    help = 'Quota oswa limit API Google la rive; pa lanse plizyè nouvo rechèch.';
+  } else if (status === 403) {
+    help = 'Google refize aksè a. Verifye pwojè, sèvis ki aktive, ak restriksyon kle a.';
+  } else if (status === 400) {
+    help = 'Google rejte paramèt apèl la. Verifye API a ak kle li.';
+  } else if (status >= 500 || !status) {
+    help = 'Sèvis Google oswa rezo a pa reponn. Reeseye pita.';
+  }
+  return '⚠️ YouTube API (' + stage + '): ' + code + ', reason=' + reason +
+    '. ' + help + '\nPa gen done SEO envante, ni okenn videyo ki pibliye.';
+}
+
 async function publicAPI(env, endpoint, params) {
-  if (!['search', 'videos', 'channels'].includes(endpoint)) return null;
+  if (!['search', 'videos', 'channels'].includes(endpoint)) {
+    return { failure: true, status: 0, reason: 'UNSUPPORTED_ENDPOINT' };
+  }
   const url = new URL(ROOT + '/' + endpoint);
   for (const [key, val] of Object.entries(params)) url.searchParams.set(key, String(val));
   url.searchParams.set('key', env.YOUTUBE_API_KEY);
   try {
     const result = await fetch(url, { method: 'GET', redirect: 'error',
       headers: { accept: 'application/json' } });
-    if (!result.ok) return null;
+    if (!result.ok) {
+      let reason = 'unknown';
+      try {
+        const body = await result.json();
+        const raw = body?.error?.details?.find((x) => x && typeof x.reason === 'string')?.reason ||
+                    body?.error?.errors?.[0]?.reason || body?.error?.status;
+        if (typeof raw === 'string' && SAFE_GOOGLE_REASONS.has(raw)) reason = raw;
+      } catch { /* Do not expose Google response bodies. */ }
+      return { failure: true, status: result.status, reason };
+    }
     const payload = await result.json();
-    return payload && Array.isArray(payload.items) ? payload.items : null;
+    return payload && Array.isArray(payload.items) ? payload.items :
+      { failure: true, status: result.status, reason: 'BAD_RESPONSE' };
   } catch {
-    return null;
+    return { failure: true, status: 0, reason: 'NETWORK_ERROR' };
   }
 }
 
@@ -411,20 +458,21 @@ export async function seoCommand(env, raw) {
     part: 'id', type: 'video', maxResults: '5', q: topic, regionCode: 'US',
     relevanceLanguage: lang, safeSearch: 'moderate',
   });
-  if (!search) return '⚠️ YouTube API pa disponib oswa quota rive nan limit. Pa gen done SEO envante.';
+  if (!Array.isArray(search)) return seoAPIError('search', search);
   const ids = [...new Set(search.map((i) => i && i.id && i.id.videoId).filter(
     (id) => typeof id === 'string' && /^[a-zA-Z0-9_-]{11}$/.test(id)))].slice(0, 5);
   if (!ids.length) return 'Pa gen videyo piblik nan rezilta rechèch sa a.';
   const videos = await publicAPI(env, 'videos', {
     part: 'snippet,statistics', id: ids.join(','),
   });
-  if (!videos) return '⚠️ Statistik videyo yo pa disponib. Pa gen rezilta envante.';
+  if (!Array.isArray(videos)) return seoAPIError('videos', videos);
   const channelsIDs = [...new Set(videos.map((v) => v?.snippet?.channelId).filter(
     (id) => typeof id === 'string' && /^UC[a-zA-Z0-9_-]{22}$/.test(id)))];
   const channels = channelsIDs.length ? await publicAPI(env, 'channels', {
     part: 'snippet,statistics', id: channelsIDs.join(','),
   }) : [];
-  const byChannel = new Map((channels || []).map((c) => [c.id, c]));
+  if (!Array.isArray(channels)) return seoAPIError('channels', channels);
+  const byChannel = new Map(channels.map((c) => [c.id, c]));
   const result = [
     '<b>SEO Intelligence — OWNER REVIEW</b>',
     'Sijè: ' + escapeHTML(topic),
