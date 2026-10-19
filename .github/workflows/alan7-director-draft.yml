@@ -67,19 +67,29 @@ jobs:
           path: outputs/director-jobs/${{ inputs.job_id }}
           if-no-files-found: ignore
           retention-days: 7
-      - name: Send unapproved script document privately to Telegram owner
-        if: success()
+      - name: Send evidence-labeled owner review if there is a real candidate
+        if: always()
         env:
           TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
         run: |
           set +x
-          file="outputs/director-jobs/$DIRECTOR_JOB_ID/director/script_full_review.txt"
+          folder="outputs/director-jobs/$DIRECTOR_JOB_ID"
+          file="$folder/director/script_full_review.txt"
+          caption="AI Director $DIRECTOR_JOB_ID — VERIFIED DRAFT (owner review required; not published)"
+          if [ ! -f "$file" ] && [ -f "$folder/unverified_candidate_review.txt" ]; then
+            file="$folder/unverified_candidate_review.txt"
+            caption="AI Director $DIRECTOR_JOB_ID — FAILED QA, UNVERIFIED candidate; NOT APPROVED"
+          fi
+          if [ ! -f "$file" ]; then
+            echo '::notice::No script candidate saved, so no document will be sent'
+            exit 0
+          fi
           if [ -z "$TG" ] || [ -z "$OWNER" ]; then
             echo '::warning::Bot secrets unavailable; retrieve the private GitHub Actions artifact instead'
           else
             code=$(curl -sS -o /dev/null -w '%{http_code}' \
-              -F "chat_id=$OWNER" -F "caption=AI Director $DIRECTOR_JOB_ID — DRAFT ONLY, approval required" \
+              -F "chat_id=$OWNER" -F "caption=$caption" \
               -F "document=@${file};type=text/plain" "https://api.telegram.org/bot$TG/sendDocument" || true)
             if [ "$code" != 200 ]; then echo '::warning::Telegram sendDocument failed; GitHub artifact remains'; fi
           fi
