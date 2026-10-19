@@ -286,6 +286,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--region", default="US")
     parser.add_argument("--language", default="en")
     parser.add_argument("--max-results", type=int, default=8)
+    parser.add_argument("--mode", choices=("documentary", "tutorial"), help="SEO editorial format; default by language")
     parser.add_argument("--video-url", default="")
     parser.add_argument("--channel-id", default="")
     parser.add_argument("--snapshot", type=Path, help="Offline JSON {videos, channels}; no API key needed")
@@ -304,7 +305,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     else:
         data = json.loads(args.snapshot.read_text(encoding="utf-8"))
-    own_tags, original_title = [], ""
+    own_tags, original_title, original_hook = [], "", ""
     if args.draft:
         from pipeline.models import ScriptArtifact
         from .metadata import derive_tags
@@ -313,15 +314,28 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--topic must match the approved draft topic")
         own_tags = derive_tags(script)
         original_title = script.title
+        original_hook = script.hook
     report = build_review(topic=args.topic, region=args.region, language=args.language,
                           public_data=data, own_tags=own_tags, original_title=original_title)
+    from .seo_package import propose_editorial_package, telegram_editorial_package
+    package = propose_editorial_package(
+        topic=args.topic, language=args.language,
+        mode=args.mode or ("documentary" if args.language.lower().startswith("es") else "tutorial"),
+        public_videos=data.get("videos", []),
+        draft_title=original_title, draft_hook=original_hook,
+    )
     if args.out.exists():
         parser.error("Output directory already exists; refuse to overwrite review evidence")
     args.out.mkdir(parents=True)
     (args.out / "seo_review.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     (args.out / "telegram_review.txt").write_text(telegram_summary(report), encoding="utf-8")
+    (args.out / "seo_editorial_package.json").write_text(
+        json.dumps(package, ensure_ascii=False, indent=2), encoding="utf-8")
+    (args.out / "seo_editorial_telegram.txt").write_text(
+        telegram_editorial_package(package), encoding="utf-8")
     print(json.dumps({"review": str(args.out / "seo_review.json"),
                       "telegram": str(args.out / "telegram_review.txt"),
+                      "editorial_package": str(args.out / "seo_editorial_package.json"),
                       "status": report["status"], "videos": report["video_count"],
                       "published": False, "applied_to_metadata": False}, indent=2))
     return 0
