@@ -248,3 +248,21 @@ def test_schema_failure_does_not_globally_pause_unrelated_tasks(tmp_path):
         router.execute('bad-content',{},request(),Answer)
     assert not router._runtime_store.load().get('paused_until')
     assert router.execute('different-task',{},request(),Answer).message=='valid'
+
+
+def test_rate_limit_pause_uses_retry_after_not_hour_long_outage(tmp_path):
+    from adapters import RateLimitError
+    p=repo(tmp_path/'repo'); clock=Clock()
+    class LimitThenValid(Fake):
+        def complete(self,req):
+            self.calls+=1
+            if self.calls==1: raise RateLimitError('rate limited',retry_after=5)
+            return SimpleNamespace(parsed=Answer(message='ready'))
+    router=Router(StateStore(p,push_required=False),{'openrouter':LimitThenValid('openrouter')},
+                  clock=clock,sleep=clock.sleep)
+    with pytest.raises(AllProvidersFailed):router.execute('first',{},request(),Answer)
+    state=router._runtime_store.load()
+    assert state['paused_until']==1005
+    assert state['cooldowns']['openrouter']==1005
+    clock.sleep(6)
+    assert router.execute('next',{},request(),Answer).message=='ready'

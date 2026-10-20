@@ -26,7 +26,7 @@ jobs:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      OPENROUTER_MODEL: 'google/gemma-4-31b-it:free'
+      OPENROUTER_MODEL: 'google/gemma-4-26b-a4b-it:free'
       ROUTER_ALLOW_LIVE_API: '1'
       ENABLE_LIVE_LLM: '1'
     steps:

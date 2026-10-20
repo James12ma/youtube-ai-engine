@@ -307,8 +307,12 @@ class Router:
             # reservations and circuit failures still count, but it must not
             # globally stop unrelated jobs for an hour.
             if not isinstance(last_error, SchemaValidationError):
+                pause = self._config.all_failed_pause
+                if isinstance(last_error, RateLimitError):
+                    retry = last_error.retry_after
+                    pause = max(0.0, retry if retry is not None else self._config.rate_limit_default_cooldown)
                 self._runtime_store.transact(
-                    lambda rt: rt.update(paused_until=self._clock() + self._config.all_failed_pause),
+                    lambda rt: rt.update(paused_until=self._clock() + pause),
                     operation_id='all-failed')
             raise AllProvidersFailed('No available approved provider. Last error: ' + repr(last_error))
         finally:
