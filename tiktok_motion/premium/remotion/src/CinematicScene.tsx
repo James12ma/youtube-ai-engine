@@ -18,13 +18,13 @@ const shotPalette:Record<string,[string,string,string]>={
 const appear=(f:number,start=0)=>interpolate(f,[start,start+20],[0,1],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
 const titleCase=(s:string)=>s.length>60?s.slice(0,59)+'…':s;
 const Phone:React.FC<{name:string;f:number;accent:string;small?:boolean}>=({name,f,accent,small})=>{
-  const scale=small?.77:1;
+  const scale=small ? 0.77 : 1;
   return <div style={{width:300,height:530,transform:'scale('+scale+')',borderRadius:54,background:'linear-gradient(145deg,#6c778f,#111a2c 18%,#02070f 80%,#657185)',padding:13,boxSizing:'border-box',boxShadow:'23px 42px 75px #0008, inset 0 0 0 2px #ffffff55'}}>
     <div style={{height:'100%',background:'#fcfdff',borderRadius:42,color:'#172338',overflow:'hidden',padding:22,boxSizing:'border-box'}}>
       <div style={{width:90,height:18,borderRadius:30,background:'#0c1322',margin:'-8px auto 48px'}}/>
       <div style={{fontSize:19,fontWeight:700,opacity:.55,marginBottom:16}}>COMMUNICATION</div>
       <div style={{fontSize:31,fontWeight:900,lineHeight:1.1,minHeight:85}}>{titleCase(name)}</div>
-      <div style={{background:'#e9f3fd',borderRadius:20,padding:16,fontSize:19,marginTop:20}}>Message delivered <span style={{color:'#16866b'}}>✓</span></div>
+      <div style={{background:'#e9f3fd',borderRadius:20,padding:16,fontSize:19,marginTop:20}}>Illustration <span style={{color:'#16866b'}}>✓</span></div>
       <div style={{height:90,marginTop:30,display:'flex',alignItems:'center',justifyContent:'center'}}>
         <div style={{width:56,height:56,borderRadius:'50%',background:accent,boxShadow:'0 0 '+(12+Math.sin(f/8)*9)+'px '+accent}}/>
       </div>
@@ -43,12 +43,12 @@ const Person:React.FC<{name:string;f:number;accent:string;right?:boolean}>=({nam
   <div style={{fontSize:27,fontWeight:800,color:'#fff',marginTop:20}}>{titleCase(name)}</div>
 </div>;
 const DeviceScene:React.FC<{scene:StoryVisual;f:number;accent:string}>=({scene,f,accent})=><div style={{height:690,position:'relative',display:'flex',justifyContent:'center',alignItems:'center'}}>
-  <div style={{transform:'translateY('+(1-appear(f,3))*100+'px) rotateY('+Math.sin(f/60)*9+'deg)'}}><Phone name={scene.items[0]||scene.action||'Application'} f={f} accent={accent}/></div>
-  <div style={{position:'absolute',right:20,top:110,fontSize:26,background:'#fff',color:'#0c2340',padding:'18px 25px',borderRadius:22,boxShadow:'0 20px 40px #0006',opacity:appear(f,24)}}>{scene.items[1]||'Connected'} ✓</div>
+  <div style={{transform:'translateY('+(1-appear(f,3))*100+'px) rotateY('+Math.sin(f/60)*9+'deg)'}}><Phone name={scene.items[0]||scene.action||'DEVICE'} f={f} accent={accent}/></div>
+  <div style={{position:'absolute',right:20,top:110,fontSize:26,background:'#fff',color:'#0c2340',padding:'18px 25px',borderRadius:22,boxShadow:'0 20px 40px #0006',opacity:appear(f,24)}}>{scene.items[1]||'Visual example'} ✓</div>
 </div>;
 const CharacterScene:React.FC<{scene:StoryVisual;f:number;accent:string}>=({scene,f,accent})=><div style={{height:690,display:'flex',justifyContent:'space-around',alignItems:'center',position:'relative'}}>
-  <Person name={scene.actors?.[0]||'Applicant'} f={f} accent={accent}/>
-  <Person name={scene.actors?.[1]||'Recruiter'} f={f} accent="#778bc8" right/>
+  <Person name={scene.actors?.[0]||'Role'} f={f} accent={accent}/>
+  {scene.actors?.[1]&&<Person name={scene.actors[1]} f={f} accent="#778bc8" right/>}
   <div style={{position:'absolute',top:10,right:12,background:'#fff',color:'#17304a',padding:'22px 26px',borderRadius:20,fontSize:24,fontWeight:800,transform:'scale('+appear(f,12)+')'}}>{scene.items[0]||'CONVERSATION'}</div>
   <div style={{position:'absolute',bottom:28,left:70,right:70,height:27,borderRadius:'50%',background:'#0005',filter:'blur(12px)'}}/>
 </div>;
@@ -66,7 +66,7 @@ const SignalScene:React.FC<{scene:StoryVisual;f:number;accent:string}>=({scene,f
       <circle cx={x} cy={y} r={19} fill="#fff" stroke={accent} strokeWidth={9}/>
       <circle cx={x} cy={y} r={37} fill="none" stroke={accent} strokeWidth={3} opacity=".5"/>
     </svg>
-    <div style={{position:'absolute',bottom:45,left:60,right:60,textAlign:'center',fontSize:25,letterSpacing:3,fontWeight:800}}>SIGNAL • TRANSMISSION • DELIVERY</div>
+    <div style={{position:'absolute',bottom:45,left:60,right:60,textAlign:'center',fontSize:25,letterSpacing:3,fontWeight:800}}>DIRECTIONAL SIGNAL FLOW</div>
   </div>;
 };
 const DocumentScene:React.FC<{scene:StoryVisual;f:number;accent:string}>=({scene,f,accent})=><div style={{height:690,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -106,6 +106,7 @@ export const CinematicScene:React.FC<{scene:StoryVisual}>=({scene})=>{
   const f=useCurrentFrame(),[bg,ink,accent]=shotPalette[scene.kind]||shotPalette.hero;
   const pan=scene.camera==='pan_left'?-f*.5:scene.camera==='pan_right'?f*.5:0;
   const zoom=scene.camera==='static'?1:1+Math.min(f,200)*.00035;
+  const angle=scene.camera==='orbit'?Math.sin(f/42)*5:0;
   const visual=scene.kind==='character'?<CharacterScene scene={scene} f={f} accent={accent}/>:
     scene.kind==='device'?<DeviceScene scene={scene} f={f} accent={accent}/>:
     scene.kind==='signal_flow'?<SignalScene scene={scene} f={f} accent={accent}/>:
@@ -116,8 +117,8 @@ export const CinematicScene:React.FC<{scene:StoryVisual}>=({scene})=>{
   return <div style={{position:'absolute',inset:0,color:ink,background:'radial-gradient(ellipse at 25% 30%,'+bg+' 0%,#080d18 100%)',overflow:'hidden'}}>
     <div style={{position:'absolute',top:110,left:72,right:72,fontFamily:'InterTight',fontSize:25,letterSpacing:4,opacity:.65}}>{(scene.setting||'PREMIUM VISUAL STORY').toUpperCase()}</div>
     <div style={{position:'absolute',top:240,left:72,right:72,fontFamily:'InterTight',fontSize:70,fontWeight:900,lineHeight:1.05,letterSpacing:-2,opacity:appear(f)}}>{titleCase(scene.headline)}</div>
-    <div style={{position:'absolute',top:520,left:60,right:60,transform:'translateX('+pan+'px) scale('+zoom+')',transformOrigin:'center'}}>{visual}</div>
+    <div style={{position:'absolute',top:520,left:60,right:60,transform:'translateX('+pan+'px) rotateY('+angle+'deg) scale('+zoom+')',transformOrigin:'center'}}>{visual}</div>
     {scene.action&&<div style={{position:'absolute',top:1300,left:72,right:72,borderLeft:'7px solid '+accent,padding:'15px 22px',background:'#0004',borderRadius:8,fontSize:32,fontWeight:700,lineHeight:1.25,opacity:appear(f,24)}}>{scene.action}</div>}
-    <div style={{position:'absolute',top:1550,left:72,right:72,fontSize:19,letterSpacing:3,color:accent}}>STORYBOARD VISUALIZATION</div>
+    
   </div>;
 };
