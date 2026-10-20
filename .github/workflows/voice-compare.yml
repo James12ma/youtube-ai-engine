@@ -1,11 +1,11 @@
-name: Premium integration live acceptance (free CPU, private owner delivery)
+name: Focus Blender preview acceptance (free CPU, private owner delivery)
 run-name: alan7 ${{ inputs.job_id }}
 on:
   workflow_dispatch:
     inputs:
       job_id:
         required: true
-        default: a20c1001
+        default: a20c1002
       delivery_pubkey:
         description: Optional owner-session public key for encrypted review copy
         default: ''
@@ -36,34 +36,47 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Free CPU dependencies
+      - name: Python required by Blender wheel
+        uses: actions/setup-python@v5
+        id: bpy-runtime
+        with:
+          python-version: '3.13'
+          update-environment: false
+      - name: Isolated Blender runtime
+        env:
+          BPY_RUNTIME: ${{ steps.bpy-runtime.outputs.python-path }}
         run: |
-          set -euo pipefail
+          "$BPY_RUNTIME" -m venv "$RUNNER_TEMP/bpy-env"
+          "$RUNNER_TEMP/bpy-env/bin/python" -m pip install bpy==5.2.2
+          echo "BPY_PYTHON=$RUNNER_TEMP/bpy-env/bin/python" >> "$GITHUB_ENV"
+      - name: Free rendering dependencies
+        run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng libsndfile1
-          echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
-          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchaudio==2.8.0
-          python -m pip install -r requirements-premium.txt
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg
+          python -m pip install numpy httpx Pillow
           cd tiktok_motion/premium/remotion && npm ci --no-audit --no-fund
           npx --no-install remotion browser ensure
-      - name: Exercise actual private Telegram script transport
+      - name: Actual Blender Cycles and Remotion preview
+        env:
+          PREVIEW: '1'
+          JOBS: '2'
+        run: |
+          bash tiktok_motion/premium/render.sh
+          mkdir -p outputs/premium
+          cp tiktok_motion/premium/out/focus_prototype_preview.mp4 outputs/premium/focus-3d-preview.mp4
+          cp tiktok_motion/premium/out/qa_report.json outputs/premium/report.json
+          cp -r tiktok_motion/premium/out/frames outputs/premium/frames
+      - name: Private owner delivery
         env:
           TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
         run: |
-          node --input-type=module <<'JS'
-          import {premiumRequest,privateScriptFile} from './alan7_bot/src/premium_control.mjs';
-          import {appendFileSync} from 'node:fs';
-          const p=await privateScriptFile({TELEGRAM_BOT_TOKEN:process.env.TG,OWNER_ID:process.env.OWNER},premiumRequest('',true));
-          appendFileSync(process.env.GITHUB_ENV,'ACCEPTANCE_PAYLOAD='+JSON.stringify(p)+'\n');
-          console.log('Private owner script stored; SHA256 bound; no plaintext in workflow input.');
-          JS
-      - name: Exact script, native English voice, premium render, private Telegram delivery
-        env:
-          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
-          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
-          PREMIUM_PAYLOAD: ${{ env.ACCEPTANCE_PAYLOAD }}
-        run: python -m scripts.premium_private_job
+          python - <<'PYCODE'
+          import os
+          from pathlib import Path
+          from scripts.premium_private_job import deliver
+          deliver(Path('outputs/premium/focus-3d-preview.mp4'),'sendVideo','video',os.environ['TG'],os.environ['OWNER'],'Focus · Blender 3D + Remotion · preview 13 s · pa pibliye')
+          PYCODE
       - name: Encrypted owner-session video copy
         if: success() && inputs.delivery_pubkey != ''
         uses: ./.github/actions/encrypted-pack

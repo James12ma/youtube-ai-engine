@@ -20,3 +20,7 @@ No YouTube upload, paid API, paid GPU, new service or project restart. The exist
 
 ## Validation
 `python -m pytest -q` and `npm test --prefix alan7_bot`; TypeScript checked with the pinned local compiler. Live acceptance and deployment evidence are appended after verification.
+# Runtime compatibility
+
+Blender 5.2.2 wheels require Python 3.13. The Focus profile uses an isolated 3.13 environment through `BPY_PYTHON`; Kokoro stays on Python 3.11.
+
