@@ -1,94 +1,63 @@
-name: Focus Blender preview acceptance (free CPU, private owner delivery)
-run-name: alan7 ${{ inputs.job_id }}
+name: Deployed premium owner entrypoint acceptance
 on:
   workflow_dispatch:
     inputs:
-      job_id:
-        required: true
-        default: a20c1002
-      delivery_pubkey:
-        description: Optional owner-session public key for encrypted review copy
-        default: ''
+      phase:
+        type: choice
+        options: [start, status]
+        default: start
+      message_id:
+        default: '2026102001'
 permissions:
-  contents: write
-concurrency:
-  group: alan7-premium-${{ inputs.job_id }}
-  cancel-in-progress: false
+  contents: read
 jobs:
-  premium:
+  acceptance:
     if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 300
-    env:
-      CUDA_VISIBLE_DEVICES: ''
-      OMP_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
-      PYTHONUNBUFFERED: '1'
-      YOUTUBE_UPLOAD_ALLOWED: '0'
-      YOUTUBE_PUBLIC_ALLOWED: '0'
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Python required by Blender wheel
-        uses: actions/setup-python@v5
-        id: bpy-runtime
-        with:
-          python-version: '3.13'
-          update-environment: false
-      - name: Isolated Blender runtime
-        env:
-          BPY_RUNTIME: ${{ steps.bpy-runtime.outputs.python-path }}
-        run: |
-          "$BPY_RUNTIME" -m venv "$RUNNER_TEMP/bpy-env"
-          "$RUNNER_TEMP/bpy-env/bin/python" -m pip install bpy==5.2.2
-          echo "BPY_PYTHON=$RUNNER_TEMP/bpy-env/bin/python" >> "$GITHUB_ENV"
-      - name: Free rendering dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends ffmpeg
-          python -m pip install numpy httpx Pillow
-          cd tiktok_motion/premium/remotion && npm ci --no-audit --no-fund
-          npx --no-install remotion browser ensure
-      - name: Actual Blender Cycles and Remotion preview
-        env:
-          PREVIEW: '1'
-          JOBS: '2'
-        run: |
-          bash tiktok_motion/premium/render.sh
-          mkdir -p outputs/premium
-          cp tiktok_motion/premium/out/focus_prototype_preview.mp4 outputs/premium/focus-3d-preview.mp4
-          cp tiktok_motion/premium/out/qa_report.json outputs/premium/report.json
-          cp -r tiktok_motion/premium/out/frames outputs/premium/frames
-      - name: Private owner delivery
+      - name: Authenticated owner webhook, deduplication, queue
         env:
           TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+          PHASE: ${{ inputs.phase }}
+          MESSAGE_ID: ${{ inputs.message_id }}
         run: |
-          python - <<'PYCODE'
-          import os
-          from pathlib import Path
-          from scripts.premium_private_job import deliver
-          deliver(Path('outputs/premium/focus-3d-preview.mp4'),'sendVideo','video',os.environ['TG'],os.environ['OWNER'],'Focus · Blender 3D + Remotion · preview 13 s · pa pibliye')
-          PYCODE
-      - name: Encrypted owner-session video copy
-        if: success() && inputs.delivery_pubkey != ''
-        uses: ./.github/actions/encrypted-pack
-        with:
-          dir: outputs/premium
-          pubkey_b64: ${{ inputs.delivery_pubkey }}
-          token: ${{ github.token }}
-          label: premium-motion
-      - name: Save metadata evidence only
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: premium-report-${{ inputs.job_id }}
-          path: outputs/premium/report.json
-          if-no-files-found: error
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {webhookSecret} from './alan7_bot/src/index.js';
+          const origin='https://alan7-bot.goatgold393.workers.dev';
+          assert.equal((await fetch(origin+'/health')).status,200);
+          assert.equal((await fetch(origin+'/telegram',{method:'POST',body:'{}'})).status,403);
+          const owner=Number(process.env.OWNER),message_id=Number(process.env.MESSAGE_ID);
+          const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('premium:'+owner+':'+message_id));
+          const id=[...new Uint8Array(bytes)].slice(0,4).map(x=>x.toString(16).padStart(2,'0')).join('');
+          const headers={'content-type':'application/json','x-telegram-bot-api-secret-token':await webhookSecret(process.env.TG)};
+          async function command(text,mid=message_id,who=owner){
+            const body={update_id:mid,message:{message_id:mid,from:{id:who},chat:{id:owner,type:'private'},text}};
+            const r=await fetch(origin+'/telegram',{method:'POST',headers,body:JSON.stringify(body)});
+            assert.equal(r.status,200);return r;
+          }
+          if(process.env.PHASE==='start'){
+            const ignored=await command('/motiontest',message_id,owner+1);
+            assert.equal(await ignored.text(),'ok');
+            const r=await command('/script en Before your next interview, choose one clear example. Explain the situation, the action you took, and the result. Practice once, listen carefully, and make your answer your own.');
+            const b=await r.json();
+            assert.ok(b.text.includes(id)&&b.text.includes('lanse'),'Owner command did not dispatch');
+            const duplicate=await (await command('/script en Before your next interview, choose one clear example. Explain the situation, the action you took, and the result. Practice once, listen carefully, and make your answer your own.')).json();
+            assert.ok(duplicate.text.includes('deja')&&duplicate.text.includes(id),'Duplicate was not suppressed');
+            console.log(JSON.stringify({job_id:id,health:200,unauthenticated:403,non_owner_ignored:true,dispatched:true,duplicate_suppressed:true}));
+          }else{
+            const b=await (await command('/queue',message_id+1)).json();
+            const row=b.text.split('\n').find(x=>x.includes(id));
+            assert.ok(row,'Job missing from D1 queue');
+            console.log(JSON.stringify({job_id:id,queue_row:row}));
+            assert.ok(row.includes('done'),'Production job has not completed successfully');
+          }
+          JS
