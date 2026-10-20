@@ -1,74 +1,65 @@
-# Director draft quota repair — 2026-10-20
+# Director draft repair — verified 2026-10-20
 
-Base: 989a4060ae6878f3bb926abad0c8c6e22d98d681.
-Investigated run: https://github.com/James12ma/youtube-ai-engine/actions/runs/39337749774
-Historical runtime: 695ce33e196f9b7bb52d3a13f971ad9ed636784c.
+## Result
 
-## Corrected behavior
+The existing source-backed Director workflow completed successfully on code commit `ea11d6d92233ae5de8f0b835d33c19504ac5a6e9`:
 
-- Source-backed draft generation enables at most 65 seconds of local minute-quota waiting per router task. Other router callers retain the existing no-wait default.
-- Approved, available fallback providers run before waiting. Reservations still happen before HTTP dispatch; daily limits, authentication cooldowns, circuit breakers, model allowlists and leases remain enforced.
-- The observed 18 reserved attempts plus a 3-attempt request under a 20/minute cap waits for the rolling window to reopen instead of immediately failing.
-- Each successful HTTP adapter response reports its actual attempt count. The router refunds only provably unused retries, idempotently. Unknown outcomes, failures, interrupted calls and legacy adapters retain their full reservation. A successful first attempt therefore consumes one request rather than three.
-- Non-authentication ClientError responses no longer impose a 24-hour authentication cooldown. They still count toward the circuit breaker. AuthError retains the 24-hour cooldown.
-- Director review failures now produce labeled failure evidence. Missing artifact files produce an error rather than a green storage step with no artifact.
-- Script duration, citations, source verification, storyboard and Director acceptance gates are unchanged. No render/upload authorization is granted.
+- Run: https://github.com/James12ma/youtube-ai-engine/actions/runs/39375623524
+- Job: `d20c0007`, topic `Excel expense tracker`, English tutorial, same two Microsoft sources as the original failed request.
+- Script: **1,508 narration words**, estimated **603.2 seconds**, **9 sections**.
+- Storyboard: **12 scenes**.
+- Final verification report: **4 accepted source claims, 0 rejected**.
+- Director status: `OWNER_REVIEW_REQUIRED`.
+- Artifact: `alan7-director-d20c0007`, ID `12242713015`, 11 files, 23,280-byte ZIP.
+- ZIP SHA256: `ad470dfbcc34b8de045c7620ac4cfaaaea8aaf609509cec5a296ca4ef6055b56`.
+- The ZIP was downloaded, its digest matched the Actions digest, and script, storyboard, verification and Director outputs were inspected.
+- The workflow's Telegram document step completed without missing-secret or delivery-failure warnings. Its script reports a warning for every HTTP status other than 200; the accepted result is the owner-review document, not publication approval.
 
-## Executed validation
+No video was rendered or uploaded. Editorial approval, render approval and actual screen-capture verification remain false. Source-claim checks do not replace human review of the whole narration or real screen footage.
 
-`python -m pytest -q -rs --junitxml=/tmp/director-quota-validation.xml`
+## Changes
 
-Result: **417 passed, 4 skipped**, 29.05 seconds, no failures.
-Skips: espeak unavailable; three live-provider smoke tests have no local API keys.
-Chromium was installed locally to run both real recording tests successfully.
+The original run 39337749774 rejected a 595-word script, then failed while repairing it because all providers were unavailable under the router's controls. Groq/Gemini had legacy auth/client-conflated cooldowns; OpenRouter could not reserve three attempts with 18 reserved under its 20/minute cap.
 
-`git diff --check` and compilation of changed Python modules passed.
+- Source-backed drafts can wait up to 65 seconds per task for local minute capacity. An available approved fallback runs before waiting. Daily limits, leases, free-model allowlists and actual authentication cooldowns remain enforced.
+- Successful HTTP responses report their actual attempts. Unused retries are refunded once, only when proven; unknown/interrupted/failed outcomes stay fully reserved.
+- Actual auth failures retain their cooldown. Client/schema failures are distinguished from provider outages; native invalid-JSON responses receive bounded correction retries. Blocked fallback providers no longer hide the preceding real error.
+- Rate-limit pauses follow Retry-After or the existing fallback cooldown instead of an unrelated hour-long outage pause.
+- The final numeric repair round rebuilds only from verified facts instead of copying the rejected paragraph. A response schema checks for unsupported numeric material before the unchanged production quality gates.
+- Director-review errors now produce labeled failure evidence. Empty artifact uploads fail visibly.
+- Director-only provider configuration uses documented Groq strict JSON Schema output and the reviewed free-tier Gemini replacement `gemini-3.1-flash-lite`. Other workflows keep their existing defaults. OpenRouter's Director override is `google/gemma-4-26b-a4b-it:free`.
+- Quota diagnosis supports metadata-only GET requests and safe provider/model status reporting, with no generation requests or exposed credentials.
 
-Regression coverage includes the observed 18+3 quota failure, bounded waiting, available fallback precedence, daily exhaustion, actual HTTP success accounting, idempotent refunds, invalid/unknown attempt counts, separate client/auth handling, and failure evidence after Director rejection.
+## Validation
 
-## Remaining live acceptance
+- Local complete suite: **430 passed, 4 skipped**, 32.00 seconds, zero failures/errors.
+- GitHub complete suite at the tested code commit: **431 passed, 3 skipped**, 56.76 seconds; run 39375549805. Its real lesson boundary check passed **15 Chromium tests**.
+- The separate Router and SEO workflows passed as well.
+- Local skips: espeak missing and three direct live-key smoke tests. GitHub has espeak; only the three direct live-key smoke tests skipped. The real Director integration above ran separately with Actions secrets.
+- Changed modules compile; `git diff --check` passed.
 
-A new owner-requested Director run must use this branch's new commit, not rerun the old SHA. The connected GitHub tools expose reads and reruns but no workflow-dispatch operation. Local execution cannot use repository Actions secrets. No new live provider request, Telegram delivery, render or upload was performed during this repair.
+Regression coverage includes the observed 18+3 failure, bounded waiting, fallback precedence, daily exhaustion, idempotent actual-attempt settlement, unknown outcomes, separate auth/client/schema handling, native JSON failures, safe error reporting, Director failure artifacts, numeric regeneration, recursive Groq schema conversion, and GET-only diagnostics.
 
-After supported dispatch is available, run `.github/workflows/alan7-director-draft.yml` on `fix/director-quota-pacing-20261020`, job ID `d20c0001`, with this payload:
+## Live observations and bounded recovery
 
-```json
-{"language":"en","mode":"tutorial","topic":"Excel expense tracker","urls":["https://support.microsoft.com/en-us/excel/get-started/create-and-format-tables?utm_source=chatgpt.com","https://support.microsoft.com/en-us/excel/create-a-simple-formula?utm_source=chatgpt.com"]}
-```
+| Evidence | Observation |
+| --- | --- |
+| 39373066659 | Advanced beyond the original reservation failure; correctly rejected an unsupported numeric statement. Real failure evidence archived. |
+| 39373571334 | The previous code-focused free model failed the bounded numeric repair schema. No output promoted. |
+| 39374007222 / 39374487855 | The two tested OpenRouter Gemma models returned HTTP 429. These limits were not treated as successful drafts. |
+| 39374233833 / 39374726093 | Read-only account diagnosis: confirmed free account, 12 of 50 daily requests used, 38 remaining. Groq/Gemini metadata authenticated with HTTP 200 and configured model presence. |
+| 39374916774 / 39375284184 | Exposed client request failures, including Groq JSON-format rejection and Gemini 2.5 generation HTTP 404. |
+| 39375623524 | Entire Director workflow succeeded, including final artifact and owner document delivery step. |
 
-The workflow retains its existing free-account and free-Actions preflight. If authentication errors or the actual daily allowance block the run, retain the labeled evidence and report the blocker; do not reset controls or substitute unverified content.
+Targeted state recoveries are auditable on `router-state`: `5713a2339a142d1cdfddefbf9a30a4f9d42f43a1` (known schema-only false outage pause), `13933eb9ca02f193057009ba1bc21e2df28f38ea` (align known rate-limit pause with recorded provider cooldown), `b2bbadead85b3e836bace0d926266d1c22e30553` (revalidate two legacy auth/client-conflated cooldowns after current authenticated metadata checks), and `00d43b3cd757a71b64d0f26e18bf3aa08230e6af` (known client-only false outage pause).
 
-Acceptance requires a successful draft step, a real artifact containing the source-backed script, storyboard, final verification report and Director review, and confirmation of the owner-review document delivery. An unverified candidate alone is not success.
+No quota counter/window was reset. Existing provider circuits and real rate-limit controls were retained. Future actual auth failures still reinstate their cooldowns.
 
-## Live acceptance follow-up
+The successful run still recorded a Groq rejection of the numeric-repair schema; the verified fallback path completed the job. This is not a claim that every provider is healthy or that free capacity is unlimited.
 
-With the owner's browser authorization, run 39373066659 executed commit 772586e0092d9158b843f1e0754929a761bd2efb on the repair branch. It progressed beyond the original provider-reservation failure and saved real failure evidence (artifact 12242328043). It then correctly rejected the expanded script for an unsupported numeric statement in `Using Formulas for Totals`; the model copied `zero`, `ten` and a formula literal containing `0` despite the repair instruction. This is not a successful verified draft.
+## Primary compatibility references checked 2026-10-20
 
-A follow-up correction makes the final bounded numeric-repair round rebuild the section only from verified facts, without repeating the contaminated paragraph. A stricter response schema rejects digits and spoken cardinal numbers at the adapter boundary. The normal script/source/verification gates are unchanged. Regression tests cover repeated bad formula output and strict-schema rejection.
-
-GitHub CI on the first repair commit passed: 418 tests, zero failures/errors, three live-key skips; the lesson boundary check also passed 15 actual Chromium tests.
-
-The strict repair response in run 39373571334 failed schema validation after the code-focused free model's bounded retries. No script was promoted. This exposed a separate router bug: a content/schema error imposed a global one-hour provider-outage pause. Content schema failures now remain task failures and retain their quota/circuit charges, without imposing that global outage pause.
-
-The Director workflow explicitly selects `google/gemma-4-31b-it:free` instead of the default code-focused model. The live official OpenRouter model catalog at `https://openrouter.ai/api/v1/models` was inspected on 2026-10-20: this exact model had prompt/completion prices of zero and advertised `response_format` support. The existing confirmed-free-account checks and `:free` enforcement remain required.
-
-Recovery is limited to the exact global pause produced by the known schema-only failure in run 39373571334: original `paused_until=1792476737.6790457`, runtime branch head `272343c6be00d61a8e4eb898e9815b9a87d05c7d`, no active leases. Provider authentication cooldowns, circuit failures, quota windows and all content gates are preserved. This does not reset provider quotas or authentication failures.
-
-Run 39374007222 hit a real OpenRouter HTTP 429. Read-only account diagnosis run 39374233833 then confirmed a free-tier account with **12 used / 50 daily / 38 remaining**, with zero generation attempts. Daily account exhaustion was therefore not established. The production router had nevertheless overlaid a one-hour global pause on a recorded provider cooldown of about 60 seconds. Rate-limit failures now use the reported Retry-After or configured fallback cooldown instead of the unrelated one-hour outage pause. This retains actual provider cooldown enforcement.
-
-The exact known rate-limit pause from runtime head 3d11b6e545e5f539ce62e26ad3a2a6e6ce276612 was aligned with its already-recorded provider cooldown in commit 13933eb9ca02f193057009ba1bc21e2df28f38ea. Provider cooldowns, quota counters/windows, circuit breakers and leases were byte-equivalent after both targeted pause recoveries.
-
-The Director's final configured model is `google/gemma-4-26b-a4b-it:free`, also present in the inspected official zero-price JSON-capable catalog and already preferred by the existing quota diagnosis script. No retry is sent before the retained cooldown expires. The metadata-only diagnostic option has an offline GET-only regression test.
-
-Metadata-only run 39374726093 confirmed authenticated HTTP 200 and configured-model presence for both Groq and Gemini. Their two legacy cooldowns (created by the old combined AuthError/ClientError handler) were revalidated in state commit b2bbadead85b3e836bace0d926266d1c22e30553. No quotas or circuit state were reset; a future actual authentication failure still reinstates its cooldown.
-
-Run 39374916774 confirmed request-level client failures on both providers (`client-groq`, `client-gemini` state commits), but a skipped OpenRouter circuit masked their actual exceptions. Blocked fallbacks now retain earlier real errors. Client request failures no longer increment provider-outage circuits or impose an outage pause. Adapter error reports use a fixed safe reason vocabulary without echoing bodies, prompts or credentials. Native `json_validate_failed` HTTP 400 is treated as generated-content failure with the existing bounded JSON correction retries, rather than an authentication error.
-
-Run 39375284184 exposed Groq HTTP 400 on JSON-mode requests and Gemini HTTP 404 for generation (despite successful metadata reads). Director-only transport configuration now opts Groq GPT-OSS into documented strict `json_schema` structured outputs, closes object schemas recursively, requires their declared fields, and requests low reasoning effort. Other workflows retain their existing transport defaults. Local Pydantic and production quality validation remain mandatory.
-
-The Director-only Gemini model override is `gemini-3.1-flash-lite`, added to both reviewed allowlists while retaining earlier models for compatibility. Google's official pricing page lists free-tier input/output for this model. No paid tier, grounding or account billing settings were enabled.
-
-Primary documentation checked 2026-10-20:
-- https://console.groq.com/docs/structured-outputs (GPT-OSS strict JSON Schema support and required-field/closed-object requirements)
-- https://ai.google.dev/gemini-api/docs/pricing (Gemini 3.1 Flash-Lite free tier)
-- https://ai.google.dev/gemini-api/docs/openai (OpenAI-compatible endpoint and model request configuration)
+- https://console.groq.com/docs/structured-outputs — GPT-OSS strict JSON Schema support and required-field/closed-object rules.
+- https://ai.google.dev/gemini-api/docs/pricing — free-tier input/output for Gemini 3.1 Flash-Lite; no paid tier or grounding was enabled.
+- https://ai.google.dev/gemini-api/docs/openai — compatibility endpoint and request options.
+- https://openrouter.ai/api/v1/models — the reviewed Gemma `:free` model IDs had zero prompt/completion prices and advertised JSON response-format support.
