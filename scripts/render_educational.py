@@ -89,8 +89,8 @@ def run(voice,out,reuse=None,narration_dir=None,sample=False):
         aligned=AlignmentResult(words=words,audio_path=str(out/'vo_norm.wav'),transcript=transcript,language='en',alignment_model='whisperx per-chapter CTC',duration_s=offset,token_coverage=1)
         save_word_timestamps(aligned,out/'words.json')
     clock={'start':None};evidence=[];steps=[]
-    for i,chapter,timing in zip(chapter_indices,chapters,timeline):
-        def show(page,c=chapter,t=timing,i=i):
+    for position,(i,chapter,timing) in enumerate(zip(chapter_indices,chapters,timeline)):
+        def show(page,c=chapter,t=timing,i=i,position=position):
             if clock['start'] is None:
                 install_cursor(page);clock['start']=time.monotonic()
             page.evaluate("""({title,key,index,total,demo})=>{
@@ -107,7 +107,7 @@ def run(voice,out,reuse=None,narration_dir=None,sample=False):
                 const note=document.createElement('div');note.textContent=`${String(index+1).padStart(2,'0')} / ${total}   •   ORIGINAL EDUCATIONAL DEMONSTRATION`;note.style.cssText='position:absolute;bottom:190px;font-size:20px;letter-spacing:3px;color:#7c91b2';e.append(note);
               }
               e.animate([{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'translateY(0px)'}],{duration:250,fill:'both'});document.body.append(e);
-            }""",{'title':c['title'],'key':c['key'],'index':i,'total':len(chapters),'demo':bool(c['demo']) or bool(c.get('lab')) or i==0})
+            }""",{'title':c['title'],'key':c['key'],'index':position,'total':len(chapters),'demo':bool(c['demo']) or bool(c.get('lab')) or i==0})
             if i==0:
                 # Cold open: demonstrate the actual boundary before the explanation.
                 def hook_move(selector):
