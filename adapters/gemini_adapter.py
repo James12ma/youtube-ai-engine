@@ -7,7 +7,7 @@ from .errors import ConfigurationError
 class GeminiAdapter(BaseAdapter):
     def __init__(self, config: ProviderConfig = GEMINI_CONFIG, **kwargs: Any) -> None:
         super().__init__(config, **kwargs)
-    _APPROVED_MODELS = frozenset({"gemini-2.5-flash", "gemini-2.5-flash-lite"})
+    _APPROVED_MODELS = frozenset({"gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"})
 
     def _resolve_model(self, request: LLMRequest) -> str:
         model = super()._resolve_model(request)

@@ -139,3 +139,32 @@ def test_native_json_failure_retries_without_echoing_provider_body():
     assert 'PRIVATE' not in str(error.value)
     assert len(calls)==GROQ_CONFIG.max_retries
     adapter.close()
+
+
+def test_director_groq_strict_schema_closes_nested_objects(monkeypatch):
+    from pipeline.models import ScriptOutput
+    monkeypatch.setenv('GROQ_STRUCTURED_OUTPUTS','1')
+    adapter=_adapter(GroqAdapter,GROQ_CONFIG,lambda req:httpx.Response(200,json={}))
+    try:
+        payload=adapter._build_payload(LLMRequest(messages=[{'role':'user','content':'json script'}],schema=ScriptOutput))
+        spec=payload['response_format']
+        assert spec['type']=='json_schema' and spec['json_schema']['strict'] is True
+        root=spec['json_schema']['schema']
+        assert root['additionalProperties'] is False
+        assert set(root['required'])==set(root['properties'])
+        section=root['$defs']['ScriptSection']
+        assert section['additionalProperties'] is False
+        assert set(section['required'])==set(section['properties'])
+        assert payload['reasoning_effort']=='low'
+    finally:adapter.close()
+
+
+def test_reviewed_free_gemini_replacement_is_allowed(monkeypatch):
+    from router.policy import require_free_model
+    monkeypatch.setenv('GEMINI_MODEL','gemini-3.1-flash-lite')
+    adapter=_adapter(GeminiAdapter,GEMINI_CONFIG,lambda req:httpx.Response(200,json={}))
+    try:
+        model=adapter._resolve_model(LLMRequest(messages=[]))
+        assert model=='gemini-3.1-flash-lite'
+        require_free_model('gemini',model)
+    finally:adapter.close()

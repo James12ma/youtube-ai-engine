@@ -262,7 +262,7 @@ class BaseAdapter:
                     ('invalid_max_tokens', 'max_tokens'),
                     ('insufficient_tokens', 'too many tokens'),
                     ('unsupported_schema', 'schema'),
-                    ('missing_json_instruction', 'json')):
+                    ('missing_json_instruction', 'must contain the word')):
                     if phrase in message:
                         reason = label
                         break

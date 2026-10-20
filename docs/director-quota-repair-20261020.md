@@ -63,3 +63,12 @@ The Director's final configured model is `google/gemma-4-26b-a4b-it:free`, also 
 Metadata-only run 39374726093 confirmed authenticated HTTP 200 and configured-model presence for both Groq and Gemini. Their two legacy cooldowns (created by the old combined AuthError/ClientError handler) were revalidated in state commit b2bbadead85b3e836bace0d926266d1c22e30553. No quotas or circuit state were reset; a future actual authentication failure still reinstates its cooldown.
 
 Run 39374916774 confirmed request-level client failures on both providers (`client-groq`, `client-gemini` state commits), but a skipped OpenRouter circuit masked their actual exceptions. Blocked fallbacks now retain earlier real errors. Client request failures no longer increment provider-outage circuits or impose an outage pause. Adapter error reports use a fixed safe reason vocabulary without echoing bodies, prompts or credentials. Native `json_validate_failed` HTTP 400 is treated as generated-content failure with the existing bounded JSON correction retries, rather than an authentication error.
+
+Run 39375284184 exposed Groq HTTP 400 on JSON-mode requests and Gemini HTTP 404 for generation (despite successful metadata reads). Director-only transport configuration now opts Groq GPT-OSS into documented strict `json_schema` structured outputs, closes object schemas recursively, requires their declared fields, and requests low reasoning effort. Other workflows retain their existing transport defaults. Local Pydantic and production quality validation remain mandatory.
+
+The Director-only Gemini model override is `gemini-3.1-flash-lite`, added to both reviewed allowlists while retaining earlier models for compatibility. Google's official pricing page lists free-tier input/output for this model. No paid tier, grounding or account billing settings were enabled.
+
+Primary documentation checked 2026-10-20:
+- https://console.groq.com/docs/structured-outputs (GPT-OSS strict JSON Schema support and required-field/closed-object requirements)
+- https://ai.google.dev/gemini-api/docs/pricing (Gemini 3.1 Flash-Lite free tier)
+- https://ai.google.dev/gemini-api/docs/openai (OpenAI-compatible endpoint and model request configuration)
