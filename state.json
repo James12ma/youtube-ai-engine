@@ -1,6 +1,21 @@
 {
   "schema_version": "1.0",
   "tasks": {
+    "1485870adc871ac30090e1ad76631f30f35154f9e6e8de15095f764d6703b238": {
+      "completed_at": "2026-10-20T05:07:15.532860+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "6195082747115e20",
+          "7c2f8388ef92beff",
+          "1ae2b61bb2394e8a"
+        ],
+        "heading": "Common Mistakes to Avoid",
+        "narration": "A frequent error is forgetting to mark the header row, which leads to generic column names and extra manual work. Another pitfall is typing amounts with inconsistent formatting, such as mixing currency symbols or using commas incorrectly. Also, avoid entering data outside the table boundaries, as this breaks the structured format and may cause formulas to miss entries. Double\u2011check each step to maintain a clean expense tracker. When you skip the header option, Excel for the web automatically inserts default labels like Column1 and Column2, which can confuse later calculations. Inconsistent number formatting may cause totals to appear misaligned or be treated as text, preventing proper summation. Entering data beyond the designated table range disrupts the dynamic range that formulas rely on, resulting in incomplete or inaccurate reports. To reinforce these points, try a suggested exercise: create a small sample table, deliberately omit the header, and observe how the default names appear. Then, edit the amounts using mixed formatting and see how the totals behave. Finally, add a row outside the table and note any errors that arise when you apply a total formula. This hands\u2011on practice highlights the importance of each setting and helps you avoid common pitfalls in your own expense tracker.",
+        "on_screen_text": "Check the header box, keep formatting consistent, stay inside the table, and verify each step."
+      },
+      "task_type": "pipeline.script_section"
+    },
     "31349561b3eedf5be5a311057336e4d4428651a3b1076d7c2a34183ff0d8f0b2": {
       "completed_at": "2026-10-19T22:51:36.504842+00:00",
       "result": {
