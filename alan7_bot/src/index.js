@@ -29,7 +29,7 @@ const KINDS = {
 const HELP = [
   '<b>Alan7 — kòmand</b>',
   '/script en <script> — videyo premium ak egzak mo ou yo; liy vid se nouvo sèn',
-  '/film education en <script> — istwa vizyèl semantik; aksyon ki poko sipòte mande revizyon',
+  '/film education en <script> — premye istwa semantik aplikan/rekritè; lòt aksyon mande revizyon',
   '/filmtest — aplikan → telefòn → siyal → rekritè, aperçu prive',
   '/motiontest — tès motion premium ak nouvo vwa anglè a',
   '/premium3d — rann referans Blender + Remotion Focus 13 s (CPU gratis, ka pran plizyè è)',
@@ -885,7 +885,7 @@ export async function premiumCommand(env,raw,context={},test=false,focus3d=false
   await setMeta(env,'github_last',d.ok?'OK':d.detail);
   if(d.ok){
     await env.DB.prepare("UPDATE jobs SET state='running',attempts=1,updated_at=?2 WHERE id=?1").bind(id,now()).run();
-    return `🎬 Travay <code>${id}</code> lanse: ${cinematic?'istwa vizyèl semantik (pou revizyon ou)':focus3d?'Blender + Remotion Focus 13 s (rann CPU long)':'motion premium + vwa anglè Kokoro (pou revizyon ou)'}. MP4 la ap rive isit la. Pa gen piblikasyon. /queue pou swiv li.`;
+    return `🎬 Travay <code>${id}</code> lanse: ${cinematic?'istwa vizyèl semantik (pou revizyon ou)':focus3d?'Blender + Remotion Focus 13 s (rann CPU long)':'motion premium + vwa anglè Kokoro (pou revizyon ou)'}. ${cinematic?'Si direktè a ak baryè kalite yo valide l, MP4 la ap rive isit la; sinon ou resevwa rezon blokaj la an prive.':'MP4 la ap rive isit la.'} Pa gen piblikasyon. /queue pou swiv li.`;
   }
   await env.DB.prepare('UPDATE jobs SET attempts=1,last_error=?2,next_try_at=?3,updated_at=?3 WHERE id=?1').bind(id,d.detail,now()+300).run();
   return `🕒 Travay <code>${id}</code> anrejistre; GitHub poko disponib. Bot la ap reeseye. /queue`;

@@ -50,7 +50,21 @@ def run(payload,out,token,owner,browser=None):
         shutil.copy2(base/'out/focus_prototype.mp4',out/'final.mp4')
         report={'renderer':'blender-cycles+remotion-focus','duration_seconds':13,'requires_owner_approval':True,'published':False,'voice':'none_original_score','technical_qc_passed':True}
         (out/'report.json').write_text(json.dumps(report,indent=2))
-    else:report=render(data,out,browser)
+    else:
+        try:report=render(data,out,browser)
+        except ValueError as error:
+            if data.get('visual_mode')!='cinematic':raise
+            message=str(error)
+            prefixes=('Film needs assets/review:','Film blocked:','Film editorial gate:','Rendered film quality gate failed','Native word alignment missing')
+            reason=message if message.startswith(prefixes) else 'Film request needs asset or editorial review.'
+            review=out/'review_needed.json'
+            review.write_text(json.dumps({'reason':reason,'requires_owner_review':True,'published':False},indent=2))
+            failure={'renderer':'remotion-semantic-film','status':'blocked','blocking_category':'asset_or_editorial_review','rendered':(out/'final.mp4').is_file(),'published':False,'auto_publish':False,'requires_owner_review':True,'private_review_delivered':False}
+            (out/'report.json').write_text(json.dumps(failure,indent=2))
+            deliver(review,'sendDocument','document',token,owner,'Film bloke pou revizyon · rezon yo nan dokiman prive sa a · pa pibliye')
+            failure['private_review_delivered']=True
+            (out/'report.json').write_text(json.dumps(failure,indent=2))
+            raise ValueError('Film blocked; private owner review delivered') from None
     duration=report['duration_seconds'];maxrate=max(128,int(44_000_000*8/duration/1000-128))
     video=out/'telegram.mp4'
     subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(out/'final.mp4'),'-vf','scale=720:1280','-c:v','libx264','-preset','veryfast','-crf','22','-maxrate',f'{maxrate}k','-bufsize',f'{maxrate*2}k','-c:a','aac','-b:a','128k','-movflags','+faststart',str(video)],check=True)
