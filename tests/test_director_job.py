@@ -196,3 +196,29 @@ def test_candidate_capture_is_exact_real_script_not_synthetic(tmp_path, monkeypa
     assert result["candidate"]["title"] == "Exact candidate"
     assert len(result["candidate"]["sections"]) == 1
     assert not (tmp_path/"draft"/"script.json").exists()
+
+
+def test_director_review_failure_is_archived_and_not_reported_as_success(tmp_path, monkeypatch):
+    import channel.research as research
+    import channel.director as director
+    from channel.director import DirectorBlocked
+    from pathlib import Path
+    def generated(repo, topic, urls, out_dir, **kwargs):
+        Path(out_dir).mkdir(parents=True)
+        (Path(out_dir)/'script.json').write_text('{"title":"validated draft"}')
+        return {'ready_for_publication':False}
+    def rejected(*args, **kwargs):
+        raise DirectorBlocked('Source hashes do not match')
+    monkeypatch.setattr(research,'generate_draft',generated)
+    monkeypatch.setattr(director,'director_cli',rejected)
+    for key in ('ZERO_COST_ACTIONS_CONFIRMED','FREE_PROVIDER_ACCOUNTS_CONFIRMED','ROUTER_ALLOW_LIVE_API'):
+        monkeypatch.setenv(key,'1')
+    monkeypatch.setenv('GROQ_API_KEY','offline-placeholder')
+    with pytest.raises(DirectorBlocked):
+        run_job(payload(),'a1b2c3d4',repo=tmp_path,output_root=tmp_path/'out')
+    out=tmp_path/'out'/'a1b2c3d4'
+    summary=json.loads((out/'failure_review.json').read_text())
+    assert summary['failed_stage'] == 'director_review'
+    assert summary['status'] == 'FAILED_UNVERIFIED'
+    assert (out/'draft'/'script.json').exists()
+    assert not (out/'director'/'script_full_review.txt').exists()

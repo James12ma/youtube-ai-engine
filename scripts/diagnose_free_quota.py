@@ -28,7 +28,7 @@ def classify(response):
     return result
 
 
-def run(out=Path('outputs/quota-diagnosis')):
+def run(out=Path('outputs/quota-diagnosis'), *, metadata_only=False):
     out.mkdir(parents=True,exist_ok=True)
     report={'paid_calls':0,'uploads':0,'attempts':[]}
     key=os.environ.get('OPENROUTER_API_KEY','')
@@ -43,6 +43,33 @@ def run(out=Path('outputs/quota-diagnosis')):
         if not report['free_tier_confirmed']:raise RuntimeError('Unverified free account; no generation allowed')
         if quota.get('remaining',1)<1:
             report['blocked']='account_daily_quota';(out/'report.json').write_text(json.dumps(report,indent=2));return report
+        if metadata_only:
+            report['metadata_only']=True
+            report['other_providers']={}
+            for name,url,key_env,model in (
+                ('groq','https://api.groq.com/openai/v1/models','GROQ_API_KEY','openai/gpt-oss-120b'),
+                ('gemini','https://generativelanguage.googleapis.com/v1beta/models','GEMINI_API_KEY','gemini-2.5-flash')):
+                credential=os.environ.get(key_env,'')
+                if not credential:
+                    report['other_providers'][name]={'configured':False}
+                    continue
+                provider_headers=({'Authorization':'Bearer '+credential} if name=='groq'
+                                  else {'x-goog-api-key':credential})
+                try:
+                    response=client.get(url,headers=provider_headers)
+                    status={'configured':True,'http_status':response.status_code}
+                    if response.status_code==200:
+                        payload=response.json()
+                        models=payload.get('data',payload.get('models',[]))
+                        ids={m.get('id',m.get('name','').removeprefix('models/'))
+                             for m in models if isinstance(m,dict)}
+                        status['configured_model_present']=model in ids
+                    report['other_providers'][name]=status
+                except Exception:
+                    report['other_providers'][name]={'configured':True,'metadata_failed':True}
+
+            (out/'report.json').write_text(json.dumps(report,indent=2))
+            return report
         catalog=client.get('https://openrouter.ai/api/v1/models');catalog.raise_for_status()
         models=[m['id'] for m in catalog.json()['data'] if zero_priced_model(m)]
         preferred='google/gemma-4-26b-a4b-it:free'
@@ -66,4 +93,9 @@ def run(out=Path('outputs/quota-diagnosis')):
         (out/'report.json').write_text(json.dumps(report,indent=2))
     return report
 
-if __name__=='__main__':print(json.dumps(run(),indent=2))
+if __name__=='__main__':
+    import argparse
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--metadata-only',action='store_true')
+    args=parser.parse_args()
+    print(json.dumps(run(metadata_only=args.metadata_only),indent=2))

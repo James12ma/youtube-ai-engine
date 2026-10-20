@@ -64,12 +64,15 @@ def run_job(raw: str, job_id: str, *, repo: Path, output_root: Path) -> dict:
     draft = out / "draft"
     director = out / "director"
     capture = out / "unverified_script_candidate.json"
+    stage = "research_script_storyboard_verification"
     try:
         result = generate_draft(
             Path(repo), payload["topic"], payload["urls"], draft,
             allow_live=True, language=payload["language"], mode=payload["mode"],
             unverified_capture=capture,
         )
+        stage = "director_review"
+        final = director_cli(draft, director, payload["mode"])
     except Exception as exc:
         # Preserve the actual model draft and an explicitly unapproved review,
         # even when the provider quota prevents final verification. NEVER
@@ -82,7 +85,7 @@ def run_job(raw: str, job_id: str, *, repo: Path, output_root: Path) -> dict:
             "PipelineQualityError": "Source-backed content failed the existing production quality gate.",
             "InsufficientSourcesError": "The approved URLs did not return enough usable verified sources.",
         }.get(kind, "Research or script pipeline failed; inspect sanitized GitHub step status.")
-        summary={"status":"FAILED_UNVERIFIED","job_id":job_id,"exception_class":kind,
+        summary={"status":"FAILED_UNVERIFIED","job_id":job_id,"exception_class":kind,"failed_stage":stage,
                  "reason":reason,"published":False,"rendered":False,
                  "candidate_saved":capture.is_file(),
                  "provider_quotas_not_bypassed":True}
@@ -106,7 +109,6 @@ def run_job(raw: str, job_id: str, *, repo: Path, output_root: Path) -> dict:
                 "\n".join(parts),encoding="utf-8")
         raise
 
-    final = director_cli(draft, director, payload["mode"])
     script = json.loads((draft / "script.json").read_text(encoding="utf-8"))
     review = [
         "AI DIRECTOR — SCRIPT FOR HUMAN REVIEW",

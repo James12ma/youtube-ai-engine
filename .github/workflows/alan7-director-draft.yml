@@ -24,8 +24,11 @@ jobs:
       ZERO_COST_ACTIONS_CONFIRMED: ${{ vars.ZERO_COST_ACTIONS_CONFIRMED }}
       FREE_PROVIDER_ACCOUNTS_CONFIRMED: ${{ vars.FREE_PROVIDER_ACCOUNTS_CONFIRMED }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_STRUCTURED_OUTPUTS: '1'
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: 'gemini-3.1-flash-lite'
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: 'google/gemma-4-26b-a4b-it:free'
       ROUTER_ALLOW_LIVE_API: '1'
       ENABLE_LIVE_LLM: '1'
     steps:
@@ -59,13 +62,13 @@ jobs:
           git config user.email 'youtube-ai-engine@users.noreply.github.com'
       - name: Existing research -> verification -> script -> storyboard -> Director review
         run: python -m scripts.director_job
-      - name: Store complete unapproved script and source hashes for owner
+      - name: Store Director draft or labeled failure evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: alan7-director-${{ inputs.job_id }}
           path: outputs/director-jobs/${{ inputs.job_id }}
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
       - name: Send evidence-labeled owner review if there is a real candidate
         if: always()

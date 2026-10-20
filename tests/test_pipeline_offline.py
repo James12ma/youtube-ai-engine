@@ -326,3 +326,37 @@ def test_numeric_hook_after_expansion_is_repaired_without_regeneration(repo):
     output=pipe._stage_script('test',verification,[])
     assert output.hook=='Learn a few habits.' and 1200<=output.word_count<=1800
     assert calls.count(('pipeline.script',0))==1 and calls.count(('pipeline.script_section','hook_cta'))==1
+
+
+@pytest.mark.parametrize('text',['Use zero values.','Use 0 values.','Choose twenty entries.','=SUM(A1:A10)'])
+def test_final_numeric_repair_schema_rejects_unsourced_numbers(text):
+    from pipeline.pipeline import _NumberFreeScriptSection
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        _NumberFreeScriptSection(heading='Totals',narration=text,claim_ids=['c'])
+
+
+def test_stubborn_numeric_repair_rebuilds_from_evidence_not_bad_paragraph(repo):
+    from pipeline.pipeline import _NumberFreeScriptSection
+    from pipeline.models import VerificationArtifact, VerifiedClaim
+    verification=VerificationArtifact(topic='test',verified=[VerifiedClaim(
+        id='c',text='Select Home then Format as Table.',source_ids=['s'],
+        supporting_snippets=['Select Home then Format as Table.'])],
+        rejected=[],pass_rate=1,verified_at='now')
+    bad=ScriptSection(heading='Totals',narration='Use =SUMIF(Amount, "<>0") to ignore zero values.',claim_ids=['c'])
+    draft=ScriptOutput(title='Test',hook='Start here.',sections=[bad],cta='Try it.')
+    calls=[]
+    class Router_:
+        def execute(self,task_type,input_data,request,schema):
+            calls.append(input_data['round'])
+            if input_data['round']==0:
+                return bad
+            assert schema is _NumberFreeScriptSection
+            prompt=request.messages[-1]['content']
+            assert bad.narration not in prompt
+            assert 'Select Home then Format as Table.' in prompt
+            return schema(heading='Totals',narration='Select Home and choose Format as Table.',claim_ids=['c'])
+    pipe=ContentPipeline(StateStore(repo,push_required=False),Router_(),FakeFetcher({}))
+    result=pipe._repair_numeric_sections('test',draft,['- c: Select Home then Format as Table.'],1,pipe._claim_numbers(verification))
+    assert calls==[0,1]
+    assert pipe._uncited_numbers(result.sections[0],pipe._claim_numbers(verification))==set()

@@ -6,6 +6,8 @@ can be retried after crashes; exactly-once external execution is impossible.
 from __future__ import annotations
 import hashlib
 import json
+import logging
+import math
 import os
 import time
 import uuid
@@ -32,18 +34,22 @@ class RouterConfig:
     all_failed_pause: float = 3600.0
     rate_limit_default_cooldown: float = 60.0
     lease_seconds: float = 900.0
+    local_quota_wait_s: float = 0.0
     schema_version: str = '1.1'
     rpd: Mapping[str, int] = field(default_factory=lambda: dict(DEFAULT_RPD))
     rpm: Mapping[str, int] = field(default_factory=lambda: dict(DEFAULT_RPM))
 
 class Router:
     def __init__(self, state_store: StateStore, adapters: dict[str, Any],
-                 config: Optional[RouterConfig] = None, *, clock=time.time):
+                 config: Optional[RouterConfig] = None, *, clock=time.time, sleep=time.sleep):
         self._state = state_store
         self._runtime_store = RouterRuntimeStore(state_store)
         self._adapters = adapters
         self._config = config or RouterConfig()
         self._clock = clock
+        self._sleep = sleep
+        if not math.isfinite(self._config.local_quota_wait_s) or not 0 <= self._config.local_quota_wait_s <= 120:
+            raise RouterError("Local quota wait must be between 0 and 120 seconds")
 
     @staticmethod
     def _fingerprint(request: LLMRequest, schema: Type[BaseModel]) -> dict[str, Any]:
@@ -137,12 +143,56 @@ class Router:
             q['day'] = day + [now] * attempts
             q['date'] = time.strftime('%Y-%m-%d', time.gmtime(now))
             q['count'] = len(q['day'])
-            reservations[reservation_id] = {'provider': provider, 'task_id': task_id, 'at': now}
+            reservations[reservation_id] = {'provider': provider, 'task_id': task_id, 'at': now, 'attempts': attempts}
             rt.setdefault('circuit_breakers', {})[provider] = cb.to_dict()
             if cb.state is CircuitState.HALF_OPEN:
                 probe[provider] = task_id
             return True
         return self._runtime_store.transact(reserve, operation_id='reserve-'+provider)
+
+    def _settle_successful_reservation(self, reservation_id: str, attempts_used: int | None) -> None:
+        """Refund only retries an adapter proves it did not use, once."""
+        if type(attempts_used) is not int:
+            return  # Unknown outcomes and legacy adapters stay pessimistically charged.
+        def settle(rt):
+            reservation = rt.get('reservations', {}).get(reservation_id)
+            if not reservation or reservation.get('settled'):
+                return
+            reserved = reservation.get('attempts', 0)
+            if not 1 <= attempts_used <= reserved:
+                return
+            quota = rt.get('quotas', {}).get(reservation['provider'], {})
+            for window in ('minute', 'day'):
+                entries = quota.get(window, [])
+                for _ in range(reserved - attempts_used):
+                    if reservation['at'] in entries:
+                        entries.remove(reservation['at'])
+            quota['count'] = len(quota.get('day', []))
+            reservation['settled'] = True
+            reservation['attempts_charged'] = attempts_used
+        self._runtime_store.transact(settle, operation_id='settle-unused-retries')
+
+    def _minute_quota_delay(self, provider: str, task_id: str, now: float,
+                            attempts: int) -> float | None:
+        """Only wait for a local minute window; never bypass other controls."""
+        rt = self._runtime_store.load()
+        cb = self._breaker(provider, rt)
+        if not cb.is_call_permitted(now) or rt.get('cooldowns', {}).get(provider, 0) > now:
+            return None
+        probe = rt.get('half_open_probes', {}).get(provider)
+        if cb.state is CircuitState.HALF_OPEN and probe not in (None, task_id):
+            return None
+        minute_cap = int(self._config.rpm.get(provider, 0))
+        day_cap = int(self._config.rpd.get(provider, 0))
+        q = rt.get('quotas', {}).get(provider, {})
+        minute = sorted(x for x in q.get('minute', []) if x > now - 60)
+        day = [x for x in q.get('day', []) if x > now - 86400]
+        if attempts > minute_cap or attempts > day_cap or len(day) + attempts > day_cap:
+            return None
+        excess = len(minute) + attempts - minute_cap
+        if excess <= 0:
+            return None
+        return max(0.01, minute[excess - 1] + 60 - now + 0.01)
 
     def _record(self, provider: str, kind: str, now: float, retry_after: float | None = None) -> None:
         def apply(rt):
@@ -150,7 +200,7 @@ class Router:
             if kind == 'success':
                 cb.record_success()
                 rt.setdefault('cooldowns', {}).pop(provider, None)
-            else:
+            elif kind != 'client':
                 cb.record_failure(now)
                 if kind == 'limit':
                     wait = retry_after if retry_after is not None else self._config.rate_limit_default_cooldown
@@ -181,60 +231,91 @@ class Router:
             if cached is not None:
                 return schema.model_validate(cached)
             last_error: Optional[Exception] = None
-            for provider in self._config.provider_order:
-                adapter = self._adapters.get(provider)
-                if adapter is None:
-                    continue
-                try:
-                    resolved = self._model(adapter, request)
-                    require_free_model(provider, resolved)
-                except (BillableModelRejected, AdapterError) as exc:
-                    last_error = exc
-                    continue
-                send = replace(request, schema=schema, model=resolved)
-                cfg = getattr(adapter, 'config', None)
-                max_attempts = int(getattr(cfg, 'max_retries', 1))
-                if not 1 <= max_attempts <= 5:
-                    raise RouterError('Unsafe adapter retry configuration')
-                reservation_id = uuid.uuid4().hex
-                if not self._reserve_provider(provider, task_id, self._clock(), reservation_id, max_attempts):
-                    continue
-                try:
-                    response = adapter.complete(send)
-                except RateLimitError as exc:
-                    last_error = exc
-                    self._record(provider, 'limit', self._clock(), exc.retry_after)
-                    continue
-                except (AuthError, ClientError) as exc:
-                    last_error = exc
-                    self._record(provider, 'auth', self._clock())
-                    continue
-                except (ServerError, AdapterError) as exc:
-                    last_error = exc
-                    self._record(provider, 'failure', self._clock())
-                    continue
-                parsed = getattr(response, 'parsed', None)
-                if parsed is None:
-                    last_error = RouterError('Provider returned no parsed data')
-                    self._record(provider, 'failure', self._clock())
-                    continue
-                try:
-                    verified = schema.model_validate(parsed.model_dump())
-                except Exception as exc:
-                    last_error = exc
-                    self._record(provider, 'failure', self._clock())
-                    continue
-                self._record(provider, 'success', self._clock())
-                self._state.record_completion(task_id, task_type, verified.model_dump())
-                # If a concurrent owner completed first, return the durable
-                # result, not an uncommitted result from our own provider.
-                durable = self._state.get_cached_result(task_id)
-                if durable is None:
-                    raise RouterError('Completion is missing after state commit')
-                return schema.model_validate(durable)
-            self._runtime_store.transact(
-                lambda rt: rt.update(paused_until=self._clock() + self._config.all_failed_pause),
-                operation_id='all-failed')
+            waited = 0.0
+            while True:
+                quota_delays = []
+                for provider in self._config.provider_order:
+                    adapter = self._adapters.get(provider)
+                    if adapter is None:
+                        continue
+                    try:
+                        resolved = self._model(adapter, request)
+                        require_free_model(provider, resolved)
+                    except (BillableModelRejected, AdapterError) as exc:
+                        last_error = exc
+                        continue
+                    send = replace(request, schema=schema, model=resolved)
+                    cfg = getattr(adapter, 'config', None)
+                    max_attempts = int(getattr(cfg, 'max_retries', 1))
+                    if not 1 <= max_attempts <= 5:
+                        raise RouterError('Unsafe adapter retry configuration')
+                    reservation_id = uuid.uuid4().hex
+                    if not self._reserve_provider(provider, task_id, self._clock(), reservation_id, max_attempts):
+                        delay = self._minute_quota_delay(provider, task_id, self._clock(), max_attempts)
+                        if delay is not None:
+                            quota_delays.append(delay)
+                        if last_error is None:
+                            last_error = RouterError(provider + ': blocked by local quota, cooldown or circuit controls')
+                        continue
+                    try:
+                        response = adapter.complete(send)
+                    except RateLimitError as exc:
+                        last_error = exc
+                        self._record(provider, 'limit', self._clock(), exc.retry_after)
+                        continue
+                    except AuthError as exc:
+                        last_error = exc
+                        self._record(provider, 'auth', self._clock())
+                        continue
+                    except ClientError as exc:
+                        logging.getLogger(__name__).warning('Provider request rejected: %s', exc)
+                        last_error = exc
+                        self._record(provider, 'client', self._clock())
+                        continue
+                    except (ServerError, AdapterError) as exc:
+                        last_error = exc
+                        self._record(provider, 'failure', self._clock())
+                        continue
+                    parsed = getattr(response, 'parsed', None)
+                    if parsed is None:
+                        last_error = RouterError('Provider returned no parsed data')
+                        self._record(provider, 'failure', self._clock())
+                        continue
+                    try:
+                        verified = schema.model_validate(parsed.model_dump())
+                    except Exception as exc:
+                        last_error = exc
+                        self._record(provider, 'failure', self._clock())
+                        continue
+                    self._settle_successful_reservation(
+                        reservation_id, getattr(response, 'attempts_used', None))
+                    self._record(provider, 'success', self._clock())
+                    self._state.record_completion(task_id, task_type, verified.model_dump())
+                    # If a concurrent owner completed first, return the durable
+                    # result, not an uncommitted result from our own provider.
+                    durable = self._state.get_cached_result(task_id)
+                    if durable is None:
+                        raise RouterError('Completion is missing after state commit')
+                    return schema.model_validate(durable)
+                remaining = self._config.local_quota_wait_s - waited
+                if not quota_delays or remaining <= 0:
+                    break
+                delay = min(min(quota_delays), remaining, 30.0)
+                logging.getLogger(__name__).warning(
+                    'Local minute quota full; retrying approved providers in %.2fs', delay)
+                self._sleep(delay)
+                waited += delay
+            # Invalid content is a failed task, not a provider outage. Its
+            # reservations and circuit failures still count, but it must not
+            # globally stop unrelated jobs for an hour.
+            if not isinstance(last_error, (SchemaValidationError, ClientError)):
+                pause = self._config.all_failed_pause
+                if isinstance(last_error, RateLimitError):
+                    retry = last_error.retry_after
+                    pause = max(0.0, retry if retry is not None else self._config.rate_limit_default_cooldown)
+                self._runtime_store.transact(
+                    lambda rt: rt.update(paused_until=self._clock() + pause),
+                    operation_id='all-failed')
             raise AllProvidersFailed('No available approved provider. Last error: ' + repr(last_error))
         finally:
             self._release(task_id, owner)

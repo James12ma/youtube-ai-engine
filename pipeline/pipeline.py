@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Iterable, List, Optional, Protocol, Sequence, Type
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from adapters import LLMRequest
 from state_store import StateStore, compute_task_id
 from pipeline.errors import InsufficientSourcesError, PipelineQualityError, PublishingDisabledError
@@ -71,6 +71,17 @@ def _spoken_numbers(text:str)->set:
     for word,value in _SPOKEN_NUMBER_WORDS.items():
         simplified=re.sub(r'\b'+word+r'\b',value,simplified)
     return {m.group().replace(',','') for m in _SPOKEN_NUM_RE.finditer(simplified)}
+class _NumberFreeScriptSection(ScriptSection):
+    """Strict regeneration after a model ignored a numeric repair request."""
+    narration: str = Field(pattern=r"^[^\d]*$")
+
+    @field_validator('narration')
+    @classmethod
+    def no_spoken_numbers(cls, text: str) -> str:
+        if _spoken_numbers(text):
+            raise ValueError('Narration must contain no digits or number words; describe the sourced process in words')
+        return text
+
 _DIGIT_TO_WORD={v:k for k,v in _SPOKEN_NUMBER_WORDS.items()}
 def _describe_numbers(found:set)->str:
     """Name the exact offending tokens so the model can remove them."""
@@ -286,7 +297,17 @@ class ContentPipeline:
                 {'role':'system','content':'Rewrite one tutorial section as JSON. Use only supplied verified claims. Clearly label hypothetical examples. Never invent facts, citations, software features or observed results.'},
                 {'role':'user','content':'Topic: '+topic+'\nVerified claims:\n'+'\n'.join(claim_lines)+'\nSection heading: '+section.heading+'\nCurrent narration: '+section.narration+'\nThis narration was REJECTED because it uses '+_describe_numbers(bad)+', which do not appear in the claims it cites. Rewrite it with approximately '+str(words)+' narration words, same meaning and structure, with every unsupported number removed or replaced by words such as first, next, a few or several. '+_NO_UNSOURCED_NUMBERS+' Return fields heading, narration, on_screen_text, claim_ids.'+_language_note(self._t.language)}],
                 schema=ScriptSection,temperature=.2,max_tokens=min(4096,max(1200,words*4)))
-            part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':'numeric','round':round_},request,ScriptSection)
+            schema=ScriptSection
+            if round_:
+                # Repeating the rejected paragraph made free models copy its
+                # unsourced numbers and invented formula examples verbatim.
+                # Rebuild only from the evidence, with adapter-level validation.
+                schema=_NumberFreeScriptSection
+                request=LLMRequest(messages=[
+                    {'role':'system','content':'Write a replacement tutorial section as JSON using ONLY the supplied verified facts. Do not invent software functions, formula syntax, cell references or observed results.'},
+                    {'role':'user','content':'Topic: '+topic+'\nVerified facts:\n'+'\n'.join(claim_lines)+'\nSection heading: '+section.heading+'\nThe previous section was REJECTED for unsupported numbers. Rebuild from the verified facts instead of copying the previous paragraph. Write approximately '+str(words)+' narration words, explaining the supplied facts and a clearly labeled suggested exercise. For this replacement use NO digits or number words anywhere in narration, even when a number is supported by a fact. Omit numeric limits rather than restating them. Avoid formula/code examples and spell out the actions in plain language. Use a, each, first, next, several instead of cardinal numbers. Return heading, narration, on_screen_text, claim_ids. Cite only the supplied claim IDs.'+_language_note(self._t.language)}],
+                    schema=schema,temperature=.3,max_tokens=min(4096,max(1200,words*4)))
+            part=self._router.execute('pipeline.script_section',{'topic':topic,'index':index,'revision':revision,'repair':'numeric','round':round_},request,schema)
             assert isinstance(part,ScriptSection)
             sections[index]=part
         return draft.model_copy(update={'sections':sections,'hook':hook,'cta':cta})
