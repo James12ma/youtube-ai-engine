@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci --prefix alan7_bot --no-audit --no-fund
+      - run: npm install --prefix alan7_bot --no-audit --no-fund
       - name: Actual branch Worker, local D1, private Telegram and real isolated dispatch
         env:
           TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
