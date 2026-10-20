@@ -220,6 +220,20 @@
       },
       "task_type": "pipeline.script"
     },
+    "80fcd17012fb8c9b19c7f14d6088609f82830d68df6766b0d2c5aeabb1918b5e": {
+      "completed_at": "2026-10-20T05:34:57.773917+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "1ae2b61bb2394e8a",
+          "6195082747115e20"
+        ],
+        "heading": "Using Formulas for Totals",
+        "narration": "Begin by selecting a cell inside your data set and then choose the formatting option that turns the range into a structured table. This action opens a dialog where you confirm the range and indicate whether your data already includes header labels. Confirm the presence of headers if they exist, otherwise allow the system to generate default header names. Once the table is established, you can rely on the structured format to simplify calculations across your expense records. To add a fresh table, first highlight the cells you wish to include and then use the insertion command that creates a table from the selected range. This approach ensures that your data is organized consistently and ready for aggregation. When constructing formulas, you have the flexibility to incorporate a variety of constants and operators, allowing you to build comprehensive expressions that capture the total of your expenses. The formula engine supports a generous amount of content, so you can include as many elements as needed to represent your calculations accurately. For the purpose of this exercise, create a table from a sample expense list, ensuring that the header option is appropriately set. Then, without writing any explicit code, describe how you would sum the values in the column that records amounts spent. Emphasize the use of the table\u2019s structured references to make the total calculation dynamic as new rows are added. Finally, practice by adding several new expense entries and observe how the total adjusts automatically, confirming that the formula responds to the expanding data set. This hands\u2011on activity reinforces the concept of using tables and formulas together to maintain an up\u2011to\u2011date expense tracker without needing to manually adjust ranges each time new information is entered.",
+        "on_screen_text": "Create a table and use formulas for totals"
+      },
+      "task_type": "pipeline.script_section"
+    },
     "94c6a18912cfe8a73545c2740e1179d25f93c33fad87cd5f90cd0ea5f99fd3af": {
       "completed_at": "2026-10-20T05:08:29.536099+00:00",
       "result": {
