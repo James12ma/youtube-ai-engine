@@ -129,10 +129,12 @@ def render(request, out, browser=None):
     if browser:cmd+=['--browser-executable',browser]
     subprocess.run(cmd,cwd=REMOTION,check=True)
     video=out/'final.mp4'
+    from .media_qc import normalize_delivery
+    normalize_delivery(video)
     info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format','-show_streams','-of','json',str(video)]))
     v=next(x for x in info['streams'] if x['codec_type']=='video');a=next(x for x in info['streams'] if x['codec_type']=='audio')
     duration=float(info['format']['duration'])
-    if (v['width'],v['height'],v['codec_name'],a['codec_name'])!=(1080,1920,'h264','aac') or abs(duration-plan['durationInFrames']/30)>.15:raise ValueError('MP4 technical gate failed')
+    if (v['width'],v['height'],v['codec_name'],a['codec_name'])!=(1080,1920,'h264','aac') or v.get('pix_fmt')!='yuv420p' or abs(duration-plan['durationInFrames']/30)>.15:raise ValueError('MP4 technical gate failed')
     subprocess.run(['ffmpeg','-v','error','-i',str(video),'-f','null','-'],check=True)
     report={k:plan[k] for k in ('source_sha256','renderer','narration_backend','caption_timing','voice','voice_owner_approved','narration_rewritten','requires_owner_approval','auto_publish')}
     report.update(duration_seconds=duration,scenes=len(plan['scenes']),technical_qc_passed=True,published=False,rendered=True,video_sha256=hashlib.sha256(video.read_bytes()).hexdigest())

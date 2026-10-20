@@ -83,3 +83,17 @@ def test_palette_probe_rejects_missing_applicant_panel():
     assert not character_visibility(image,WORLD)['passed']
     draw.rectangle((35,140,85,220),fill=WORLD['candidate']['shirt'])
     assert character_visibility(image,WORLD)['passed']
+
+
+def test_blocked_film_explains_itself_privately_without_public_script(tmp_path,monkeypatch):
+    import scripts.premium_private_job as m
+    sent=[]
+    monkeypatch.setattr(m,'fetch_request',lambda *a:{'script':'PRIVATE OWNER DETAILS','visual_mode':'cinematic'})
+    def reject(*a):raise ValueError('Film needs assets/review: PRIVATE OWNER DETAILS')
+    monkeypatch.setattr(m,'render',reject)
+    monkeypatch.setattr(m,'deliver',lambda path,*a:sent.append(path.read_text()))
+    with pytest.raises(ValueError,match='private owner review delivered'):m.run({},tmp_path,'TEST_ONLY','777')
+    report=(tmp_path/'report.json').read_text()
+    assert 'PRIVATE OWNER DETAILS' not in report
+    assert json.loads(report)['private_review_delivered'] is True
+    assert 'PRIVATE OWNER DETAILS' in sent[0]
