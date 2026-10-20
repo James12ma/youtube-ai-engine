@@ -303,9 +303,13 @@ class Router:
                     'Local minute quota full; retrying approved providers in %.2fs', delay)
                 self._sleep(delay)
                 waited += delay
-            self._runtime_store.transact(
-                lambda rt: rt.update(paused_until=self._clock() + self._config.all_failed_pause),
-                operation_id='all-failed')
+            # Invalid content is a failed task, not a provider outage. Its
+            # reservations and circuit failures still count, but it must not
+            # globally stop unrelated jobs for an hour.
+            if not isinstance(last_error, SchemaValidationError):
+                self._runtime_store.transact(
+                    lambda rt: rt.update(paused_until=self._clock() + self._config.all_failed_pause),
+                    operation_id='all-failed')
             raise AllProvidersFailed('No available approved provider. Last error: ' + repr(last_error))
         finally:
             self._release(task_id, owner)

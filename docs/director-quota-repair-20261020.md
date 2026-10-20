@@ -47,3 +47,9 @@ With the owner's browser authorization, run 39373066659 executed commit 772586e0
 A follow-up correction makes the final bounded numeric-repair round rebuild the section only from verified facts, without repeating the contaminated paragraph. A stricter response schema rejects digits and spoken cardinal numbers at the adapter boundary. The normal script/source/verification gates are unchanged. Regression tests cover repeated bad formula output and strict-schema rejection.
 
 GitHub CI on the first repair commit passed: 418 tests, zero failures/errors, three live-key skips; the lesson boundary check also passed 15 actual Chromium tests.
+
+The strict repair response in run 39373571334 failed schema validation after the code-focused free model's bounded retries. No script was promoted. This exposed a separate router bug: a content/schema error imposed a global one-hour provider-outage pause. Content schema failures now remain task failures and retain their quota/circuit charges, without imposing that global outage pause.
+
+The Director workflow explicitly selects `google/gemma-4-31b-it:free` instead of the default code-focused model. The live official OpenRouter model catalog at `https://openrouter.ai/api/v1/models` was inspected on 2026-10-20: this exact model had prompt/completion prices of zero and advertised `response_format` support. The existing confirmed-free-account checks and `:free` enforcement remain required.
+
+Recovery is limited to the exact global pause produced by the known schema-only failure in run 39373571334: original `paused_until=1792476737.6790457`, runtime branch head `272343c6be00d61a8e4eb898e9815b9a87d05c7d`, no active leases. Provider authentication cooldowns, circuit failures, quota windows and all content gates are preserved. This does not reset provider quotas or authentication failures.

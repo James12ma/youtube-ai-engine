@@ -231,3 +231,20 @@ def test_success_settles_actual_http_attempts_before_next_request(tmp_path):
         assert router._runtime_store.load()['quotas']['openrouter']['count'] == 2
     finally:
         adapter.close()
+
+
+def test_schema_failure_does_not_globally_pause_unrelated_tasks(tmp_path):
+    from adapters import SchemaValidationError
+    p=repo(tmp_path/'repo')
+    class InvalidThenValid(Fake):
+        def complete(self,req):
+            self.calls+=1
+            if self.calls==1:
+                raise SchemaValidationError('Invalid narration schema')
+            return SimpleNamespace(parsed=Answer(message='valid'))
+    adapter=InvalidThenValid('openrouter')
+    router=make(p,{'openrouter':adapter})
+    with pytest.raises(AllProvidersFailed,match='SchemaValidationError'):
+        router.execute('bad-content',{},request(),Answer)
+    assert not router._runtime_store.load().get('paused_until')
+    assert router.execute('different-task',{},request(),Answer).message=='valid'
