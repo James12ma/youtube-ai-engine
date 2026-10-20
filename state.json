@@ -220,6 +220,21 @@
       },
       "task_type": "pipeline.script"
     },
+    "94c6a18912cfe8a73545c2740e1179d25f93c33fad87cd5f90cd0ea5f99fd3af": {
+      "completed_at": "2026-10-20T05:08:29.536099+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "1ae2b61bb2394e8a",
+          "7c2f8388ef92beff",
+          "6195082747115e20"
+        ],
+        "heading": "Using Formulas for Totals",
+        "narration": "To calculate totals, click in a blank cell below the Amount column and type a formula that sums the values. Excel allows up to 8192 characters in a formula, so you can combine multiple functions if needed. For a simple total, use =SUM(Amount:Amount) to add all expenses. This provides a quick overview of overall spending and helps identify trends over time. When you enter the formula, ensure the cell reference matches the column header to avoid errors. If you need to sum only a subset of rows, adjust the range accordingly, such as =SUM(Amount:Amount) for the entire column or =SUM(Amount1:Amount10) for the first ten entries. You can also add conditional logic to exclude certain entries, like =SUMIF(Amount, \"<>0\") to ignore zero values. To see the total update automatically as you add new expenses, make sure the table is formatted correctly and the formula references the dynamic range. If you prefer a more detailed breakdown, you can create additional columns for categories, dates, or notes and apply functions like =SUMIFS to filter by criteria. For example, =SUMIFS(Amount, Category, \"Travel\") will sum only travel expenses, giving you insight into spending by category. After entering the formula, press Enter to see the result. You can also format the total cell to stand out, using bold or a different fill color. To keep your tracker organized, consider adding a label above the total, such as \"Total Expenses,\" to make it clear what the number represents. If you need to calculate percentages of the total, you can divide each expense by the total using a formula like =Amount/Total. This helps visualize the proportion of each expense relative to the overall spending. To ensure accuracy, double\u2011check that the column name used in the formula matches the header exactly, including spacing and capitalization. If you make a mistake, you can edit the formula directly in the cell or use the formula bar for more complex adjustments. Regularly reviewing the totals helps you spot trends and manage your budget more effectively. By mastering these basic formulas, you can transform a simple expense list into a powerful financial tracking tool that adapts to your needs.",
+        "on_screen_text": ""
+      },
+      "task_type": "pipeline.script_section"
+    },
     "968d1129930e7382b1778420cea08ba85f7699b746049d33183fb354fc5d7290": {
       "completed_at": "2026-10-19T22:52:20.895737+00:00",
       "result": {
