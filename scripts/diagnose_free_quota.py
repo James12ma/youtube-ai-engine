@@ -45,6 +45,29 @@ def run(out=Path('outputs/quota-diagnosis'), *, metadata_only=False):
             report['blocked']='account_daily_quota';(out/'report.json').write_text(json.dumps(report,indent=2));return report
         if metadata_only:
             report['metadata_only']=True
+            report['other_providers']={}
+            for name,url,key_env,model in (
+                ('groq','https://api.groq.com/openai/v1/models','GROQ_API_KEY','openai/gpt-oss-120b'),
+                ('gemini','https://generativelanguage.googleapis.com/v1beta/models','GEMINI_API_KEY','gemini-2.5-flash')):
+                credential=os.environ.get(key_env,'')
+                if not credential:
+                    report['other_providers'][name]={'configured':False}
+                    continue
+                provider_headers=({'Authorization':'Bearer '+credential} if name=='groq'
+                                  else {'x-goog-api-key':credential})
+                try:
+                    response=client.get(url,headers=provider_headers)
+                    status={'configured':True,'http_status':response.status_code}
+                    if response.status_code==200:
+                        payload=response.json()
+                        models=payload.get('data',payload.get('models',[]))
+                        ids={m.get('id',m.get('name','').removeprefix('models/'))
+                             for m in models if isinstance(m,dict)}
+                        status['configured_model_present']=model in ids
+                    report['other_providers'][name]=status
+                except Exception:
+                    report['other_providers'][name]={'configured':True,'metadata_failed':True}
+
             (out/'report.json').write_text(json.dumps(report,indent=2))
             return report
         catalog=client.get('https://openrouter.ai/api/v1/models');catalog.raise_for_status()

@@ -53,7 +53,32 @@ def test_quota_metadata_diagnosis_never_sends_generation(tmp_path,monkeypatch):
     client=httpx.Client(transport=httpx.MockTransport(handler))
     monkeypatch.setattr(module.httpx,'Client',lambda **kw:client)
     monkeypatch.setenv('OPENROUTER_API_KEY','offline-placeholder')
+    monkeypatch.delenv('GROQ_API_KEY',raising=False)
+    monkeypatch.delenv('GEMINI_API_KEY',raising=False)
     report=module.run(tmp_path/'report',metadata_only=True)
     assert report['daily_requests']['remaining']==5
     assert report['attempts']==[] and report['metadata_only'] is True
     assert calls==[('GET','https://openrouter.ai/api/v1/key')]
+
+
+def test_provider_metadata_reports_only_safe_statuses_and_never_generates(tmp_path,monkeypatch):
+    import scripts.diagnose_free_quota as module
+    import httpx
+    calls=[]
+    def handler(request):
+        calls.append(request.method)
+        assert request.method=='GET'
+        if request.url.host=='openrouter.ai':
+            return httpx.Response(200,json={'data':{'is_free_tier':True,'free_model_daily_requests':{'remaining':38}}})
+        if request.url.host=='api.groq.com':
+            return httpx.Response(401,json={'error':{'message':'PRIVATE_DO_NOT_ECHO'}})
+        return httpx.Response(200,json={'models':[{'name':'models/gemini-2.5-flash'}]})
+    client=httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(module.httpx,'Client',lambda **kw:client)
+    for key in ('OPENROUTER_API_KEY','GROQ_API_KEY','GEMINI_API_KEY'):
+        monkeypatch.setenv(key,'PRIVATE_KEY_DO_NOT_ECHO')
+    report=module.run(tmp_path/'report',metadata_only=True)
+    assert report['other_providers']['groq']['http_status']==401
+    assert report['other_providers']['gemini']['configured_model_present'] is True
+    assert calls==['GET','GET','GET']
+    assert 'PRIVATE' not in __import__('json').dumps(report)
