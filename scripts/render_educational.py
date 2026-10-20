@@ -50,9 +50,15 @@ def install_cursor(page):
     }""")
 
 
-def run(voice,out,reuse=None,narration_dir=None):
+def lesson_chapters(sample=False):
+    lesson=json.loads((LESSON/'lesson.json').read_text())
+    indices=[0,3,4] if sample else list(range(len(lesson['chapters'])))
+    return lesson, indices, [lesson['chapters'][i] for i in indices]
+
+
+def run(voice,out,reuse=None,narration_dir=None,sample=False):
     out.mkdir(parents=True,exist_ok=True)
-    lesson=json.loads((LESSON/'lesson.json').read_text());chapters=lesson['chapters']
+    lesson,chapter_indices,chapters=lesson_chapters(sample)
     transcript=' '.join(c['narration'] for c in chapters)
     if reuse:
         aligned=AlignmentResult.model_validate_json((reuse/'words.json').read_text())
@@ -83,7 +89,7 @@ def run(voice,out,reuse=None,narration_dir=None):
         aligned=AlignmentResult(words=words,audio_path=str(out/'vo_norm.wav'),transcript=transcript,language='en',alignment_model='whisperx per-chapter CTC',duration_s=offset,token_coverage=1)
         save_word_timestamps(aligned,out/'words.json')
     clock={'start':None};evidence=[];steps=[]
-    for i,(chapter,timing) in enumerate(zip(chapters,timeline)):
+    for i,chapter,timing in zip(chapter_indices,chapters,timeline):
         def show(page,c=chapter,t=timing,i=i):
             if clock['start'] is None:
                 install_cursor(page);clock['start']=time.monotonic()
@@ -222,7 +228,8 @@ if __name__=='__main__':
     parser.add_argument('--reuse-narration',type=Path)
     parser.add_argument('--narration-dir',type=Path,help='premade narration (scripts/narrate_texts.py)')
     parser.add_argument('--dump-texts',type=Path,help='write the texts to narrate as JSON and exit')
+    parser.add_argument('--sample',action='store_true',help='Render three original action chapters as a short private engine test')
     args=parser.parse_args()
     if args.dump_texts:
-        args.dump_texts.write_text(json.dumps([c['narration'] for c in json.loads((LESSON/'lesson.json').read_text())['chapters']],ensure_ascii=False));raise SystemExit(0)
-    run(args.voice,args.output_dir,args.reuse_narration,args.narration_dir)
+        args.dump_texts.write_text(json.dumps([c['narration'] for c in lesson_chapters(args.sample)[2]],ensure_ascii=False));raise SystemExit(0)
+    run(args.voice,args.output_dir,args.reuse_narration,args.narration_dir,args.sample)

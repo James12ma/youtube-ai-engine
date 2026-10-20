@@ -1,4 +1,4 @@
-name: Educational lesson render (no upload)
+name: LogicScript short action test (private, no YouTube upload)
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
   render:
     if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 200
+    timeout-minutes: 100
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
       PYTHONUNBUFFERED: '1'
@@ -31,6 +31,8 @@ jobs:
       MKL_NUM_THREADS: '2'
       VOICE_NAME: en_US-libritts-high
       CUDA_VISIBLE_DEVICES: ''
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+      YOUTUBE_PUBLIC_ALLOWED: '0'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -94,7 +96,7 @@ jobs:
       - name: Texts to narrate
         if: inputs.voice == 'chatterbox'
         shell: bash
-        run: python -m scripts.render_educational --dump-texts narration_texts.json
+        run: python -m scripts.render_educational --sample --dump-texts narration_texts.json
       - name: Narrate (owner-approved shared voice, English)
         if: inputs.voice == 'chatterbox'
         uses: ./.github/actions/alan7-voice
@@ -107,8 +109,31 @@ jobs:
         run: |
           set -euo pipefail
           extra=(); [ "${{ inputs.voice }}" = chatterbox ] && extra=(--narration-dir outputs/narration)
-          python -m scripts.render_educational --voice "$VOICE_DIR/${VOICE_NAME}.onnx" \
+          python -m scripts.render_educational --sample --voice "$VOICE_DIR/${VOICE_NAME}.onnx" \
             --output-dir outputs/educational "${extra[@]}"
+      - name: Deliver the test video to the owner on Telegram
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+        run: |
+          set -euo pipefail
+          ffmpeg -y -hide_banner -loglevel error -i outputs/educational/final.mp4 \
+            -vf scale=1280:720 -c:v libx264 -crf 23 -preset veryfast -c:a aac -b:a 128k \
+            -movflags +faststart outputs/educational/test_720p.mp4
+          python - <<'PYTHON'
+          import json, os, httpx
+          from pathlib import Path
+          p=Path('outputs/educational/test_720p.mp4')
+          assert 1000 < p.stat().st_size < 49_000_000, 'Telegram video size limit'
+          with p.open('rb') as f:
+              r=httpx.post('https://api.telegram.org/bot'+os.environ['TG']+'/sendVideo',
+                  data={'chat_id':os.environ['OWNER'],'supports_streaming':'true',
+                        'caption':'LogicScript — tès reyèl motè a: sourit, klik, vwa Chatterbox ak soutit. Egzanp lokal; pa pibliye sou YouTube.'},
+                  files={'video':('LogicScript_Action_Test.mp4',f,'video/mp4')}, timeout=180)
+          ok = r.status_code == 200 and r.json().get('ok') is True
+          print('::notice title=telegram::'+json.dumps({'http_status':r.status_code,'accepted':ok}))
+          if not ok: raise SystemExit('Telegram video delivery failed')
+          PYTHON
       - name: Encrypted review pack (public repo -> never plain artifacts)
         if: always()
         uses: ./.github/actions/encrypted-pack
