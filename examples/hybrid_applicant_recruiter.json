@@ -1,0 +1,65 @@
+{
+  "title": "From the applicant to the recruiter — a visual story test",
+  "language": "en",
+  "scenes": [
+    {
+      "narration": "A candidate finds an open position and prepares an application before contacting the company.",
+      "kind": "character",
+      "on_screen": "A new opportunity",
+      "actors": [
+        "Candidate"
+      ],
+      "setting": "Candidate's desk",
+      "action": "The candidate prepares an application.",
+      "camera": "push_in",
+      "items": [
+        "Prepare"
+      ]
+    },
+    {
+      "narration": "The candidate picks up a phone and sends the application to the company's recruiting team.",
+      "kind": "device",
+      "on_screen": "Application sent",
+      "actors": [
+        "Candidate"
+      ],
+      "setting": "Candidate's phone",
+      "action": "An application is sent from the candidate's phone.",
+      "camera": "orbit",
+      "items": [
+        "Job application",
+        "Submit"
+      ]
+    },
+    {
+      "narration": "The message travels from the candidate's phone to the recruiter at the company office.",
+      "kind": "signal_flow",
+      "on_screen": "From applicant to recruiter",
+      "setting": "Communication network",
+      "action": "The message moves across two connected endpoints.",
+      "camera": "static",
+      "flow": {
+        "from": "Candidate's phone",
+        "to": "Recruiter's office"
+      },
+      "items": [
+        "Message"
+      ]
+    },
+    {
+      "narration": "The recruiter reviews the application and contacts the candidate to schedule an interview.",
+      "kind": "character",
+      "on_screen": "The recruiter responds",
+      "actors": [
+        "Candidate",
+        "Recruiter"
+      ],
+      "setting": "Recruiter's office",
+      "action": "The recruiter invites the candidate to an interview.",
+      "camera": "pan_left",
+      "items": [
+        "Interview invitation"
+      ]
+    }
+  ]
+}

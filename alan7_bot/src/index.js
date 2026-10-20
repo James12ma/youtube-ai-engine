@@ -1,4 +1,4 @@
-import {premiumRequest,privateScriptFile} from './premium_control.mjs';
+import {premiumRequest,privateScriptFile,filmRequest} from './premium_control.mjs';
 // Alan7 Telegram control bot — Cloudflare Worker (webhook) + D1 (jobs/queue).
 //
 // Design rules
@@ -19,6 +19,7 @@ const MAX_ATTEMPTS = 12;
 
 // Job kinds the bot can run today. Anything else is refused with an honest message.
 const KINDS = {
+  cinematic_video: {label:'Istwa vizyèl semantik pou revizyon',dispatch:true,workflow:'alan7-premium-video.yml'},
   premium_video: {label:'Videyo premium prive ak script pwopriyetè a',dispatch:true,workflow:'alan7-premium-video.yml'},
   test: { label: 'Tès sistèm (GitHub Actions, san GPU)', dispatch: true },
   lena: { label: 'Plan IA LENA 3 s (Kaggle GPU gratis, ~1 è)', dispatch: true, workflow: 'alan7-daily.yml' },
@@ -28,6 +29,8 @@ const KINDS = {
 const HELP = [
   '<b>Alan7 — kòmand</b>',
   '/script en <script> — videyo premium ak egzak mo ou yo; liy vid se nouvo sèn',
+  '/film education en <script> — premye istwa semantik aplikan/rekritè; lòt aksyon mande revizyon',
+  '/filmtest — aplikan → telefòn → siyal → rekritè, aperçu prive',
   '/motiontest — tès motion premium ak nouvo vwa anglè a',
   '/premium3d — rann referans Blender + Remotion Focus 13 s (CPU gratis, ka pran plizyè è)',
   '/status — eta bot la, GitHub ak file atant lan',
@@ -112,13 +115,13 @@ export async function dispatchJob(env, job) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 0, detail: 'GITHUB_TOKEN pa konfigire' };
   try {
     const wf = workflowFor(job.kind);
-    const inputs = ['director_draft','premium_video'].includes(job.kind) ? { job_id: job.id, payload: job.arg || '' }
+    const inputs = ['director_draft','premium_video','cinematic_video'].includes(job.kind) ? { job_id: job.id, payload: job.arg || '' }
       : wf === JOB_WORKFLOW ? { job_id: job.id, kind: job.kind, arg: job.arg || '' }
       : { job_id: job.id, shot: /^[0-4]$/.test((job.arg || '').trim()) ? job.arg.trim() : '' };
     const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${wf}/dispatches`, {
       method: 'POST',
       headers: { ...ghHeaders(env), 'content-type': 'application/json' },
-      body: JSON.stringify({ ref: 'main', inputs }),
+      body: JSON.stringify({ ref: job.kind==='cinematic_video'&&env.CINEMA_REVIEW_REF ? env.CINEMA_REVIEW_REF : 'main', inputs }),
     });
     if (r.status === 204 || r.status === 200) return { ok: true, status: r.status, detail: 'dispatched' };
     return { ok: false, status: r.status, detail: `GitHub HTTP ${r.status}` };
@@ -177,7 +180,7 @@ async function cmdStatus(env) {
 async function cmdCreate(env, arg) {
   const [kindRaw, ...rest] = (arg || '').trim().split(/\s+/);
   const kind = (kindRaw || '').toLowerCase();
-  if (!KINDS[kind] || ['director_draft','premium_video'].includes(kind)) {
+  if (!KINDS[kind] || ['director_draft','premium_video','cinematic_video'].includes(kind)) {
     return `Mwen pa konnen "<code>${esc(kindRaw || '')}</code>". Sa ki disponib: ${Object.keys(KINDS).map((k) => `<code>${k}</code>`).join(', ')}.`;
   }
   const id = newId();
@@ -246,6 +249,10 @@ export async function handleCommand(env, text, context={}) {
       return seoPackCommand(env, arg);
     case 'director':
       return /^draft(?:\s|$)/i.test(arg.trim()) ? directorDraftCommand(env, arg.trim().replace(/^draft\s*/i, '')) : directorPreflightCommand(env, arg);
+    case 'film':
+      return premiumCommand(env,arg,context,false,false,true);
+    case 'filmtest':
+      return premiumCommand(env,'',context,true,false,true);
     case 'script':
     case 'video':
       return premiumCommand(env,arg,context);
@@ -858,9 +865,9 @@ export async function directorDraftCommand(env, raw) {
 }
 
 // Owner-authenticated entrypoint; private source bytes stay on Telegram, never in public workflow inputs.
-export async function premiumCommand(env,raw,context={},test=false,focus3d=false){
+export async function premiumCommand(env,raw,context={},test=false,focus3d=false,cinematic=false){
   let request;
-  try { request=focus3d?{profile:'focus3d',voice:'none'}:premiumRequest(raw,test); } catch(e){return esc(e.message);}
+  try { request=focus3d?{profile:'focus3d',voice:'none'}:cinematic?filmRequest(raw,test):premiumRequest(raw,test); } catch(e){return esc(e.message);}
   let id=newId();
   if(Number.isSafeInteger(context.message_id)&&context.chat_id){
     const key='premium:'+context.chat_id+':'+context.message_id;
@@ -871,14 +878,14 @@ export async function premiumCommand(env,raw,context={},test=false,focus3d=false
   }
   let payload;
   try { payload=focus3d?request:await privateScriptFile(env,request); } catch(e){return esc(e.message);}
-  const result=await env.DB.prepare("INSERT OR IGNORE INTO jobs(id,kind,arg,state,attempts,created_at,updated_at) VALUES (?1,'premium_video',?2,'queued',0,?3,?3)").bind(id,JSON.stringify(payload),now()).run();
+  const result=await env.DB.prepare("INSERT OR IGNORE INTO jobs(id,kind,arg,state,attempts,created_at,updated_at) VALUES (?1,?2,?3,'queued',0,?4,?4)").bind(id,cinematic?'cinematic_video':'premium_video',JSON.stringify(payload),now()).run();
   if(result.meta?.changes===0)return `Travay <code>${id}</code> deja anrejistre.`;
   await logEvent(env,id,'created','premium_video');
-  const d=await dispatchJob(env,{id,kind:'premium_video',arg:JSON.stringify(payload)});
+  const d=await dispatchJob(env,{id,kind:cinematic?'cinematic_video':'premium_video',arg:JSON.stringify(payload)});
   await setMeta(env,'github_last',d.ok?'OK':d.detail);
   if(d.ok){
     await env.DB.prepare("UPDATE jobs SET state='running',attempts=1,updated_at=?2 WHERE id=?1").bind(id,now()).run();
-    return `🎬 Travay <code>${id}</code> lanse: ${focus3d?'Blender + Remotion Focus 13 s (rann CPU long)':'motion premium + vwa anglè Kokoro (pou revizyon ou)'}. MP4 la ap rive isit la. Pa gen piblikasyon. /queue pou swiv li.`;
+    return `🎬 Travay <code>${id}</code> lanse: ${cinematic?'istwa vizyèl semantik (pou revizyon ou)':focus3d?'Blender + Remotion Focus 13 s (rann CPU long)':'motion premium + vwa anglè Kokoro (pou revizyon ou)'}. ${cinematic?'Si direktè a ak baryè kalite yo valide l, MP4 la ap rive isit la; sinon ou resevwa rezon blokaj la an prive.':'MP4 la ap rive isit la.'} Pa gen piblikasyon. /queue pou swiv li.`;
   }
   await env.DB.prepare('UPDATE jobs SET attempts=1,last_error=?2,next_try_at=?3,updated_at=?3 WHERE id=?1').bind(id,d.detail,now()+300).run();
   return `🕒 Travay <code>${id}</code> anrejistre; GitHub poko disponib. Bot la ap reeseye. /queue`;

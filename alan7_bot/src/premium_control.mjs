@@ -27,3 +27,11 @@ export async function privateScriptFile(env, request) {
     return {file_id:file,source_sha256:[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join(''),profile:'premium',voice:request.voice};
   }catch{throw Error('Telegram pa t ka konsève script la. Pa gen rann ki lanse.');}
 }
+
+export function filmRequest(raw,test=false){
+  let text=String(raw||'').trim(),genre='education';
+  const profiles=['children','finance','news','education','technology','documentary'];
+  const first=text.split(/\s+/)[0];if(profiles.includes(first)){genre=first;text=text.slice(first.length).trim();}
+  if(test)text="en A candidate finds an open position and prepares an application before contacting the company. The candidate picks up a phone and sends the application to the company's recruiting team. The message travels from the candidate's phone to the recruiter at the company office. The recruiter reviews the application and contacts the candidate to schedule an interview.";
+  return {...premiumRequest(text),visual_mode:'cinematic',genre};
+}
