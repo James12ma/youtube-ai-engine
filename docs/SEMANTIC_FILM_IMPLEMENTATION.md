@@ -44,4 +44,4 @@ npm test --prefix alan7_bot
 
 Runtime dependencies and real browser installation follow the existing offline CI workflow. Local browser downloads can be unavailable in the workspace; the verified free public Ubuntu runner is the authoritative browser-test environment.
 
-Live render evidence and shot-by-shot visual evaluation are recorded after the actual MP4 is reviewed.
+Verified 26.944-second MP4, six-shot visual evaluation, final tests, exact hashes and Telegram evidence are recorded in [SEMANTIC_FILM_VISUAL_QA.md](SEMANTIC_FILM_VISUAL_QA.md).
