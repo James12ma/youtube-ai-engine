@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       voice:
-        description: 'chatterbox = owner-approved shared voice (same as Alan7), piper = old voice'
+        description: 'chatterbox = shared narrator: native English Kokoro; existing Spanish voice, piper = old voice'
         type: choice
         options: [chatterbox, piper]
         default: chatterbox
@@ -95,7 +95,7 @@ jobs:
         if: inputs.voice == 'chatterbox'
         shell: bash
         run: python -m scripts.render_showcase --dump-texts narration_texts.json
-      - name: Narrate (owner-approved shared voice, English)
+      - name: Narrate (native English shared narrator, for owner review)
         if: inputs.voice == 'chatterbox'
         uses: ./.github/actions/alan7-voice
         with:

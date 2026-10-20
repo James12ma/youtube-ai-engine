@@ -38,3 +38,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Integrated premium motion and native English speech
+- Premium Blender/Remotion sources and OFL fonts are preserved from the existing premium branch.
+- Kokoro-82M model weights: Apache-2.0, https://huggingface.co/hexgrad/Kokoro-82M . Native English af_heart/am_michael are synthetic voices; no person's voice is cloned.
+- Remotion remains subject to its free/company license eligibility. No billable renderer is configured.

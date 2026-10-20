@@ -1,8 +1,8 @@
-name: Alan7 / LogicScript narrator (owner-approved Chatterbox voice)
+name: Shared narrator (native English Kokoro / existing Spanish Chatterbox)
 description: >-
-  Narrates a documentary plan or a JSON list of texts with the approved voice, in its own Python 3.11
-  environment (Chatterbox pins torch/transformers). Same synthetic reference clip everywhere, so
-  Alan7 and LogicScript share one timbre. Free and local; output carries Resemble's Perth watermark.
+  Narrates English with native English Kokoro; Spanish retains Chatterbox in its own Python 3.11
+  environment. English uses its native phonemizer without a Spanish reference clip.
+  New English voices require owner listening review. Free local CPU inference.
 inputs:
   plan:
     description: Documentary plan JSON (one segment per beat)
@@ -17,12 +17,33 @@ inputs:
 runs:
   using: composite
   steps:
+    - shell: bash
+      if: inputs.language == 'en'
+      env:
+        IN_TEXTS: ${{ inputs.texts }}
+        IN_PLAN: ${{ inputs.plan }}
+        IN_OUT: ${{ inputs.out }}
+      run: |
+        set -euo pipefail
+        sudo apt-get install -y --no-install-recommends espeak-ng ffmpeg libsndfile1 >/dev/null
+        python -m pip install kokoro==0.9.4 soundfile
+        if [ -n "$IN_PLAN" ]; then
+          python - <<'PYTHON'
+          import json,os
+          p=json.load(open(os.environ['IN_PLAN']))
+          json.dump([b['narration'] for b in p['beats']],open('english_texts.json','w'))
+          PYTHON
+          IN_TEXTS=english_texts.json
+        fi
+        python -m scripts.narrate_english --texts "$IN_TEXTS" --out "$IN_OUT"
     - uses: actions/cache/restore@v4
+      if: inputs.language != 'en'
       with:
         path: .narration-cache
         key: alan7-voice-v1-${{ github.run_id }}
         restore-keys: alan7-voice-v1-
     - shell: bash
+      if: inputs.language != 'en'
       env:
         IN_PLAN: ${{ inputs.plan }}
         IN_TEXTS: ${{ inputs.texts }}
@@ -46,7 +67,7 @@ runs:
         fi
         echo "::notice title=narration::$(tr -d '\n ' < "$IN_OUT/manifest.json" | head -c 500)"
     - uses: actions/cache/save@v4
-      if: always()
+      if: always() && inputs.language != 'en'
       with:
         path: .narration-cache
         key: alan7-voice-v1-${{ github.run_id }}
