@@ -43,7 +43,7 @@ def test_word_timing_controls_click_and_transition(tmp_path):
     assert shots[2]['camera']['from'][2:]==shots[1]['camera']['to'][2:]
     assert len({s['location_id'] for s in shots})==3
 
-@pytest.mark.parametrize('fault',['actor','recipient','source','blank','timing','static_repeat'])
+@pytest.mark.parametrize('fault',['actor','recipient','source','blank','timing','static_repeat','prop_state'])
 def test_editorial_gate_catches_continuity_and_relevance_regressions(tmp_path,fault):
     p=timed_plan(tmp_path);shots=p['director']['shots']
     if fault=='actor':shots[0]['subjects'][0]['appearance_ref']='different-person'
@@ -51,6 +51,7 @@ def test_editorial_gate_catches_continuity_and_relevance_regressions(tmp_path,fa
     elif fault=='source':shots[2]['source_sentence']='A completely unrelated story.'
     elif fault=='blank':shots[4]['simulation_label']=''
     elif fault=='timing':shots[1]['action_frame']=shots[1]['to']+1
+    elif fault=='prop_state':shots[3]['prop_states'][0]['state_before']='draft'
     else:shots[4]['action']='establish'
     assert not validate_film(p)['passed']
 
@@ -63,3 +64,22 @@ def test_missing_native_alignment_does_not_use_proportional_guess(tmp_path):
 def test_registry_is_not_shared_mutable_state():
     a=compile_script(SCRIPT);a['world']['candidate']['shirt']='pink'
     assert compile_script(SCRIPT)['world']['candidate']['shirt']!='pink'
+
+
+def test_pickup_uses_exact_word_and_states_form_a_continuous_chain(tmp_path):
+    p=timed_plan(tmp_path);shot=p['director']['shots'][1]
+    word=next(w for w in p['scenes'][1]['words'] if w['text']=='picks')
+    assert shot['cue_frames']['picks']==shot['narration_range'][0]+round(word['start']*30)
+    states=[s['prop_states'][0] for s in p['director']['shots']]
+    assert [s['state_before'] for s in states[1:]]==[s['state_after'] for s in states[:-1]]
+
+
+def test_palette_probe_rejects_missing_applicant_panel():
+    from PIL import Image,ImageDraw
+    from tiktok_motion.film_qa import character_visibility
+    from tiktok_motion.semantic_director import WORLD
+    image=Image.new('RGB',(270,480),'#dce8e2');draw=ImageDraw.Draw(image)
+    draw.rectangle((170,140,225,220),fill=WORLD['recruiter']['shirt'])
+    assert not character_visibility(image,WORLD)['passed']
+    draw.rectangle((35,140,85,220),fill=WORLD['candidate']['shirt'])
+    assert character_visibility(image,WORLD)['passed']

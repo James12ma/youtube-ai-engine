@@ -50,12 +50,12 @@ const Phone:React.FC<{x:number;y:number;f:number;state:string;tap?:number;scale?
  <rect x="7" y="8" width="126" height="253" rx="18" fill="url(#glass)"/>
  <rect x="47" y="13" width="46" height="9" rx="5" fill="#1b303e"/><circle cx="104" cy="27" r="2" fill="#5a8c7e"/>
  <Text x={17} y={46} size={8} fill="#647c85">EXAMPLE STUDIO · DEMO</Text>
- <Text x={17} y={67} size={13} weight={800}>{state==='invitation_received'?'Interview invitation':received?'New application':'Job application'}</Text>
- <Text x={17} y={83} size={9} fill="#65818b">{id} · FICTIONAL</Text>
+ <Text x={17} y={67} size={13} weight={800}>{state==='idle'?'Recruiting inbox':state==='invitation_received'?'Interview invitation':received?'New application':'Job application'}</Text>
+ <Text x={17} y={83} size={9} fill="#65818b">{state==='idle'?'Waiting for application':id+' · FICTIONAL'}</Text>
  <rect x="16" y="96" width="108" height="68" rx="9" fill={received?'#d8ece8':'#e7edf0'}/>
  {state==='review'?<><Text x={25} y={112} size={9}>Application reviewed</Text><Text x={25} y={128} size={8}>Skills · project examples</Text><Check x={105} y={148} size={.45}/></>:<><path d="M28 109 H91 M28 120 H106 M28 131 H85 M28 142 H98" stroke="#9eb6bd" strokeWidth="3" strokeLinecap="round"/><Text x={26} y={157} size={7}>{received?'Tap to open application':'CV and project examples'}</Text></>}
  <rect x="16" y="179" width="108" height="36" rx="10" fill={state==='draft'?'#2e7977':C.teal}/>
- <Text x={70} y={201} size={12} anchor="middle" fill="#153d38" weight={850}>{({draft:'Send application',sending:'Sending…',sent:'Sent ✓',received:'Notification',review:'Invite to interview',invited:'Invitation sent ✓',invitation_received:'Open invitation'} as Record<string,string>)[state]||'Application'}</Text>
+ <Text x={70} y={201} size={12} anchor="middle" fill="#153d38" weight={850}>{({idle:'No new messages',draft:'Send application',sending:'Sending…',sent:'Sent ✓',received:'Notification',review:'Invite to interview',invited:'Invitation sent ✓',invitation_received:'Open invitation'} as Record<string,string>)[state]||'Application'}</Text>
  <Text x={70} y={237} size={8} anchor="middle" fill="#6c8189">{sent?'Sent from applicant device':received?'Recruiter device':'Illustrative interface'}</Text>
  <rect x="49" y="249" width="42" height="3" rx="2" fill="#9cafb3"/>
  {tap>0&&tap<1&&<circle cx="95" cy="196" r={8+tap*34} fill="none" stroke={C.gold} strokeWidth={3*(1-tap)} opacity={1-tap}/>}
@@ -66,7 +66,7 @@ const Laptop:React.FC<{x:number;y:number;f:number;review?:boolean;progress:numbe
  <path d="M0 0 H260 Q274 0 274 14 V182 H-14 V14 Q-14 0 0 0" fill="#334c5b"/>
  <rect x="0" y="12" width="260" height="157" rx="4" fill="#f8faf7"/>
  <rect x="0" y="12" width="260" height="22" fill="#dbe8e7"/><circle cx="12" cy="23" r="3" fill="#ce8b6c"/><circle cx="23" cy="23" r="3" fill="#d7b368"/><circle cx="34" cy="23" r="3" fill="#82b79e"/>
- <Text x={18} y={56} size={12} weight={850}>EXAMPLE STUDIO</Text><Text x={18} y={76} size={10}>{review?'APP-042 · FICTIONAL CV':'Open role · fictional listing'}</Text>
+ <Text x={18} y={56} size={14} weight={850}>EXAMPLE STUDIO</Text><Text x={18} y={76} size={12}>{review?'APP-042 · FICTIONAL CV':'Open role · fictional listing'}</Text>
  {[0,1,2].map(i=><g key={i} opacity={progress>i/4?1:.15}><rect x="20" y={91+i*22} width={130+i*16} height="5" rx="2" fill="#a4bab9"/><Check x={226} y={93+i*22} size={.4}/></g>)}
  <path d="M-14 182 H274 L305 210 H-45Z" fill="#8198a2"/><path d="M-20 190 H280 M-5 197 H264" stroke="#5d7480" strokeWidth="3"/><rect x="103" y="199" width="50" height="7" rx="3" fill="#b1c1c5"/>
  </g>;
@@ -107,8 +107,9 @@ function Stage({shot,global,plan}:{shot:any;global:number;plan:OwnerPlan}){
  const phase=global<sendAt?'draft':global<sendAt+17?'sending':global<receive.from?'sent':global<revAt?'received':global<inviteAt?'review':'invited';
  const tap=clamp((global-(shot.action==='compose_send'?sendAt:shot.action==='review'?revAt:inviteAt)+6)/24);
  const progress=smooth((global-shot.from)/Math.max(1,shot.to-shot.from-8));
- const camera=shot.camera.from.map((v:number,i:number)=>mix(v,shot.camera.to[i],progress));
- const reach=clamp((global-send.from)/27);
+ const via=shot.camera.via;
+ const camera=shot.camera.from.map((v:number,i:number)=>via?(progress<.55?mix(v,via[i],progress/.55):mix(via[i],shot.camera.to[i],(progress-.55)/.45)):mix(v,shot.camera.to[i],progress));
+ const reach=clamp((global-(send.cue_frames?.picks??send.from))/27);
  let visual:React.ReactNode;
  if(['establish','compose_send'].includes(shot.action))visual=<Room office={false} f={global} world={world} phase={phase} tap={tap} reach={reach}/>;
  else if(shot.action==='transmit'){
@@ -128,14 +129,14 @@ function Stage({shot,global,plan}:{shot:any;global:number;plan:OwnerPlan}){
  }else if(shot.action==='invite'){
     const reply=smooth((global-inviteAt)/42);
     visual=<g><rect x="-1500" y="-1500" width="4000" height="4300" fill="#dce8e2"/><path d="M540 0 V1550" stroke="#b5c9c5" strokeWidth="4"/>
-    <g transform="translate(28,170) scale(.58)"><Room office={false} f={global} world={world} phase={reply>.85?'invitation_received':'sent'} tap={0} reach={1}/></g>
-    <g transform="translate(550,170) scale(.58)"><Room office f={global} world={world} phase="invited" tap={tap} reach={1}/></g>
+    <defs><clipPath id="left-view"><rect width="540" height="1550"/></clipPath><clipPath id="right-view"><rect x="540" width="540" height="1550"/></clipPath></defs><g clipPath="url(#left-view)"><g transform="translate(28,170) scale(.58)"><Room office={false} f={global} world={world} phase={reply>.85?'invitation_received':'sent'} tap={0} reach={1}/></g></g>
+    <g clipPath="url(#right-view)"><g transform="translate(550,170) scale(.58)"><Room office f={global} world={world} phase="invited" tap={tap} reach={1}/></g></g>
     <path d="M810 1080 C810 1310 270 1310 270 1080" fill="none" stroke="#468b83" strokeWidth="6" strokeDasharray="9 12"/>
     <g transform={`translate(${mix(810,270,reply)},${1080+Math.sin(reply*Math.PI)*165})`}><rect x="-46" y="-31" width="92" height="62" rx="12" fill={C.teal}/><Text x={0} y={7} size={20} anchor="middle">INVITE</Text></g>
     <Text x={270} y={1030} size={31} anchor="middle">Applicant</Text><Text x={810} y={1030} size={31} anchor="middle">Recruiter</Text>
     <Text x={540} y={1390} size={32} anchor="middle">APP-042 · Interview invitation</Text>
     </g>;
- }else visual=<Room office f={global} world={world} phase={global<recAt?'sent':phase} tap={tap} reach={clamp((global-revAt+15)/30)}/>;
+ }else visual=<Room office f={global} world={world} phase={global<recAt?'idle':phase} tap={tap} reach={clamp((global-revAt+15)/30)}/>;
  return <svg width={W} height={H} viewBox={camera.join(' ')} style={{position:'absolute',inset:0}}><Defs/>{visual}</svg>;
 }
 export const SemanticFilm:React.FC<{plan:OwnerPlan}>=({plan})=>{
@@ -153,7 +154,7 @@ export const SemanticFilm:React.FC<{plan:OwnerPlan}>=({plan})=>{
   <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at center,transparent 45%,#102d3d1c 100%)',pointerEvents:'none'}}/>
   <div style={{position:'absolute',left:58,right:58,top:53,display:'flex',justifyContent:'space-between',fontSize:22,letterSpacing:2,color:C.ink,fontWeight:800}}><span>LOGICSCRIPT / FIELD NOTES</span><span>0{index+1} / 06</span></div>
   <div style={{position:'absolute',top:115,left:58,fontSize:23,color:shot.action==='transmit'?'#b7d9dc':C.ink,fontWeight:700,letterSpacing:3}}>{titles[shot.action]}</div>
-  <div style={{position:'absolute',bottom:290,left:58,right:58,fontSize:19,color:shot.action==='transmit'?'#b7d9dc':'#536e75',letterSpacing:1.2}}>FICTIONAL UI · ORIGINAL ANIMATED SIMULATION</div>
+  <div style={{position:'absolute',bottom:290,left:58,right:58,fontSize:28,color:shot.action==='transmit'?'#b7d9dc':'#536e75',letterSpacing:1.2}}>FICTIONAL UI · ANIMATED SIMULATION</div>
   {caption&&<div style={{position:'absolute',left:58,right:58,bottom:145,color:'#173b49',background:'#f8faf1ef',borderRadius:15,padding:'23px 30px',fontSize:43,fontWeight:800,lineHeight:1.18,boxShadow:'0 8px 25px #173b4912'}}>{caption}</div>}
   <div style={{position:'absolute',bottom:72,left:58,right:58,height:3,background:'#1e43552a'}}><div style={{height:3,width:`${frame/plan.durationInFrames*100}%`,background:'#347e79'}}/></div>
   {audio}{plan.director.soundtrack&&<Audio src={staticFile(plan.director.soundtrack)}/>}
