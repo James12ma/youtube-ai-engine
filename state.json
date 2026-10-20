@@ -261,6 +261,21 @@
       },
       "task_type": "pipeline.script_section"
     },
+    "56a596b808e4b84989d9de886ef07f3d4d4a0283f91317093ff54effb2e051ca": {
+      "completed_at": "2026-10-20T05:35:58.901259+00:00",
+      "result": {
+        "judgments": [
+          {
+            "claim_id": "6195082747115e20",
+            "confidence": 1.0,
+            "label": "entailment",
+            "reasoning": "The source excerpt explicitly says that if the 'My table has headers' box is not checked, Excel for the web adds default headers like Column1 and Column2 above the data, which directly supports the claim.",
+            "source_id": "6c74053a3448"
+          }
+        ]
+      },
+      "task_type": "verify.entailment"
+    },
     "65c5ad7fc513bb41fc3d78c7776a434450f10075316628cdba57b583234bcced": {
       "completed_at": "2026-10-20T05:35:33.177556+00:00",
       "result": {
