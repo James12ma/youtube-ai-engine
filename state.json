@@ -261,6 +261,21 @@
       },
       "task_type": "pipeline.script_section"
     },
+    "65c5ad7fc513bb41fc3d78c7776a434450f10075316628cdba57b583234bcced": {
+      "completed_at": "2026-10-20T05:35:33.177556+00:00",
+      "result": {
+        "judgments": [
+          {
+            "claim_id": "c2d665d7b07a2e7d",
+            "confidence": 1.0,
+            "label": "entailment",
+            "reasoning": "The evidence explicitly lists the steps: select a cell within your data, select Home > Format as Table, choose a style, set the cell range in the Create Table dialog box, mark if the table has headers, and select OK, which matches the claim exactly.",
+            "source_id": "6c74053a3448"
+          }
+        ]
+      },
+      "task_type": "verify.entailment"
+    },
     "660cdb28c35e0cad227e4c70f66e528d08e76d13cf62b4d706acc9d9363f7079": {
       "completed_at": "2026-10-20T05:07:32.478378+00:00",
       "result": {
