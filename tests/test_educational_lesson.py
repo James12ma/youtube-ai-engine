@@ -39,3 +39,21 @@ def test_cohere_prompt_json_is_still_schema_validated():
     assert 'response_format' not in captured[0]
     assert captured[0]['reasoning']=={'enabled':False}
     assert 'JSON Schema' in captured[0]['messages'][0]['content']
+
+
+def test_quota_metadata_diagnosis_never_sends_generation(tmp_path,monkeypatch):
+    import scripts.diagnose_free_quota as module
+    import httpx
+    calls=[]
+    def handler(request):
+        calls.append((request.method,str(request.url)))
+        assert request.method=='GET'
+        return httpx.Response(200,json={'data':{'is_free_tier':True,
+            'free_model_daily_requests':{'limit':50,'used':45,'remaining':5}}})
+    client=httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(module.httpx,'Client',lambda **kw:client)
+    monkeypatch.setenv('OPENROUTER_API_KEY','offline-placeholder')
+    report=module.run(tmp_path/'report',metadata_only=True)
+    assert report['daily_requests']['remaining']==5
+    assert report['attempts']==[] and report['metadata_only'] is True
+    assert calls==[('GET','https://openrouter.ai/api/v1/key')]
