@@ -124,3 +124,18 @@ def test_rate_limiter_penalize():
     limiter=RateLimiter(rpm=100,rpd=100,monotonic=monotonic,sleep=sleep)
     limiter.penalize(5.0);limiter.acquire()
     assert any(s>=4.9 for s in sleeps),sleeps
+
+
+def test_native_json_failure_retries_without_echoing_provider_body():
+    calls=[]
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(400,json={'error':{'code':'json_validate_failed',
+            'message':'Failed to generate JSON. PRIVATE_KEY_AND_PROMPT',
+            'failed_generation':'PRIVATE_CONTENT'}})
+    adapter=_adapter(GroqAdapter,GROQ_CONFIG,handler)
+    with pytest.raises(SchemaValidationError,match='provider rejected generated JSON after bounded retries') as error:
+        adapter.complete(LLMRequest(messages=[{'role':'user','content':'json'}],schema=Answer))
+    assert 'PRIVATE' not in str(error.value)
+    assert len(calls)==GROQ_CONFIG.max_retries
+    adapter.close()

@@ -200,7 +200,7 @@ class Router:
             if kind == 'success':
                 cb.record_success()
                 rt.setdefault('cooldowns', {}).pop(provider, None)
-            else:
+            elif kind != 'client':
                 cb.record_failure(now)
                 if kind == 'limit':
                     wait = retry_after if retry_after is not None else self._config.rate_limit_default_cooldown
@@ -254,7 +254,8 @@ class Router:
                         delay = self._minute_quota_delay(provider, task_id, self._clock(), max_attempts)
                         if delay is not None:
                             quota_delays.append(delay)
-                        last_error = RouterError(provider + ': blocked by local quota, cooldown or circuit controls')
+                        if last_error is None:
+                            last_error = RouterError(provider + ': blocked by local quota, cooldown or circuit controls')
                         continue
                     try:
                         response = adapter.complete(send)
@@ -267,6 +268,7 @@ class Router:
                         self._record(provider, 'auth', self._clock())
                         continue
                     except ClientError as exc:
+                        logging.getLogger(__name__).warning('Provider request rejected: %s', exc)
                         last_error = exc
                         self._record(provider, 'client', self._clock())
                         continue
@@ -306,7 +308,7 @@ class Router:
             # Invalid content is a failed task, not a provider outage. Its
             # reservations and circuit failures still count, but it must not
             # globally stop unrelated jobs for an hour.
-            if not isinstance(last_error, SchemaValidationError):
+            if not isinstance(last_error, (SchemaValidationError, ClientError)):
                 pause = self._config.all_failed_pause
                 if isinstance(last_error, RateLimitError):
                     retry = last_error.retry_after

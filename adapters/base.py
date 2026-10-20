@@ -247,7 +247,38 @@ class BaseAdapter:
 
             if status in (401, 403):
                 raise AuthError(f"{self.config.name}: authentication/permissions error {status}")
-            raise ClientError(f"{self.config.name}: non-retryable HTTP {status}")
+            # Fixed vocabulary only: never echo provider bodies, prompts or keys.
+            reason = "unclassified_client_error"
+            try:
+                error = response.json().get('error', {})
+                code = error.get('code') or error.get('status')
+                if code in ('json_validate_failed', 'context_length_exceeded', 'model_not_found',
+                            'INVALID_ARGUMENT', 'PERMISSION_DENIED', 'unsupported_parameter'):
+                    reason = code
+                message = str(error.get('message', '')).lower()
+                for label, phrase in (
+                    ('invalid_json_generation', 'failed to generate json'),
+                    ('unsupported_response_format', 'response_format'),
+                    ('invalid_max_tokens', 'max_tokens'),
+                    ('insufficient_tokens', 'too many tokens'),
+                    ('unsupported_schema', 'schema'),
+                    ('missing_json_instruction', 'json')):
+                    if phrase in message:
+                        reason = label
+                        break
+            except (ValueError, TypeError, AttributeError):
+                pass
+            if reason in ('invalid_json_generation', 'json_validate_failed'):
+                # Groq reports invalid generated JSON as HTTP 400. This is
+                # content failure, not an invalid key or infrastructure outage.
+                if attempt < self.config.max_retries:
+                    payload = dict(payload)
+                    payload['messages'] = _inject_system_instruction(
+                        payload['messages'],
+                        'Previous generation failed JSON validation. Return ONLY a valid json object matching the supplied schema; no markdown or commentary.')
+                    continue
+                raise SchemaValidationError(f"{self.config.name}: provider rejected generated JSON after bounded retries")
+            raise ClientError(f"{self.config.name}: non-retryable HTTP {status}; reason={reason}")
 
         assert last_error is not None
         raise last_error

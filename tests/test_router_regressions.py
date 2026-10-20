@@ -177,7 +177,7 @@ def test_client_error_does_not_disable_provider_for_24_hours(tmp_path):
         router.execute('test',{},request(),Answer)
     runtime = router._runtime_store.load()
     assert 'groq' not in runtime.get('cooldowns',{})
-    assert runtime['circuit_breakers']['groq']['failure_count'] == 1
+    assert runtime['circuit_breakers']['groq']['failure_count'] == 0
 
 
 def test_auth_error_retains_24_hour_cooldown(tmp_path):
@@ -266,3 +266,16 @@ def test_rate_limit_pause_uses_retry_after_not_hour_long_outage(tmp_path):
     assert state['cooldowns']['openrouter']==1005
     clock.sleep(6)
     assert router.execute('next',{},request(),Answer).message=='ready'
+
+
+def test_blocked_fallback_does_not_hide_client_error_or_pause_router(tmp_path):
+    from adapters import ClientError
+    p=repo(tmp_path/'repo')
+    class BadRequest(Fake):
+        def complete(self,req):raise ClientError('groq: non-retryable HTTP 400; reason=invalid_json_generation')
+    router=make(p,{'groq':BadRequest('groq'),'openrouter':Fake('openrouter')})
+    router._runtime_store.transact(lambda rt:rt.update(cooldowns={'openrouter':__import__('time').time()+600}))
+    with pytest.raises(AllProvidersFailed,match='invalid_json_generation'):
+        router.execute('test',{},request(),Answer)
+    assert not router._runtime_store.load().get('paused_until')
+    assert router._runtime_store.load()['circuit_breakers']['groq']['failure_count']==0
