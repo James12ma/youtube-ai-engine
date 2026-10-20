@@ -45,5 +45,7 @@ args=()
 npx remotion render src/index.ts PremiumPrototype "$OUT" \
   --props="{\"platesDir\":\"$(basename "$PLATES")\",\"withAudio\":true}" "${args[@]}"
 
+(cd "$HERE/../.." && python3 -m tiktok_motion.media_qc "$OUT")
+
 echo "== 4/4 QA"
 python3 "$HERE/qa.py" "$OUT"

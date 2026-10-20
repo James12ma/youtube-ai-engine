@@ -32,7 +32,7 @@ def rendered_qa(video,plan,out):
         shots.append({'shot_id':shot['shot_id'],'action':shot['action'],'samples':samples,'mean_pixel_change':round(change,3),'not_black':luma>10,'has_visible_change':change>.18,'semantic_grounding':'manual review required'})
     structural=validate_film(plan)
     result={'passed':structural['passed'] and all(s['not_black'] and s['has_visible_change'] for s in shots) and all(v['visible_id_read_by_ocr'] for v in identity_checks) and bool(both_characters and both_characters['passed']),'structural':structural,'shots':shots,'visible_application_identity':identity_checks,'split_view_characters':both_characters,
-            'limitations':'Pixel change detects static/black execution, not semantic correctness, OCR, human anatomy or factual truth. Independent visual review required.'}
+            'limitations':'Motion sampling checks black/static execution. OCR verifies application IDs only; palette checks recognize only the original procedural assets. General semantic correctness, anatomy and factual truth still require review.'}
     (out/'visual-qa.json').write_text(json.dumps(result,indent=2))
     return result
 
