@@ -1,4 +1,4 @@
-name: LogicScript short action test (private, no YouTube upload)
+name: LogicScript quick action test (Piper preview, private)
 
 on:
   workflow_dispatch:
@@ -128,7 +128,7 @@ jobs:
           with p.open('rb') as f:
               r=httpx.post('https://api.telegram.org/bot'+os.environ['TG']+'/sendVideo',
                   data={'chat_id':os.environ['OWNER'],'supports_streaming':'true',
-                        'caption':'LogicScript — tès reyèl motè a: sourit, klik, vwa Chatterbox ak soutit. Egzanp lokal; pa pibliye sou YouTube.'},
+                        'caption':'LogicScript — tès reyèl motè a: sourit, klik, vwa Piper ak soutit — kopi tès rapid. Egzanp lokal; pa pibliye sou YouTube.'},
                   files={'video':('LogicScript_Action_Test.mp4',f,'video/mp4')}, timeout=180)
           ok = r.status_code == 200 and r.json().get('ok') is True
           print('::notice title=telegram::'+json.dumps({'http_status':r.status_code,'accepted':ok}))
