@@ -176,6 +176,21 @@
       },
       "task_type": "pipeline.script_section"
     },
+    "bcafc18d1122fb70a352795a682351e67bc88fc666e942c075b57158467528ef": {
+      "completed_at": "2026-10-20T05:06:52.763674+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "1ae2b61bb2394e8a",
+          "7c2f8388ef92beff",
+          "6195082747115e20"
+        ],
+        "heading": "Filtering and Sorting Expenses",
+        "narration": "Enable filtering by clicking the dropdown arrow on any column header. Use filters to isolate specific categories or date ranges, making it easier to analyze spending patterns. Sorting allows you to order entries chronologically or by amount, which can highlight large purchases or recent transactions. These tools are built into the table structure and require no additional setup. For a hands\u2011on practice, create a small sample table with a few expense entries, apply a filter to show only food\u2011related rows, then sort those rows by amount to see which food items cost the most. This exercise demonstrates how filtering narrows data and sorting reveals insights without needing extra formulas or manual rearrangement.",
+        "on_screen_text": ""
+      },
+      "task_type": "pipeline.script_section"
+    },
     "c98e29fb3636717ec2d3ac2861d9ca8d0f74c81fe0da36034cfcb3f0e772d436": {
       "completed_at": "2026-10-20T05:06:38.415665+00:00",
       "result": {
