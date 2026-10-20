@@ -18,6 +18,7 @@ def validate_request(data):
     if data.get('language', 'en') != 'en': raise ValueError('This premium narrator currently supports English only')
     if data.get('voice', 'af_heart') not in VOICES: raise ValueError('Unsupported English voice')
     if data.get('profile', 'premium') not in ('premium', 'focus3d'): raise ValueError('Unsupported renderer')
+    if data.get('visual_mode','premium') not in ('premium','cinematic'):raise ValueError('Unsupported visual mode')
     text = data.get('script')
     if data.get('profile') != 'focus3d':
         if not isinstance(text, str) or not 20 <= len(text) <= 12000 or len(text.split()) < 8:
@@ -28,7 +29,13 @@ def validate_request(data):
 def make_plan(data, out):
     data=validate_request(data)
     text=data['script']
-    if text.lstrip().startswith('{'):
+    director=None
+    if data.get('visual_mode')=='cinematic':
+        from .semantic_director import compile_script
+        director=compile_script(text,data.get('genre','education'))
+        if not director['ready']:raise ValueError('Film needs assets/review: '+'; '.join(director['missing_requirements']))
+        raw=director['scenes'];title='Applicant to recruiter · cinematic simulation'
+    elif text.lstrip().startswith('{'):
         obj=json.loads(text)
         if obj.get('language','en') != 'en': raise ValueError('English script required')
         raw=obj.get('scenes',[]);title=obj.get('title','Owner script')
@@ -49,6 +56,7 @@ def make_plan(data, out):
     plan={'title':str(title)[:150], 'scenes':scenes, 'language':'en','voice':data.get('voice','af_heart'),
           'source_sha256':hashlib.sha256(text.encode()).hexdigest(),'narration_rewritten':False,
           'requires_owner_approval':True,'auto_publish':False,'visual_notes_require_review':any(s['visual_notes'] for s in scenes)}
+    if director:plan['director']=director
     out.mkdir(parents=True,exist_ok=True)
     (out/'source.json').write_text(json.dumps(data,ensure_ascii=False))
     return plan
@@ -80,11 +88,12 @@ def narrate(plan, public_dir, pipeline=None):
         pipeline=KPipeline(lang_code='a',repo_id='hexgrad/Kokoro-82M')
     total=0
     for i,s in enumerate(plan['scenes']):
-        chunks=[];captions=[];offset=0
+        chunks=[];captions=[];word_times=[];offset=0
         for result in pipeline(s['narration'],voice=plan['voice'],speed=1.0):
             audio=np.asarray(result.audio,dtype=np.float32)
             if not len(audio) or not np.isfinite(audio).all():raise ValueError('Invalid generated speech')
             captions.extend(captions_from_tokens(result.tokens or [],offset))
+            word_times.extend({'text':t.text,'start':float(t.start_ts)+offset,'end':float(t.end_ts)+offset} for t in (result.tokens or []) if t.start_ts is not None and t.end_ts is not None)
             chunks.append(audio);offset+=len(audio)/24000
         if not chunks or not captions:raise ValueError('Speech or native token timing missing')
         if offset>120:raise ValueError('Scene too long; divide the script into more paragraphs')
@@ -96,12 +105,17 @@ def narrate(plan, public_dir, pipeline=None):
         if abs(measured-offset)>.08:raise ValueError('Narration normalization changed timing')
         for c in captions:
             if c['start']<0 or c['end']>measured+.1:raise ValueError('Caption outside measured speech')
-        s.update(audio=f'job/speech_{i}.wav',captions=captions,durationFrames=math.ceil((measured+.30)*30),speech_seconds=measured)
+        s.update(audio=f'job/speech_{i}.wav',captions=captions,durationFrames=math.ceil((measured+(1.0 if plan.get('director') else .30))*30),speech_seconds=measured,words=word_times)
         total+=s['durationFrames']
     if total>600*30:raise ValueError('Maximum video duration is ten minutes')
     plan.update(durationInFrames=total,fps=30,width=1080,height=1920,
-                renderer='remotion-premium-owner-script',narration_backend='kokoro-en-native',
+                renderer='remotion-semantic-film' if plan.get('director') else 'remotion-premium-owner-script',narration_backend='kokoro-en-native',
                 caption_timing='kokoro_generated_token_durations',voice_owner_approved=False)
+    if plan.get('director'):
+        from .semantic_director import bind_timeline
+        plan=bind_timeline(plan)
+        from .film_qa import make_soundtrack
+        make_soundtrack(plan,public_dir)
     return plan
 
 
@@ -111,7 +125,7 @@ def render(request, out, browser=None):
     plan=narrate(make_plan(request,out),public)
     props=out/'props.json';props.write_text(json.dumps({'plan':plan},ensure_ascii=False))
     (out/'plan.json').write_text(json.dumps(plan,ensure_ascii=False,indent=2))
-    cmd=['npx','--no-install','remotion','render','src/index.ts','OwnerPremium',str((out/'final.mp4').resolve()),'--props',str(props.resolve()),'--concurrency=2','--crf=20']
+    cmd=['npx','--no-install','remotion','render','src/index.ts','OwnerPremium',str((out/'final.mp4').resolve()),'--props',str(props.resolve()),'--concurrency=2','--crf=20','--pixel-format=yuv420p']
     if browser:cmd+=['--browser-executable',browser]
     subprocess.run(cmd,cwd=REMOTION,check=True)
     video=out/'final.mp4'
@@ -123,6 +137,11 @@ def render(request, out, browser=None):
     report={k:plan[k] for k in ('source_sha256','renderer','narration_backend','caption_timing','voice','voice_owner_approved','narration_rewritten','requires_owner_approval','auto_publish')}
     report.update(duration_seconds=duration,scenes=len(plan['scenes']),technical_qc_passed=True,published=False,rendered=True,video_sha256=hashlib.sha256(video.read_bytes()).hexdigest())
     (out/'report.json').write_text(json.dumps(report,indent=2))
+    if plan.get('director'):
+        from .film_qa import rendered_qa
+        report['visual_quality']=rendered_qa(video,plan,out)
+        if not report['visual_quality']['passed']:raise ValueError('Rendered film quality gate failed')
+        (out/'report.json').write_text(json.dumps(report,indent=2))
     # Speech-only audition from the same actual rendered voice.
     subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(video),'-t','15','-vn','-c:a','libmp3lame','-b:a','160k',str(out/'voice_sample.mp3')],check=True)
     return report
@@ -134,3 +153,4 @@ def main():
     report=render(json.loads(a.request.read_text()),a.out,a.browser)
     print(json.dumps(report))
 if __name__=='__main__':main()
+
