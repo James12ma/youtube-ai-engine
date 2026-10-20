@@ -39,3 +39,11 @@ After supported dispatch is available, run `.github/workflows/alan7-director-dra
 The workflow retains its existing free-account and free-Actions preflight. If authentication errors or the actual daily allowance block the run, retain the labeled evidence and report the blocker; do not reset controls or substitute unverified content.
 
 Acceptance requires a successful draft step, a real artifact containing the source-backed script, storyboard, final verification report and Director review, and confirmation of the owner-review document delivery. An unverified candidate alone is not success.
+
+## Live acceptance follow-up
+
+With the owner's browser authorization, run 39373066659 executed commit 772586e0092d9158b843f1e0754929a761bd2efb on the repair branch. It progressed beyond the original provider-reservation failure and saved real failure evidence (artifact 12242328043). It then correctly rejected the expanded script for an unsupported numeric statement in `Using Formulas for Totals`; the model copied `zero`, `ten` and a formula literal containing `0` despite the repair instruction. This is not a successful verified draft.
+
+A follow-up correction makes the final bounded numeric-repair round rebuild the section only from verified facts, without repeating the contaminated paragraph. A stricter response schema rejects digits and spoken cardinal numbers at the adapter boundary. The normal script/source/verification gates are unchanged. Regression tests cover repeated bad formula output and strict-schema rejection.
+
+GitHub CI on the first repair commit passed: 418 tests, zero failures/errors, three live-key skips; the lesson boundary check also passed 15 actual Chromium tests.
