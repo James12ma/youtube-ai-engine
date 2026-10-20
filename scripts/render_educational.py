@@ -58,7 +58,7 @@ def run(voice,out,reuse=None,narration_dir=None):
         aligned=AlignmentResult.model_validate_json((reuse/'words.json').read_text())
         if aligned.transcript!=transcript or aligned.method!='whisperx_ctc':raise ValueError('Reuse transcript/alignment mismatch')
         old_report=json.loads((reuse/'qc_report.json').read_text())
-        if old_report.get('narration_backend') not in ('piper','chatterbox'):raise ValueError('Expected verified Piper or Chatterbox narration')
+        if old_report.get('narration_backend') not in ('piper','chatterbox','kokoro'):raise ValueError('Expected verified Piper or Chatterbox narration')
         backend=old_report['narration_backend']
         timeline=old_report['chapters'];offset=aligned.duration_s;words=aligned.words
         subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(reuse/'final.mp4'),'-vn','-acodec','pcm_s16le',str(out/'vo.wav')],check=True)
@@ -68,7 +68,7 @@ def run(voice,out,reuse=None,narration_dir=None):
     else:
         # owner-approved shared voice (Chatterbox) when narrated beforehand; Piper otherwise
         narrator=PremadeNarrator(narration_dir) if narration_dir else PiperOrEdgeNarrator(voice,length_scale=1.03,noise_scale=.5,allow_edge_fallback=False)
-        backend='chatterbox' if narration_dir else 'piper'
+        backend=narrator.engine if narration_dir else 'piper'
         aligner=WhisperXAligner(min_token_coverage=1)
         words=[];parts=[];timeline=[];offset=0
         for i,c in enumerate(chapters):

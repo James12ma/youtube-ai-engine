@@ -1,0 +1,73 @@
+{
+  "title": "Focus — premium motion prototype",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "frames": 390,
+  "beats": {
+    "hero_drop": [
+      0,
+      22
+    ],
+    "dots_in": [
+      14,
+      70
+    ],
+    "line1": [
+      2,
+      60
+    ],
+    "line1_big": [
+      34,
+      118
+    ],
+    "dialog_in": [
+      120,
+      138
+    ],
+    "cursor_click": 158,
+    "dialog_out": [
+      170,
+      186
+    ],
+    "dots_out": [
+      164,
+      216
+    ],
+    "line2": [
+      192,
+      282
+    ],
+    "ring_in": [
+      216,
+      270
+    ],
+    "line3": [
+      282,
+      390
+    ]
+  },
+  "copy": {
+    "line1_small": [
+      "Most",
+      "people",
+      "think",
+      "success",
+      "means"
+    ],
+    "line1_big": "DOING MORE",
+    "dialog_title": "Remove “Distractions”?",
+    "dialog_body": "24 items are competing for your attention. Removing them keeps only what matters.",
+    "line2_small": [
+      "It",
+      "means",
+      "knowing"
+    ],
+    "line2_big": "WHAT TO CUT",
+    "line3_small": [
+      "Less",
+      "noise."
+    ],
+    "line3_big": "MORE IMPACT"
+  }
+}

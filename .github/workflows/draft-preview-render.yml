@@ -21,7 +21,7 @@ on:
         options: [landscape, portrait]
         default: landscape
       narrator:
-        description: 'chatterbox = owner-approved shared voice (same as Alan7), piper = old voice'
+        description: 'chatterbox = shared narrator: native English Kokoro; existing Spanish voice, piper = old voice'
         type: choice
         options: [chatterbox, piper]
         default: chatterbox
@@ -138,7 +138,7 @@ jobs:
           out=$(python -m channel.cli render --draft outputs/draft --voice-model "$VOICE_DIR/${VOICE_NAME}.onnx" \
             --out outputs/preview/preview.mp4 --dump-texts narration_texts.json)
           echo "NARR_LANG=$(echo "$out" | python -c 'import json,sys;print(json.load(sys.stdin)["language"])')" >> "$GITHUB_ENV"
-      - name: Narrate (owner-approved shared voice)
+      - name: Narrate (shared narrator, for owner review)
         if: inputs.narrator == 'chatterbox'
         uses: ./.github/actions/alan7-voice
         with:
