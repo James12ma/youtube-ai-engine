@@ -60,3 +60,8 @@ def test_empty_native_timing_fails_instead_of_fake_alignment(tmp_path):
     import numpy as np
     def pipeline(*a,**kw):yield SimpleNamespace(audio=np.zeros(24000),tokens=[])
     with pytest.raises(ValueError,match='timing missing'):narrate({'voice':'af_heart','scenes':[{'narration':'Some words here.'}]},tmp_path,pipeline)
+
+
+def test_caption_punctuation_and_contractions_stay_readable():
+    tokens=[SimpleNamespace(text=w,start_ts=i*.1,end_ts=i*.1+.08) for i,w in enumerate(['Don',"'",'t','rush',',','prepare','.'])]
+    assert captions_from_tokens(tokens)[0]['text']=="Don't rush, prepare."

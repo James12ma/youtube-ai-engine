@@ -1,63 +1,88 @@
-name: Deployed premium owner entrypoint acceptance
+name: Premium integration live acceptance (free CPU, private owner delivery)
+run-name: alan7 ${{ inputs.job_id }}
 on:
   workflow_dispatch:
     inputs:
-      phase:
-        type: choice
-        options: [start, status]
-        default: start
-      message_id:
-        default: '2026102001'
+      job_id:
+        required: true
+        default: a20c1003
+      delivery_pubkey:
+        description: Optional owner-session public key for encrypted review copy
+        default: ''
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: alan7-premium-${{ inputs.job_id }}
+  cancel-in-progress: false
 jobs:
-  acceptance:
+  premium:
     if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 300
+    env:
+      CUDA_VISIBLE_DEVICES: ''
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      PYTHONUNBUFFERED: '1'
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+      YOUTUBE_PUBLIC_ALLOWED: '0'
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Authenticated owner webhook, deduplication, queue
+      - name: Free CPU dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng libsndfile1
+          echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchaudio==2.8.0
+          python -m pip install -r requirements-premium.txt
+          cd tiktok_motion/premium/remotion && npm ci --no-audit --no-fund
+          npx --no-install remotion browser ensure
+      - name: Exercise actual private Telegram script transport
         env:
           TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
-          PHASE: ${{ inputs.phase }}
-          MESSAGE_ID: ${{ inputs.message_id }}
         run: |
           node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          import {webhookSecret} from './alan7_bot/src/index.js';
-          const origin='https://alan7-bot.goatgold393.workers.dev';
-          assert.equal((await fetch(origin+'/health')).status,200);
-          assert.equal((await fetch(origin+'/telegram',{method:'POST',body:'{}'})).status,403);
-          const owner=Number(process.env.OWNER),message_id=Number(process.env.MESSAGE_ID);
-          const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('premium:'+owner+':'+message_id));
-          const id=[...new Uint8Array(bytes)].slice(0,4).map(x=>x.toString(16).padStart(2,'0')).join('');
-          const headers={'content-type':'application/json','x-telegram-bot-api-secret-token':await webhookSecret(process.env.TG)};
-          async function command(text,mid=message_id,who=owner){
-            const body={update_id:mid,message:{message_id:mid,from:{id:who},chat:{id:owner,type:'private'},text}};
-            const r=await fetch(origin+'/telegram',{method:'POST',headers,body:JSON.stringify(body)});
-            assert.equal(r.status,200);return r;
-          }
-          if(process.env.PHASE==='start'){
-            const ignored=await command('/motiontest',message_id,owner+1);
-            assert.equal(await ignored.text(),'ok');
-            const r=await command('/script en Before your next interview, choose one clear example. Explain the situation, the action you took, and the result. Practice once, listen carefully, and make your answer your own.');
-            const b=await r.json();
-            assert.ok(b.text.includes(id)&&b.text.includes('lanse'),'Owner command did not dispatch');
-            const duplicate=await (await command('/script en Before your next interview, choose one clear example. Explain the situation, the action you took, and the result. Practice once, listen carefully, and make your answer your own.')).json();
-            assert.ok(duplicate.text.includes('deja')&&duplicate.text.includes(id),'Duplicate was not suppressed');
-            console.log(JSON.stringify({job_id:id,health:200,unauthenticated:403,non_owner_ignored:true,dispatched:true,duplicate_suppressed:true}));
-          }else{
-            const b=await (await command('/queue',message_id+1)).json();
-            const row=b.text.split('\n').find(x=>x.includes(id));
-            assert.ok(row,'Job missing from D1 queue');
-            console.log(JSON.stringify({job_id:id,queue_row:row}));
-            assert.ok(row.includes('done'),'Production job has not completed successfully');
-          }
+          import {premiumRequest,privateScriptFile} from './alan7_bot/src/premium_control.mjs';
+          import {appendFileSync} from 'node:fs';
+          const request=premiumRequest('',true);
+          request.script=JSON.stringify({title:'Interview preparation · final preview',language:'en',scenes:[
+            {kind:'cards',on_screen:'PREPARE WITH PURPOSE',items:['Role','Company','Examples'],narration:'Before your interview, prepare one clear example.'},
+            {kind:'process',on_screen:'SHOW YOUR THINKING',items:['Situation','Action','Result'],narration:'Explain the situation, your action, and the result.'},
+            {kind:'timeline',on_screen:'PRACTICE THEN IMPROVE',items:['Record','Listen','Refine','Clarify','Connect','Repeat'],narration:'Record your answer. Listen carefully, then refine it.'},
+            {kind:'cards',on_screen:'MAKE IT YOUR OWN',items:['Listen','Clarify','Connect'],narration: "Don't memorize a speech. Make the answer your own."}
+          ]});
+          const p=await privateScriptFile({TELEGRAM_BOT_TOKEN:process.env.TG,OWNER_ID:process.env.OWNER},request);
+          appendFileSync(process.env.GITHUB_ENV,'ACCEPTANCE_PAYLOAD='+JSON.stringify(p)+'\n');
+          console.log('Private owner script stored; SHA256 bound; no plaintext in workflow input.');
           JS
+      - name: Exact script, native English voice, premium render, private Telegram delivery
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+          PREMIUM_PAYLOAD: ${{ env.ACCEPTANCE_PAYLOAD }}
+        run: python -m scripts.premium_private_job
+      - name: Encrypted owner-session video copy
+        if: success() && inputs.delivery_pubkey != ''
+        uses: ./.github/actions/encrypted-pack
+        with:
+          dir: outputs/premium
+          pubkey_b64: ${{ inputs.delivery_pubkey }}
+          token: ${{ github.token }}
+          label: premium-motion
+      - name: Save metadata evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: premium-report-${{ inputs.job_id }}
+          path: outputs/premium/report.json
+          if-no-files-found: error

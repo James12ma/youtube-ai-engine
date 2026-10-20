@@ -54,17 +54,20 @@ def make_plan(data, out):
 
 def captions_from_tokens(tokens, offset=0):
     """Use Kokoro's generated phoneme durations, never proportional word timings."""
+    def text(words):
+        value=re.sub(r'\s+([,.;:!?%])',r'\1',' '.join(words))
+        return re.sub(r"(\w)\s*(['’])\s*(\w)",r'\1\2\3',value)
     captions=[];batch=[];start=None;end=None
     for token in tokens:
         a=getattr(token,'start_ts',None);b=getattr(token,'end_ts',None);word=getattr(token,'text','')
         if a is None or b is None or not word.strip(): continue
         if b<=a: continue
         if batch and (len(' '.join(batch+[word]))>38 or b-start>2.8):
-            captions.append({'start':start+offset,'end':end+offset,'text':' '.join(batch)})
+            captions.append({'start':start+offset,'end':end+offset,'text':text(batch)})
             batch=[];start=None
         if start is None:start=float(a)
         end=float(b);batch.append(word)
-    if batch:captions.append({'start':start+offset,'end':end+offset,'text':' '.join(batch)})
+    if batch:captions.append({'start':start+offset,'end':end+offset,'text':text(batch)})
     return captions
 
 
