@@ -76,19 +76,24 @@ def bind_timeline(plan):
     director=plan['director']
     if not director['ready']:raise ValueError('Film blocked: '+ '; '.join(director['missing_requirements']))
     shots=[];offset=0
+    states={'establish':('draft','prepared'),'compose_send':('prepared','sent'),'transmit':('sent','in_transit'),'receive':('in_transit','received'),'review':('received','reviewed'),'invite':('reviewed','invitation_sent')}
     views={
       'establish':([0,0,1080,1550],[680,800,240,344]),
       'compose_send':([680,800,240,344],[680,800,240,344]),
       'transmit':([80,866,240,344],[0,0,1080,1550]),
       'receive':([0,0,1080,1550],[680,800,240,344]),
-      'review':([680,800,240,344],[120,300,840,1205]),
-      'invite':([120,300,840,1205],[0,0,1080,1550]),
+      'review':([680,800,240,344],[200,450,500,717]),
+      'invite':([200,450,500,717],[0,0,1080,1550]),
     }
     for i,scene in enumerate(plan['scenes']):
         frames=scene['durationFrames']; events=director['scenes'][i]['events'];local=[]
         for event in events:
             at=round(_trigger_time(scene['words'],event['trigger'])*30)
             local.append({**event,'at':offset+at})
+        cues={}
+        for word in ('picks','sends','recruiter','reviews','contacts'):
+            try:cues[word]=offset+round(_trigger_time(scene['words'],word)*30)
+            except ValueError:pass
         boundary=0
         for j,event in enumerate(local):
             start=offset+boundary
@@ -104,7 +109,9 @@ def bind_timeline(plan):
                           'narration_range':[offset,offset+frames],'location_id':location,
                           'subjects':[{'entity_id':s,**director['world'][s]} for s in subjects],
                           'props':props,'application_id':director['world']['application']['id'],
-                          'camera':{'from':a,'to':b,'movement': 'macro_match' if action=='compose_send' else 'pan_push'},
+                          'prop_states':[{'entity_id':'application','state_before':states[action][0],'state_after':states[action][1]}],
+                          'cue_frames':cues,
+                          'camera':{'from':a,'to':b,'via':[400,755,500,717] if action=='establish' else None,'movement': 'macro_match' if action=='compose_send' else 'pan_push'},
                           'transition':{'from_shot':shots[-1]['shot_id'] if shots else None,'continuity_object':'phone' if action in ('compose_send','transmit') else 'application','match_point':'same device case / APP-042'},
                           'evidence_source_ids':['original-procedural-artwork'],'simulation_label':'FICTIONAL UI · ANIMATED SIMULATION',
                           'needs_owner_review':True})
@@ -120,12 +127,15 @@ def bind_timeline(plan):
 def validate_film(plan):
     d=plan['director'];shots=d.get('shots',[]);blocking=[]
     if d['missing_requirements']:blocking+=d['missing_requirements']
-    world=d['world'];last=0;seen=[]
+    world=d['world'];last=0;seen=[];application_state='draft'
     if world!=WORLD: blocking.append('Continuity registry changed from renderer asset contract')
     for s in shots:
         if s['action'] not in RENDERABLE_ACTIONS:blocking.append('Unsupported action')
         if s['from']!=last or s['to']<=s['from']:blocking.append('Non-contiguous shot timeline')
         if not s['from']<=s['action_frame']<s['to']:blocking.append('Action outside its narrated shot')
+        state=s.get('prop_states',[{}])[0]
+        if state.get('entity_id')!='application' or state.get('state_before')!=application_state:blocking.append('Broken application state transition')
+        application_state=state.get('state_after')
         if s['application_id']!=world['application']['id']:blocking.append('Wrong sender/recipient application')
         if not s['simulation_label']:blocking.append('Simulation must be labelled')
         for actor in s['subjects']:
@@ -133,6 +143,7 @@ def validate_film(plan):
         if s['source_sentence']!=plan['scenes'][s['scene_index']]['narration']:blocking.append('Shot is unrelated to source sentence')
         seen.append(s['action']);last=s['to']
     if seen!=['establish','compose_send','transmit','receive','review','invite']:blocking.append('Causal action order or variety missing')
+    if application_state!='invitation_sent':blocking.append('Application has no invitation outcome')
     if last!=plan['durationInFrames']:blocking.append('Uncovered narration frames')
     return {'passed':not blocking,'blocking':blocking,'shot_count':len(shots),'checks':['causal order','same APP-042','stable original assets','source sentence binding','native speech timing','visible simulation label'],
             'pixel_relevance_verified':False,'human_visual_review_required':True}

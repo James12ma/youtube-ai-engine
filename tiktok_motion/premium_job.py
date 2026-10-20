@@ -140,8 +140,8 @@ def render(request, out, browser=None):
     if plan.get('director'):
         from .film_qa import rendered_qa
         report['visual_quality']=rendered_qa(video,plan,out)
-        if not report['visual_quality']['passed']:raise ValueError('Rendered film quality gate failed')
         (out/'report.json').write_text(json.dumps(report,indent=2))
+        if not report['visual_quality']['passed']:raise ValueError('Rendered film quality gate failed')
     # Speech-only audition from the same actual rendered voice.
     subprocess.run(['ffmpeg','-y','-loglevel','error','-i',str(video),'-t','15','-vn','-c:a','libmp3lame','-b:a','160k',str(out/'voice_sample.mp3')],check=True)
     return report

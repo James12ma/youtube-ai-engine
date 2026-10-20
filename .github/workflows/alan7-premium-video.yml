@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng libsndfile1
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng libsndfile1 tesseract-ocr
           echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
           python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchaudio==2.8.0
           python -m pip install -r requirements-premium.txt

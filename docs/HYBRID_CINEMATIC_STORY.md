@@ -29,3 +29,8 @@ These are stylized VECTOR animations, not cinematic 3D humans, lipsynced actors,
 7. Run full Python, JS and pinned TypeScript tests and a real MP4 render, with video, hashes, test counts, comparisons for approval. Do not consume paid GitHub Actions quotas. Keep this PR draft until proven.
 
 Acceptance: a 25–40 second, four-shot narrative showing applicant preparing, sending from phone, signal crossing, recruiter receiving/responding. Real actions, not repeated cards. 1080x1920 H264/AAC with technical QC and human visual review. Original spoken text unchanged. Owner approval required.
+
+
+
+## Semantic continuation
+The bounded executable semantic director, word-timed causal film, continuity registry, Telegram review routing and quality boundaries are documented in [SEMANTIC_FILM_IMPLEMENTATION.md](SEMANTIC_FILM_IMPLEMENTATION.md). This extension is pending owner approval; main and the production Worker are not changed.

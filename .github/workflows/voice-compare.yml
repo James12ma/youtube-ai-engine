@@ -26,6 +26,7 @@ jobs:
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
           GH: ${{ secrets.ALAN7_GITHUB_TOKEN }}
           CINEMA_REVIEW_REF: feat/semantic-film-director-20261020
+          MESSAGE_ID: '2026102021'
           DELIVERY_PUBKEY: ${{ inputs.delivery_pubkey }}
         run: node scripts/cinema_telegram_acceptance.mjs
       - uses: actions/upload-artifact@v4
