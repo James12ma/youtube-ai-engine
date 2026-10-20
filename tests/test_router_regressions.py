@@ -96,3 +96,138 @@ def test_stale_half_open_probe_is_recovered_after_crash(tmp_path):
     state=router._runtime_store.load()
     assert state['half_open_probes']=={}
     assert state['leases']['new-task']['owner']=='alive'
+
+class Clock:
+    def __init__(self):
+        self.now = 1000.0
+        self.waits = []
+    def __call__(self):
+        return self.now
+    def sleep(self, seconds):
+        self.waits.append(seconds)
+        self.now += seconds
+
+
+def test_director_18_of_20_reservations_waits_then_repairs(tmp_path):
+    """Reproduce run 39337749774 without any provider/network calls."""
+    p = repo(tmp_path/'repo')
+    clock = Clock()
+    adapter = Fake('openrouter', attempts=3)
+    router = Router(StateStore(p, push_required=False), {'openrouter': adapter},
+                    RouterConfig(local_quota_wait_s=65), clock=clock, sleep=clock.sleep)
+    def historical(rt):
+        rt.update(cooldowns={'groq':87400, 'gemini':87400},
+                  quotas={'openrouter':{'minute':[980.0]*18, 'day':[980.0]*24}})
+    router._runtime_store.transact(historical)
+    result = router.execute('pipeline.script_section', {'repair':1}, request(), Answer)
+    assert result.message == 'one' and adapter.calls == 1
+    assert 40 <= sum(clock.waits) <= 41
+    assert max(clock.waits) <= 30
+    runtime = router._runtime_store.load()
+    assert len(runtime['quotas']['openrouter']['minute']) == 3
+    assert len(runtime['quotas']['openrouter']['day']) == 27
+    assert not runtime.get('paused_until')
+    assert runtime['leases'] == {}
+
+
+def test_daily_quota_does_not_wait_or_dispatch(tmp_path):
+    p = repo(tmp_path/'repo'); clock = Clock(); adapter = Fake('openrouter', attempts=3)
+    router = Router(StateStore(p,push_required=False), {'openrouter':adapter},
+                    RouterConfig(local_quota_wait_s=65), clock=clock, sleep=clock.sleep)
+    router._runtime_store.transact(lambda rt:rt.update(
+        quotas={'openrouter':{'minute':[980.0]*18,'day':[980.0]*48}}))
+    with pytest.raises(AllProvidersFailed, match='local quota'):
+        router.execute('test',{},request(),Answer)
+    assert clock.waits == [] and adapter.calls == 0
+
+
+def test_available_fallback_runs_before_waiting(tmp_path):
+    p = repo(tmp_path/'repo'); clock = Clock()
+    groq = Fake('groq', attempts=3); gemini = Fake('gemini')
+    router = Router(StateStore(p,push_required=False), {'groq':groq,'gemini':gemini},
+                    RouterConfig(local_quota_wait_s=65), clock=clock, sleep=clock.sleep)
+    router._runtime_store.transact(lambda rt:rt.update(
+        quotas={'groq':{'minute':[990.0]*30,'day':[990.0]*30}}))
+    assert router.execute('test',{},request(),Answer).message == 'one'
+    assert groq.calls == 0 and gemini.calls == 1 and clock.waits == []
+
+
+def test_wait_budget_shorter_than_window_fails_without_dispatch(tmp_path):
+    p = repo(tmp_path/'repo'); clock = Clock(); adapter = Fake('openrouter', attempts=3)
+    router = Router(StateStore(p,push_required=False), {'openrouter':adapter},
+                    RouterConfig(local_quota_wait_s=5), clock=clock, sleep=clock.sleep)
+    router._runtime_store.transact(lambda rt:rt.update(
+        quotas={'openrouter':{'minute':[999.0]*18,'day':[999.0]*18}}))
+    with pytest.raises(AllProvidersFailed):
+        router.execute('test',{},request(),Answer)
+    assert sum(clock.waits) == 5 and adapter.calls == 0
+    assert router._runtime_store.load()['leases'] == {}
+
+
+def test_client_error_does_not_disable_provider_for_24_hours(tmp_path):
+    from adapters import ClientError
+    p = repo(tmp_path/'repo')
+    class ClientFailure(Fake):
+        def complete(self, req):
+            self.calls += 1
+            raise ClientError('provider: non-retryable HTTP 400')
+    adapter = ClientFailure('groq')
+    router = make(p, {'groq':adapter}, all_failed_pause=0)
+    with pytest.raises(AllProvidersFailed):
+        router.execute('test',{},request(),Answer)
+    runtime = router._runtime_store.load()
+    assert 'groq' not in runtime.get('cooldowns',{})
+    assert runtime['circuit_breakers']['groq']['failure_count'] == 1
+
+
+def test_auth_error_retains_24_hour_cooldown(tmp_path):
+    from adapters import AuthError
+    p = repo(tmp_path/'repo')
+    class AuthFailure(Fake):
+        def complete(self, req):
+            raise AuthError('provider: authentication/permissions error 401')
+    router = make(p, {'groq':AuthFailure('groq')})
+    with pytest.raises(AllProvidersFailed):
+        router.execute('test',{},request(),Answer)
+    assert router._runtime_store.load()['cooldowns']['groq'] > __import__('time').time() + 86300
+
+
+def test_only_proven_unused_retries_are_refunded_once(tmp_path):
+    p = repo(tmp_path/'repo'); adapter = Fake('openrouter', attempts=3)
+    router = make(p, {'openrouter':adapter})
+    assert router._reserve_provider('openrouter','task',1000,'reservation',3)
+    router._settle_successful_reservation('reservation',1)
+    router._settle_successful_reservation('reservation',1)
+    runtime=router._runtime_store.load()
+    assert runtime['quotas']['openrouter']['minute'] == [1000]
+    assert runtime['quotas']['openrouter']['day'] == [1000]
+    assert runtime['quotas']['openrouter']['count'] == 1
+    assert runtime['reservations']['reservation']['attempts_charged'] == 1
+
+
+@pytest.mark.parametrize('used',[None,0,4,True])
+def test_unknown_or_invalid_attempt_count_stays_fully_reserved(tmp_path,used):
+    p = repo(tmp_path/'repo'); router = make(p, {'openrouter':Fake('openrouter',attempts=3)})
+    assert router._reserve_provider('openrouter','task',1000,'reservation',3)
+    router._settle_successful_reservation('reservation',used)
+    assert router._runtime_store.load()['quotas']['openrouter']['count'] == 3
+
+
+def test_success_settles_actual_http_attempts_before_next_request(tmp_path):
+    import httpx
+    from adapters import OpenRouterAdapter, OPENROUTER_CONFIG
+    p=repo(tmp_path/'repo'); clock=Clock(); requests=[]
+    def handler(req):
+        requests.append(req)
+        return httpx.Response(200,json={'choices':[{'message':{'content':'{"message":"ok"}'}}]})
+    adapter=OpenRouterAdapter(OPENROUTER_CONFIG,api_key='offline-only',transport=httpx.MockTransport(handler))
+    try:
+        router=Router(StateStore(p,push_required=False),{'openrouter':adapter},
+                      RouterConfig(rpd={'openrouter':4},rpm={'openrouter':4},local_quota_wait_s=65),
+                      clock=clock,sleep=clock.sleep)
+        for index in range(2):
+            assert router.execute('test',{'index':index},request(),Answer).message == 'ok'
+        assert len(requests) == 2 and clock.waits == []
+        assert router._runtime_store.load()['quotas']['openrouter']['count'] == 2
+    finally:
+        adapter.close()

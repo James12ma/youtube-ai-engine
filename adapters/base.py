@@ -30,6 +30,7 @@ class LLMResponse:
     usage: dict[str, Any]
     raw: dict[str, Any]
     parsed: Optional[BaseModel] = None
+    attempts_used: Optional[int] = None
 
 def _strip_markdown_fences(text: str) -> str:
     stripped = text.strip()
@@ -218,7 +219,7 @@ class BaseAdapter:
                 return LLMResponse(
                     text=text, provider=self.config.name,
                     model=self._extract_model(data), usage=self._extract_usage(data),
-                    raw=data, parsed=parsed,
+                    raw=data, parsed=parsed, attempts_used=attempt,
                 )
 
             if status == 429:

@@ -59,13 +59,13 @@ jobs:
           git config user.email 'youtube-ai-engine@users.noreply.github.com'
       - name: Existing research -> verification -> script -> storyboard -> Director review
         run: python -m scripts.director_job
-      - name: Store complete unapproved script and source hashes for owner
+      - name: Store Director draft or labeled failure evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: alan7-director-${{ inputs.job_id }}
           path: outputs/director-jobs/${{ inputs.job_id }}
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
       - name: Send evidence-labeled owner review if there is a real candidate
         if: always()

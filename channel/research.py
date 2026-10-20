@@ -7,7 +7,7 @@ import os as _os
 from urllib.parse import urlparse
 from adapters import GroqAdapter,GeminiAdapter,OpenRouterAdapter
 from pipeline import ContentPipeline,HttpSourceFetcher,QualityThresholds
-from router import Router
+from router import Router, RouterConfig
 from state_store import StateStore
 from verification import VerificationGate
 from verification.integrated import VerifiedContentPipeline
@@ -35,7 +35,7 @@ def generate_draft(repo:Path,topic:str,urls:list[str],out_dir:Path,*,
         if os.environ.get(key): adapters[provider]=cls()
     if not adapters:raise RuntimeError('No free-tier provider API key configured')
     try:
-        router=Router(state,adapters)
+        router=Router(state,adapters,RouterConfig(local_quota_wait_s=65.0))
         if unverified_capture is not None:
             # Capture the ACTUAL draft before the existing word-count and
             # citation quality gates run. Failed output remains unapproved.

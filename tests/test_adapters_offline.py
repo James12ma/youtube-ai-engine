@@ -30,6 +30,7 @@ def test_success_path_parses_and_validates(cls,config):
     assert isinstance(response.parsed,Answer)
     assert response.parsed.answer=="ok"
     assert response.parsed.confidence==pytest.approx(0.9)
+    assert response.attempts_used == 1
     assert response.provider==config.name
     assert response.usage["total_tokens"]==15
 
@@ -45,6 +46,7 @@ def test_retry_after_is_respected():
     adapter=_adapter(GroqAdapter,GROQ_CONFIG,handler,sleep=fake_sleep,monotonic=fake_clock)
     response=adapter.complete(LLMRequest(messages=[{"role":"user","content":"hi"}],schema=Answer))
     assert response.parsed is not None and response.parsed.answer=="ok"
+    assert response.attempts_used == 2
     assert calls["n"]==2
     assert any(s>=2.0 for s in sleeps),sleeps
 
@@ -56,6 +58,7 @@ def test_5xx_retries_then_succeeds():
         return httpx.Response(200,json=_body(json.dumps({"answer":"ok","confidence":1.0})))
     adapter=_adapter(GeminiAdapter,GEMINI_CONFIG,handler,sleep=sleeps.append)
     response=adapter.complete(LLMRequest(messages=[{"role":"user","content":"hi"}],schema=Answer))
+    assert response.attempts_used == 3
     assert calls["n"]==3
     assert response.parsed is not None and response.parsed.confidence==1.0
     assert len(sleeps)>=2
