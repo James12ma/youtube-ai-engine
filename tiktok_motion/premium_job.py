@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse, hashlib, json, math, re, subprocess, wave
 from pathlib import Path
 
+from .story_scene import ALL_KINDS, enrich_visual
+
 VOICES = {'af_heart', 'am_michael'}
 ROOT = Path(__file__).resolve().parent
 REMOTION = ROOT/'premium/remotion'
@@ -38,12 +40,12 @@ def make_plan(data, out):
     for i,s in enumerate(raw):
         n=s.get('narration');kind=s.get('kind','kinetic');items=s.get('items',[])
         if not isinstance(n,str) or not n.strip() or len(n)>3000: raise ValueError('Invalid scene narration')
-        if kind not in ('kinetic','cards','process','ui','timeline','chart'): raise ValueError('Unsupported scene kind')
+        if kind not in ALL_KINDS: raise ValueError('Unsupported scene kind')
         if not isinstance(items,list) or len(items)>6 or any(not isinstance(v,str) or len(v)>60 for v in items): raise ValueError('Invalid labels')
         headline=s.get('on_screen') or ' '.join(n.split()[:7])
         if not isinstance(headline,str) or len(headline)>110: raise ValueError('Headline too long')
         scenes.append({'narration':n,'kind':kind,'headline':headline,'items':items,
-                       'visual_notes':s.get('visual_notes','')})
+                       'visual_notes':s.get('visual_notes',''), **enrich_visual(s)})
     plan={'title':str(title)[:150], 'scenes':scenes, 'language':'en','voice':data.get('voice','af_heart'),
           'source_sha256':hashlib.sha256(text.encode()).hexdigest(),'narration_rewritten':False,
           'requires_owner_approval':True,'auto_publish':False,'visual_notes_require_review':any(s['visual_notes'] for s in scenes)}
