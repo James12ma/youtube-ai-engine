@@ -378,6 +378,21 @@
       },
       "task_type": "verify.entailment"
     },
+    "7db38f0d2e69ae42330b134e3cc25df19eff5f38ba7116586e7bb20870ac1d72": {
+      "completed_at": "2026-10-20T05:35:50.289633+00:00",
+      "result": {
+        "judgments": [
+          {
+            "claim_id": "7c2f8388ef92beff",
+            "confidence": 1.0,
+            "label": "entailment",
+            "reasoning": "The source excerpt explicitly states that you can enter as many constants and operators in a formula as needed, up to 8192 characters, which directly supports the claim.",
+            "source_id": "0559be5f521e"
+          }
+        ]
+      },
+      "task_type": "verify.entailment"
+    },
     "80fcd17012fb8c9b19c7f14d6088609f82830d68df6766b0d2c5aeabb1918b5e": {
       "completed_at": "2026-10-20T05:34:57.773917+00:00",
       "result": {
