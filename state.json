@@ -415,6 +415,21 @@
       },
       "task_type": "pipeline.research"
     },
+    "e788057b5ed720debb0a82f2786dab3a77713dd00cf42b9272bc4bed5e905499": {
+      "completed_at": "2026-10-20T05:08:41.337844+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "1ae2b61bb2394e8a",
+          "7c2f8388ef92beff",
+          "6195082747115e20"
+        ],
+        "heading": "Practical Exercise: Build Your Own Tracker",
+        "narration": "Create a new sheet and input sample expenses: a grocery purchase on Monday, a movie ticket on Wednesday, and a utility bill on Friday. Assign each a category and amount. Apply a table style, add headers, and calculate the total. Then filter to show only the entertainment category. This hands\u2011on practice reinforces each step and demonstrates how quickly you can organize and review spending. Begin by selecting the range where you want the table, then use Insert > Table to add a blank table. Ensure the My table has headers option is checked so you can label columns such as Category, Amount, and Date. Choose a simple style from Home > Format as Table to improve readability. Enter the three expense entries, each with a category label and a numeric amount. Use a formula that sums the Amount column to compute the total automatically. Finally, apply a filter and select the entertainment category to view only those rows, illustrating how easy it is to isolate specific data for analysis.",
+        "on_screen_text": ""
+      },
+      "task_type": "pipeline.script_section"
+    },
     "f569c24c72a008188b6b1a039d489e50f28f78b3973c1e49497d515f075cdb40": {
       "completed_at": "2026-10-19T22:51:32.941688+00:00",
       "result": {
