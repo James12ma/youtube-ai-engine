@@ -32,6 +32,8 @@ def enrich_visual(scene):
     actors = [_short_text(a, "actor", 36) for a in actors]
     if any(not a for a in actors) or len(set(actors)) != len(actors):
         raise ValueError("Invalid scene actors")
+    if kind == "character" and not actors:
+        raise ValueError("Character scene requires at least one named role")
     camera = scene.get("camera", "push_in")
     if camera not in CAMERAS:
         raise ValueError("Unsupported camera motion")
