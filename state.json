@@ -444,6 +444,21 @@
       },
       "task_type": "pipeline.script_section"
     },
+    "efb409b281abc25547c4449cb72c0f6ccac6fda08f5d0805614a579386305412": {
+      "completed_at": "2026-10-20T05:35:11.401891+00:00",
+      "result": {
+        "claim_ids": [
+          "c2d665d7b07a2e7d",
+          "1ae2b61bb2394e8a",
+          "7c2f8388ef92beff",
+          "6195082747115e20"
+        ],
+        "heading": "Practical Exercise: Build Your Own Tracker",
+        "narration": "To begin organizing your expenses, start by selecting a cell located within your data set. Navigate to the Home tab and choose the option to format as a table. Pick a visual style that suits your preference. A dialog box will appear where you must define the range of your cells. Ensure you indicate whether your data includes headers. If you choose not to include headers, the application will automatically generate default labels for each column. Alternatively, you may highlight a group of empty cells and select the insert tab to add a blank table structure. Once your table is established, you can begin crafting formulas to calculate your totals. You are permitted to include a vast amount of constants and operators within these formulas to suit your needs. For your practical exercise, create a new table using the steps described above. Populate the rows with your spending categories and input your costs. Apply a formula to sum these values and observe how the table structure keeps your information tidy and accessible.",
+        "on_screen_text": "Create Your Expense Table"
+      },
+      "task_type": "pipeline.script_section"
+    },
     "f569c24c72a008188b6b1a039d489e50f28f78b3973c1e49497d515f075cdb40": {
       "completed_at": "2026-10-19T22:51:32.941688+00:00",
       "result": {
