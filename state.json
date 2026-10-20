@@ -363,6 +363,21 @@
       },
       "task_type": "pipeline.script"
     },
+    "72e365675cc921759f5fc2b7339965a8985c627a329599a99517ee8470b5c155": {
+      "completed_at": "2026-10-20T05:35:41.639117+00:00",
+      "result": {
+        "judgments": [
+          {
+            "claim_id": "1ae2b61bb2394e8a",
+            "confidence": 1.0,
+            "label": "entailment",
+            "reasoning": "The evidence explicitly states: 'To add a blank table, select the cells you want included in the table and click Insert > Table.', which directly supports the claim's instruction.",
+            "source_id": "6c74053a3448"
+          }
+        ]
+      },
+      "task_type": "verify.entailment"
+    },
     "80fcd17012fb8c9b19c7f14d6088609f82830d68df6766b0d2c5aeabb1918b5e": {
       "completed_at": "2026-10-20T05:34:57.773917+00:00",
       "result": {
