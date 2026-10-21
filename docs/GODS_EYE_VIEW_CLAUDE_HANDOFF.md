@@ -1,5 +1,9 @@
 # God's Eye View integration handoff for Claude
 
+**Continuation:** the original status below is historical. See
+[GODS_EYE_CAPTURE_PIPELINE.md](GODS_EYE_CAPTURE_PIPELINE.md) for the implemented
+upstream-viewer capture adapter, narrated Remotion test and current limits.
+
 **Status: integration boundary implemented on an isolated GitHub branch, NOT an upstream Cesium capture pipeline or a verified final video.** Do not merge or deploy before testing and owner approval.
 
 ## Upstream (the real project)

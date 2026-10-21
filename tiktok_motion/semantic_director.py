@@ -147,3 +147,21 @@ def validate_film(plan):
     if last!=plan['durationInFrames']:blocking.append('Uncovered narration frames')
     return {'passed':not blocking,'blocking':blocking,'shot_count':len(shots),'checks':['causal order','same APP-042','stable original assets','source sentence binding','native speech timing','visible simulation label'],
             'pixel_relevance_verified':False,'human_visual_review_required':True}
+
+
+def compile_geographic_script(script, geography, clip_id='director', genre='documentary'):
+    """Extend the Director with explicit spatial facts, preserving exact narration.
+
+    Separate renderer contract: geographic shots must not enter SemanticFilm's
+    applicant/application state machine. No automatic coordinate invention.
+    """
+    if genre not in GENRES:
+        raise ValueError('Unsupported film genre')
+    from .geographic_director import compile_geographic_scene
+    scene = compile_geographic_scene(geography, clip_id)
+    if script != scene['narration']:
+        raise ValueError('Geographic screenplay must preserve the exact owner script')
+    return {'version': 1, 'planner': 'semantic-geographic-director-v1',
+            'genre': genre, 'source_sha256': hashlib.sha256(script.encode()).hexdigest(),
+            'scenes': [scene], 'ready': True, 'needs_owner_review': True,
+            'missing_requirements': [], 'demonstrated_scope': 'Explicit two-endpoint geographic story'}

@@ -76,6 +76,14 @@ def enrich_visual(scene):
             raise ValueError("God's Eye View is only for geographically meaningful narration")
     elif geo_clip:
         raise ValueError("Only a god_eye scene may contain a geographic video clip")
+    geo_storyboard = scene.get("geo_storyboard")
+    if geo_storyboard is not None:
+        if kind != "god_eye":
+            raise ValueError("Geographic storyboard requires god_eye scene")
+        from .geographic_director import validate_geography
+        validate_geography(geo_storyboard)
+        if geo_storyboard['narration'] != scene.get('narration'):
+            raise ValueError("Geographic storyboard narration mismatch")
     excerpt = _short_text(scene.get("excerpt", ""), "document excerpt", 180)
     if kind == "document" and not excerpt:
         raise ValueError("Document scene requires a supplied excerpt")
@@ -90,4 +98,5 @@ def enrich_visual(scene):
         "source_label": _short_text(scene.get("source_label", ""), "source label", 100),
         "geo_clip": geo_clip,
         "geo_attribution": geo_attribution,
+        **({"geo_storyboard": geo_storyboard} if geo_storyboard is not None else {}),
     }

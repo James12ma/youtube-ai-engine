@@ -30,7 +30,11 @@ def make_plan(data, out):
     data=validate_request(data)
     text=data['script']
     director=None
-    if data.get('visual_mode')=='cinematic':
+    if data.get('geography') is not None:
+        from .semantic_director import compile_geographic_script
+        geographic = compile_geographic_script(text, data['geography'], data.get('geo_clip_id', 'director'), data.get('genre','documentary'))
+        raw = geographic['scenes']; title = data['geography'].get('title', 'Geographic story')
+    elif data.get('visual_mode')=='cinematic':
         from .semantic_director import compile_script
         director=compile_script(text,data.get('genre','education'))
         if not director['ready']:raise ValueError('Film needs assets/review: '+'; '.join(director['missing_requirements']))
@@ -63,6 +67,7 @@ def make_plan(data, out):
     plan={'title':str(title)[:150], 'scenes':scenes, 'language':'en','voice':data.get('voice','af_heart'),
           'source_sha256':hashlib.sha256(text.encode()).hexdigest(),'narration_rewritten':False,
           'requires_owner_approval':True,'auto_publish':False,'visual_notes_require_review':any(s['visual_notes'] for s in scenes)}
+    if data.get('geography') is not None:plan['geographic_director']=geographic
     if director:plan['director']=director
     out.mkdir(parents=True,exist_ok=True)
     (out/'source.json').write_text(json.dumps(data,ensure_ascii=False))
@@ -86,6 +91,17 @@ def captions_from_tokens(tokens, offset=0):
         end=float(b);batch.append(word)
     if batch:captions.append({'start':start+offset,'end':end+offset,'text':text(batch)})
     return captions
+
+
+def validate_clip_duration(clip, required_seconds):
+    """Reject short captures rather than freezing the last frame under narration."""
+    info = json.loads(subprocess.check_output([
+        'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+        '-of', 'json', str(clip)], text=True))
+    duration = float(info.get('format', {}).get('duration') or 0)
+    if not math.isfinite(duration) or duration + 1/60 < required_seconds:
+        raise ValueError('Geographic capture is shorter than narrated scene; recapture to match speech')
+    return duration
 
 
 def narrate(plan, public_dir, pipeline=None):
@@ -113,6 +129,8 @@ def narrate(plan, public_dir, pipeline=None):
         for c in captions:
             if c['start']<0 or c['end']>measured+.1:raise ValueError('Caption outside measured speech')
         s.update(audio=f'job/speech_{i}.wav',captions=captions,durationFrames=math.ceil((measured+(1.0 if plan.get('director') else .30))*30),speech_seconds=measured,words=word_times)
+        if s['kind'] == 'god_eye':
+            validate_clip_duration(REMOTION/'public'/s['geo_clip'], s['durationFrames']/30)
         total+=s['durationFrames']
     if total>600*30:raise ValueError('Maximum video duration is ten minutes')
     plan.update(durationInFrames=total,fps=30,width=1080,height=1920,

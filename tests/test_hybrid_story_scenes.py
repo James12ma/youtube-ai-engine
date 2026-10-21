@@ -8,7 +8,7 @@ from tiktok_motion.story_scene import enrich_visual, STORY_KINDS
 
 
 def test_all_new_visual_kinds_are_recognized():
-    assert STORY_KINDS == {"character", "device", "signal_flow", "document", "data", "map", "hero"}
+    assert STORY_KINDS == {"character", "device", "signal_flow", "document", "data", "map", "hero", "god_eye"}
 
 
 def test_owner_storyboard_preserves_spoken_text_and_scene_continuity(tmp_path):
