@@ -56,6 +56,7 @@ jobs:
         run: python -m pytest -q tests/test_studio.py
       - name: Produce every requested video
         env:
+          ENABLE_LIVE_LLM: '1'        # free-tier models only (same switch as channel-draft.yml)
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
