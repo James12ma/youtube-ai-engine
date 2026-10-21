@@ -86,12 +86,10 @@ jobs:
         env:
           FINANCE_LLM_APPROVED: ${{ vars.FINANCE_LLM_APPROVED }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           test "$FINANCE_LLM_APPROVED" = "1" || { echo "::error::Finance LLM requires explicit owner approval"; exit 1; }
-          if [ -z "$GROQ_API_KEY" ] && [ -z "$GEMINI_API_KEY" ] && [ -z "$OPENROUTER_API_KEY" ]; then
-            echo "::error::No free-tier finance LLM key configured"
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "::error::Missing GROQ_API_KEY (Groq Free Plan only)"
             exit 1
           fi
       - name: Exact script, native English voice, premium render, private Telegram delivery
@@ -100,11 +98,10 @@ jobs:
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
           PREMIUM_PAYLOAD: ${{ inputs.payload }}
           FINANCE_LLM_APPROVED: ${{ (fromJSON(inputs.payload).mode == 'finance' && vars.FINANCE_LLM_APPROVED == '1') && '1' || '0' }}
+          FINANCE_FREE_PROVIDER: ${{ (fromJSON(inputs.payload).mode == 'finance' && vars.FINANCE_LLM_APPROVED == '1') && 'groq' || 'disabled' }}
           ROUTER_ALLOW_LIVE_API: ${{ (fromJSON(inputs.payload).mode == 'finance' && vars.FINANCE_LLM_APPROVED == '1') && '1' || '0' }}
           ENABLE_LIVE_LLM: ${{ (fromJSON(inputs.payload).mode == 'finance' && vars.FINANCE_LLM_APPROVED == '1') && '1' || '0' }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python -m scripts.premium_private_job
       - name: Encrypted owner-session video copy
         if: success() && inputs.delivery_pubkey != ''
