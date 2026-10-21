@@ -41,6 +41,20 @@ def deliver(path,method,field,token,owner,caption):
 def run(payload,out,token,owner,browser=None):
     data=fetch_request(payload,token)
     out.mkdir(parents=True,exist_ok=True)
+    if payload.get('mode')=='finance':
+        from orchestrator.finance_runtime import finance_payload
+        try:
+            data=finance_payload(data)
+        except Exception:
+            # Preserve private delivery while keeping provider text/URLs and script out of logs.
+            review=out/'review_needed.json'
+            review.write_text(json.dumps({'reason':'Finance scene planning blocked or unavailable; check approved free-provider configuration and source integrity.',
+                                          'requires_owner_review':True,'published':False},indent=2))
+            (out/'report.json').write_text(json.dumps({'mode':'finance','status':'blocked',
+                                                       'published':False,'requires_owner_review':True},indent=2))
+            deliver(review,'sendDocument','document',token,owner,
+                    'Plan finans bloke · pa gen videyo pibliye · verifikasyon nesesè')
+            raise ValueError('Finance scene planning blocked') from None
     if data.get('profile')=='focus3d':
         base=Path('tiktok_motion/premium')
         env={**os.environ,'PREVIEW':'0','JOBS':'2'}
