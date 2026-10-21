@@ -6,6 +6,22 @@ on:
     branches: ['studio/run-**']
     paths: ['studio/jobs/request.json']
   workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Video idea or full script (empty = run studio/jobs/request.json)'
+        required: false
+      format:
+        description: 'vertical, horizontal or square'
+        default: vertical
+      style:
+        description: 'auto, explainer-dark, explainer-light, data-minimal, ai-dark, screen-demo, storybook'
+        default: auto
+      seconds:
+        description: 'Target length in seconds'
+        default: '40'
+      language:
+        description: 'en, fr, es, pt, it, hi, ja, zh'
+        default: en
 permissions:
   contents: write   # only for the optional encrypted review pack (qa/<run id>)
 concurrency:
@@ -43,12 +59,21 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          IN_PROMPT: ${{ inputs.prompt }}
+          IN_FORMAT: ${{ inputs.format }}
+          IN_STYLE: ${{ inputs.style }}
+          IN_SECONDS: ${{ inputs.seconds }}
+          IN_LANGUAGE: ${{ inputs.language }}
         run: |
           set -uo pipefail
           mkdir -p outputs/studio
           python - <<'PY'
-          import json, subprocess, sys
+          import json, os, subprocess, sys
           req = json.load(open('studio/jobs/request.json'))
+          if os.environ.get('IN_PROMPT', '').strip():      # one video from the Run-workflow form
+              req['jobs'] = [{'prompt': os.environ['IN_PROMPT'].strip(), 'format': os.environ.get('IN_FORMAT') or 'vertical',
+                              'style': os.environ.get('IN_STYLE') or 'auto', 'seconds': int(os.environ.get('IN_SECONDS') or 40),
+                              'language': os.environ.get('IN_LANGUAGE') or 'en'}]
           results = []
           for i, j in enumerate(req['jobs']):
               out = f'outputs/studio/{i:02d}'
