@@ -60,6 +60,11 @@ const LOOKS={
  b:{skin:'#f1c7a1',hair:'#7c2d12',shirt:'#f97316',pants:'#334155',hairStyle:'long'},
  c:{skin:'#8d5524',hair:'#0f0f0f',shirt:'#10b981',pants:'#1f2937',hairStyle:'bun'},
  d:{skin:'#e0ac69',hair:'#3f3f46',shirt:'#a855f7',pants:'#111827',hairStyle:'short'},
+ robot:{kind:'robot',skin:'#cbd5e1',shirt:'#94a3b8',pants:'#475569',eye:'#22d3ee'},
+ robot2:{kind:'robot',skin:'#fde68a',shirt:'#f59e0b',pants:'#78350f',eye:'#0ea5e9'},
+ cat:{kind:'animal',fur:'#f59e0b',belly:'#fde68a',ear:'pointy'},
+ cat2:{kind:'animal',fur:'#64748b',belly:'#e2e8f0',ear:'pointy'},
+ dog:{kind:'animal',fur:'#a16207',belly:'#fef3c7',ear:'floppy'},
 };
 const POSES={
  stand:{ls:8,le:6,rs:-8,re:-6,head:0},
@@ -79,25 +84,33 @@ function limb(parent,color,len1,len2,w){const upper=A.g(parent);A.el('rect',{x:-
 A.person=(parent,lookKey='a',opts={})=>{
   const L=Object.assign({},LOOKS[lookKey]||LOOKS.a,opts.look||{});
   const root=A.g(parent);const body=A.g(root);
-  if(!opts.seated){A.el('rect',{x:-44,y:-200,width:36,height:200,rx:16,fill:L.pants},body);A.el('rect',{x:8,y:-200,width:36,height:200,rx:16,fill:L.pants},body);
+  if(L.kind==='animal')return A.animal(parent,L,opts);
+  const robot=L.kind==='robot';
+  if(robot&&!opts.seated){A.el('rect',{x:-30,y:-200,width:60,height:150,rx:12,fill:L.pants},body);A.el('rect',{x:-80,y:-70,width:160,height:46,rx:23,fill:L.pants},body);
+    [-50,0,50].forEach(x=>A.el('circle',{cx:x,cy:-18,r:20,fill:'#1f2937'},body));}
+  else if(!opts.seated){A.el('rect',{x:-44,y:-200,width:36,height:200,rx:16,fill:L.pants},body);A.el('rect',{x:8,y:-200,width:36,height:200,rx:16,fill:L.pants},body);
     A.el('rect',{x:-50,y:-14,width:46,height:16,rx:8,fill:'#0f172a'},body);A.el('rect',{x:4,y:-14,width:46,height:16,rx:8,fill:'#0f172a'},body);}
   const torso=A.g(body,{transform:'translate(0 -200)'});
   const armL=A.g(torso,{transform:'translate(-58 -170)'});const armR=A.g(torso,{transform:'translate(58 -170)'});
   A.el('rect',{x:-66,y:-190,width:132,height:196,rx:44,fill:L.shirt},torso);
-  const al=limb(armL,L.shirt,96,92,30);al.hand.setAttribute('fill',L.skin);
-  const ar=limb(armR,L.shirt,96,92,30);ar.hand.setAttribute('fill',L.skin);
+  const al=limb(armL,L.shirt,96,92,30);al.hand.setAttribute('fill',robot?L.pants:L.skin);
+  const ar=limb(armR,L.shirt,96,92,30);ar.hand.setAttribute('fill',robot?L.pants:L.skin);
   // phone prop in right hand
   const prop=A.g(ar.lower,{transform:'translate(0 92)',opacity:0});A.el('rect',{x:-18,y:-36,width:36,height:62,rx:7,fill:'#0f172a'},prop);A.el('rect',{x:-14,y:-30,width:28,height:46,rx:3,fill:'#7bf1d0',opacity:.8},prop);
   torso.appendChild(armL);torso.appendChild(armR); // arms drawn above torso
   A.el('rect',{x:-16,y:-214,width:32,height:30,fill:L.skin},torso);
   const head=A.g(torso,{transform:'translate(0 -250)'});
   if(L.hairStyle==='long')A.el('path',{d:'M-58 0 Q-62 -66 0 -68 Q62 -66 58 0 L58 70 Q30 80 0 74 Q-30 80 -58 70 Z',fill:L.hair},head);
-  A.el('circle',{cx:0,cy:0,r:56,fill:L.skin},head);
+  if(robot){A.el('path',{d:'M0 -58 V-92',stroke:L.pants,'stroke-width':8},head);A.el('circle',{cx:0,cy:-98,r:12,fill:L.eye},head);
+    A.el('rect',{x:-66,y:-58,width:132,height:112,rx:26,fill:L.skin},head);A.el('rect',{x:-50,y:-34,width:100,height:62,rx:16,fill:'#0f172a'},head);}
+  else A.el('circle',{cx:0,cy:0,r:56,fill:L.skin},head);
   if(L.hairStyle==='short')A.el('path',{d:'M-56 -6 Q-58 -62 0 -62 Q58 -62 56 -6 Q40 -34 0 -34 Q-40 -34 -56 -6 Z',fill:L.hair},head);
   if(L.hairStyle==='long')A.el('path',{d:'M-56 -4 Q-56 -60 0 -60 Q56 -60 56 -4 Q30 -30 -10 -36 Q-40 -30 -56 -4 Z',fill:L.hair},head);
   if(L.hairStyle==='bun'){A.el('circle',{cx:0,cy:-66,r:24,fill:L.hair},head);A.el('path',{d:'M-56 -6 Q-56 -60 0 -60 Q56 -60 56 -6 Q36 -30 0 -32 Q-36 -30 -56 -6 Z',fill:L.hair},head);}
-  const eyes=A.g(head);const eL=A.el('ellipse',{cx:-20,cy:4,rx:6,ry:7,fill:'#111827'},eyes);const eR=A.el('ellipse',{cx:20,cy:4,rx:6,ry:7,fill:'#111827'},eyes);
-  const mouth=A.el('path',{d:'M-16 26 Q0 38 16 26',fill:'none',stroke:'#7f1d1d','stroke-width':5,'stroke-linecap':'round'},head);
+  const ec=robot?L.eye:'#111827';
+  const eyes=A.g(head);const eL=A.el('ellipse',{cx:-20,cy:robot?-6:4,rx:robot?9:6,ry:robot?10:7,fill:ec},eyes);const eR=A.el('ellipse',{cx:20,cy:robot?-6:4,rx:robot?9:6,ry:robot?10:7,fill:ec},eyes);
+  const mouth=A.el('path',{d:'M-16 26 Q0 38 16 26',fill:'none',stroke:robot?L.eye:'#7f1d1d','stroke-width':5,'stroke-linecap':'round'},head);
+  if(robot)mouth.setAttribute('transform','translate(0 -12) scale(.8)');
   const bubble=A.g(root,{transform:'translate(70 -560)',opacity:0});A.el('rect',{x:0,y:-60,width:300,height:90,rx:24,fill:'#fff'},bubble);
   A.el('path',{d:'M30 26 L10 60 L60 28 Z',fill:'#fff'},bubble);const btxt=A.text(bubble,150,-15,'',{fill:'#0f172a','font-size':34,'font-weight':800});
   const seed=opts.seed||1;
@@ -114,12 +127,50 @@ A.person=(parent,lookKey='a',opts={})=>{
     A.op(prop,s.pose==='phone'?p:(s.prev==='phone'?1-p:0));
     const breathe=1+Math.sin(t*2.2+seed)*.012;torso.setAttribute('transform',`translate(0 -200) scale(1 ${breathe})`);
     head.setAttribute('transform',`translate(0 -250) rotate(${ang('head')+Math.sin(t*1.3+seed)*1.5})`);
-    const blink=((t+seed*.7)%3.7)<.12?.15:1;eL.setAttribute('ry',7*blink);eR.setAttribute('ry',7*blink);
+    const blink=((t+seed*.7)%3.7)<.12?.15:1;eL.setAttribute('ry',(robot?10:7)*blink);eR.setAttribute('ry',(robot?10:7)*blink);
     const look=s.pose==='phone'||s.pose==='read'||s.pose==='type'?6:0;eyes.setAttribute('transform',`translate(0 ${look})`);
     mouth.setAttribute('d',s.emote==='surprise'?'M-8 28 Q0 40 8 28 Q0 18 -8 28':s.emote==='neutral'?'M-14 30 L14 30':'M-16 26 Q0 38 16 26');
     if(s.bubble){btxt.textContent=s.bubble;const w=Math.max(220,Math.min(560,s.bubble.length*19+60));
       bubble.querySelector('rect').setAttribute('width',w);btxt.setAttribute('x',w/2);
       const bp=A.back(A.prog(t,s.bubbleAt,.35));bubble.setAttribute('transform',`translate(70 -560) scale(${Math.max(.01,bp)})`);A.op(bubble,1)}
+    else A.op(bubble,0);
+  }
+  return {root,update};
+};
+
+/* ---------- animals (cat, dog): same update(t, s) contract as A.person; poses map to body language ----------
+   stand: idle tail  wave: tail wag  cheer: jump  think/read: head tilt  point: look ahead  phone/type: sit */
+A.animal=(parent,L,opts={})=>{
+  const root=A.g(parent);const body=A.g(root);const legs=[];
+  [-80,-40,40,80].forEach((x,i)=>legs.push(A.el('rect',{x:x-13,y:-110,width:26,height:110,rx:13,fill:L.fur},body)));
+  const tail=A.g(body,{transform:'translate(-120 -150)'});A.el('path',{d:'M0 0 Q-60 -40 -40 -120',fill:'none',stroke:L.fur,'stroke-width':22,'stroke-linecap':'round'},tail);
+  A.el('ellipse',{cx:0,cy:-150,rx:135,ry:68,fill:L.fur},body);A.el('ellipse',{cx:10,cy:-128,rx:90,ry:34,fill:L.belly},body);
+  const head=A.g(body,{transform:'translate(120 -230)'});
+  if(L.ear==='floppy'){A.el('ellipse',{cx:-46,cy:-10,rx:24,ry:50,fill:'#713f12',transform:'rotate(18 -46 -10)'},head);A.el('ellipse',{cx:46,cy:-10,rx:24,ry:50,fill:'#713f12',transform:'rotate(-18 46 -10)'},head);}
+  else{A.el('path',{d:'M-56 -30 L-44 -96 L-8 -52 Z',fill:L.fur},head);A.el('path',{d:'M56 -30 L44 -96 L8 -52 Z',fill:L.fur},head);}
+  A.el('circle',{cx:0,cy:0,r:66,fill:L.fur},head);A.el('ellipse',{cx:0,cy:26,rx:34,ry:24,fill:L.belly},head);
+  const eyes=A.g(head);const eL=A.el('ellipse',{cx:-24,cy:-8,rx:8,ry:10,fill:'#111827'},eyes);const eR=A.el('ellipse',{cx:24,cy:-8,rx:8,ry:10,fill:'#111827'},eyes);
+  A.el('ellipse',{cx:0,cy:14,rx:10,ry:7,fill:'#7f1d1d'},head);
+  const mouth=A.el('path',{d:'M-14 26 Q0 36 14 26',fill:'none',stroke:'#7f1d1d','stroke-width':4,'stroke-linecap':'round'},head);
+  if(L.ear!=='floppy')[-1,1].forEach(k=>{A.el('path',{d:`M${k*30} 20 L${k*86} 8 M${k*30} 28 L${k*86} 34`,stroke:'#1f2937','stroke-width':3},head)});
+  const bubble=A.g(root,{transform:'translate(90 -420)',opacity:0});A.el('rect',{x:0,y:-60,width:300,height:90,rx:24,fill:'#fff'},bubble);
+  A.el('path',{d:'M30 26 L10 60 L60 28 Z',fill:'#fff'},bubble);const btxt=A.text(bubble,150,-15,'',{fill:'#0f172a','font-size':34,'font-weight':800});
+  const seed=opts.seed||1;
+  function update(t,s){
+    const p=A.eInOut(A.prog(t,s.at,.45));const pose=s.pose||'stand';
+    const wag=pose==='wave'||pose==='cheer'?Math.sin(t*12)*22:Math.sin(t*2+seed)*8;
+    tail.setAttribute('transform',`translate(-120 -150) rotate(${wag})`);
+    const jump=pose==='cheer'?Math.abs(Math.sin((t-s.at)*5))*70*p:0;
+    const sit=pose==='phone'||pose==='type'?p:(s.prev==='phone'||s.prev==='type'?1-p:0);
+    body.setAttribute('transform',`translate(0 ${-jump+sit*40}) rotate(${-sit*12})`);
+    legs.forEach((l,i)=>l.setAttribute('height',110-(i<2?sit*60:0)));
+    const tilt=pose==='think'||pose==='read'?-14*p:pose==='point'?6*p:0;
+    head.setAttribute('transform',`translate(120 -230) rotate(${tilt+Math.sin(t*1.4+seed)*2})`);
+    const blink=((t+seed*.7)%3.4)<.12?.15:1;eL.setAttribute('ry',10*blink);eR.setAttribute('ry',10*blink);
+    mouth.setAttribute('d',s.emote==='surprise'?'M-7 30 Q0 40 7 30 Q0 22 -7 30':s.emote==='neutral'?'M-12 30 L12 30':'M-14 26 Q0 36 14 26');
+    if(s.bubble){btxt.textContent=s.bubble;const w=Math.max(220,Math.min(560,s.bubble.length*19+60));
+      bubble.querySelector('rect').setAttribute('width',w);btxt.setAttribute('x',w/2);
+      const bp=A.back(A.prog(t,s.bubbleAt,.35));bubble.setAttribute('transform',`translate(${90-Math.max(0,w-300)} -420) scale(${Math.max(.01,bp)})`);A.op(bubble,1)}
     else A.op(bubble,0);
   }
   return {root,update};
@@ -141,6 +192,15 @@ A.setting=(parent,kind,box)=>{const B=box||{x:0,y:0,w:1000,h:1000,r:44};const ou
     const r=A.rand(7);for(let i=0;i<9;i++){const w=80+r()*60,h=220+r()*360,x=i*115-20;A.el('rect',{x,y:760-h,width:w,height:h,fill:i%2?'#22305e':'#2a3a70'},g);
       for(let yy=780-h;yy<730;yy+=44)for(let xx=x+14;xx<x+w-20;xx+=30)if(r()>.35)A.el('rect',{x:xx,y:yy,width:14,height:20,fill:'#f7bf75',opacity:.55},g);}
     A.el('rect',{x:0,y:760,width:1000,height:240,fill:'#111833'},g);}
+  else if(kind==='bedroom'){A.el('rect',{x:0,y:0,width:1000,height:720,fill:'#26214a'},g);A.el('rect',{x:0,y:720,width:1000,height:280,fill:'#3a2f5c'},g);
+    A.el('rect',{x:560,y:100,width:340,height:260,rx:14,fill:'#141133'},g);const r=A.rand(5);for(let i=0;i<14;i++)A.el('circle',{cx:580+r()*300,cy:120+r()*220,r:2+r()*4,fill:'#fde68a'},g);
+    A.el('circle',{cx:840,cy:160,r:34,fill:'#fef3c7'},g);A.el('circle',{cx:826,cy:150,r:30,fill:'#141133'},g);
+    A.el('rect',{x:40,y:560,width:300,height:160,rx:24,fill:'#7c3aed'},g);A.el('rect',{x:40,y:540,width:120,height:60,rx:20,fill:'#ede9fe'},g);
+    A.el('rect',{x:420,y:460,width:150,height:16,rx:6,fill:'#a16207'},g);}
+  else if(kind==='park'){A.el('rect',{x:0,y:0,width:1000,height:1000,fill:'#bae6fd'},g);A.el('circle',{cx:820,cy:170,r:70,fill:'#fde047'},g);
+    A.el('ellipse',{cx:250,cy:180,rx:110,ry:40,fill:'#fff'},g);A.el('ellipse',{cx:320,cy:160,rx:80,ry:40,fill:'#fff'},g);
+    A.el('path',{d:'M0 700 Q250 600 500 680 T1000 660 V1000 H0 Z',fill:'#4ade80'},g);A.el('rect',{x:0,y:760,width:1000,height:240,fill:'#22c55e'},g);
+    A.el('rect',{x:120,y:430,width:40,height:300,fill:'#92400e'},g);A.el('circle',{cx:140,cy:400,r:110,fill:'#16a34a'},g);}
   return outer};
 
 window.ART=A;

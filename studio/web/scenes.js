@@ -34,6 +34,7 @@ SC.character=S=>{const th=T(S);if(S.p.setting&&S.p.setting!=='none')A.setting(S.
     const says=S.cues.filter(c=>c.name===`say:${i}`&&c.at<=t);const say=says.length?says[says.length-1]:null;
     const emo=S.cues.filter(c=>c.name.startsWith(`emote:${i}:`)&&c.at<=t);
     let x=k.x;S.cues.filter(c=>c.name===`walk:${i}`&&c.at<=t).forEach(c=>{const p=A.eInOut(A.prog(t,c.at,c.args.dur||1.2));x=A.lerp(x,c.args.to??x,p)});
+    x=A.clamp(x,170,830);   // keep people inside the frame whatever x the plan gives
     A.tf(k.g,x,930,k.c.scale||1);
     k.pe.update(t,{pose,prev:poses.length>1?prev:(k.c.pose||'stand'),at,bubble:say&&say.args.text,bubbleAt:say?say.at:0,emote:emo.length?emo[emo.length-1].name.split(':')[2]:'smile'});
     const pc=S.cues.filter(c=>c.name===`prop:${i}`&&c.at<=t).pop();

@@ -7,7 +7,7 @@ from .styles import PACKS
 SCENES = {
     'character': {
         'use': 'people doing things in a place (story moments, reactions, someone using a phone, celebrating)',
-        'params': "setting: office|home|city|none; cast: [{look: a|b|c|d (consistent per person across the video), x: 0-1000, pose, seated: bool}]",
+        'params': "setting: office|home|city|bedroom|park|none; cast: [{look: a|b|c|d (people) | robot|robot2 | cat|cat2|dog (keep each character's look the same across the video), x: 170-830, pose, seated: bool, scale: 0.6-1}]. Animals: wave=tail wag, cheer=jump, think=head tilt, phone/type=sit",
         'cues': "pose:<i>:<stand|wave|phone|point|think|type|cheer|read>, say:<i> {text<=24 chars}, emote:<i>:<smile|surprise|neutral>, prop:<i> {icon}, walk:<i> {to: x, dur}",
     },
     'phone_app': {
@@ -85,6 +85,7 @@ def prompt_catalog() -> str:
     lines = ['BUILT-IN SCENES (name: use | params | cue names):']
     for name, d in SCENES.items():
         lines.append(f"- {name}: {d['use']} | params: {d['params']} | cues: {d['cues']}")
+    lines.append("ANY SCENE also accepts cue 'punch' (a quick camera push on that word, for emphasis).")
     lines.append('ICONS: ' + ', '.join(ICONS))
     lines.append('STYLE PACKS: ' + ', '.join(PACKS))
     lines.append(CUSTOM_API.strip())

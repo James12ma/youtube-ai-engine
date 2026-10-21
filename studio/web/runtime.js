@@ -18,7 +18,7 @@ window.addEventListener('error',e=>ST.errors.push(String(e.message||e)));
 
 function layoutFor(fmt){
   // drawing box, headline box and caption line per format
-  if(fmt==='horizontal')return {w:1920,h:1080,art:{x:460,y:150,w:1000,h:760},head:{top:40,size:58,src:20},cap:{bottom:70,size:44,maxw:1300},brand:{x:40,y:1032},prog:{x:40,y:1060,w:1840}};
+  if(fmt==='horizontal')return {w:1920,h:1080,art:{x:500,y:110,w:920,h:840},head:{top:40,size:58,src:20},cap:{bottom:70,size:44,maxw:1300},brand:{x:40,y:1032},prog:{x:40,y:1060,w:1840}};
   if(fmt==='square')return {w:1080,h:1080,art:{x:140,y:250,w:800,h:640},head:{top:50,size:60,src:18},cap:{bottom:60,size:42,maxw:900},brand:{x:40,y:1040},prog:{x:40,y:1066,w:1000}};
   return {w:1080,h:1920,art:{x:40,y:500,w:1000,h:1000},head:{top:200,size:96,src:22},cap:{bottom:265,size:52,maxw:860},brand:{x:0,y:1752},prog:{x:90,y:1860,w:900}};
 }
@@ -118,10 +118,12 @@ window.STUDIO={
       if(!visible){sh.host.style.display='none';return}
       sh.host.style.display='block';
       try{sh.update(Math.max(0,tl))}catch(e){if(ST.errors.length<50)ST.errors.push(`shot ${sh.shot.id} (${sh.shot.scene}) t=${tl.toFixed(2)}: ${e.message}`)}
-      if(i===cur){const p=A.eOut(A.clamp((t-sh.shot.start)/TR));const kind=sh.shot.transition||ST.plan.style.transition||'push';
+      if(i===cur){const p=i===0?1:A.eOut(A.clamp((t-sh.shot.start)/TR));const kind=sh.shot.transition||ST.plan.style.transition||'push';
         sh.host.style.opacity=p;sh.host.style.zIndex=2;
         const enter=kind==='slide'?`translateX(${(1-p)*120}px)`:kind==='fade'?'':`scale(${A.lerp(1.06,1,p)})`;
-        sh.art.style.transform=camera(sh,tl).replace('none','')+' '+enter;
+        // 'punch' cues: a short camera push on the spoken word (emphasis; any scene)
+        const pk=sh.shot.cues.filter(c=>c.name==='punch').reduce((m,c)=>Math.max(m,Math.exp(-Math.pow((t-c.at-.18)/.22,2))),0);
+        sh.art.style.transform=camera(sh,tl).replace('none','')+' '+enter+(pk>.001?` scale(${1+.07*pk}) rotate(${(pk*.8).toFixed(3)}deg)`:'');
         if(sh.shot.layout==='full')sh.art.style.transform=enter||'none';}
       else{sh.host.style.zIndex=1;sh.host.style.opacity=1}
     });

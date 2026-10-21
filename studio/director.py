@@ -8,6 +8,7 @@ Models: free tiers only (Groq, Gemini, OpenRouter ':free'), tried in order; no p
 """
 from __future__ import annotations
 
+import copy
 import dataclasses
 import json
 import os
@@ -19,6 +20,7 @@ from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, Field
 
+from .autofix import autofix
 from .catalog import prompt_catalog
 from .plan import Beat, Shot, VideoPlan, spoken
 from .styles import PACKS
@@ -166,8 +168,8 @@ def assemble(script: Script, visuals: dict[int, BeatVisual], *, fmt: str, langua
 def _beats_of(problems: list[str]) -> set[int]:
     out = set()
     for p in problems:
-        for m in re.finditer(r'\b(?:beat|shot) (\d+)', p):
-            out.add(int(m.group(1)))
+        for m in re.finditer(r'\bbeat (\d+)|\bshot (\d+)\.\d', p):
+            out.add(int(m.group(1) or m.group(2)))
     return out
 
 
@@ -186,13 +188,23 @@ def direct(prompt: str, *, fmt: str = 'vertical', language: str = 'en', seconds:
     visuals = plan_visuals(script, fmt=fmt, ask=ask)
     raw = assemble(script, visuals, fmt=fmt, language=language, brand=brand)
     for r in range(rounds + 1):
+        raw, notes = autofix(raw)
         plan, problems = check_plan(raw, render_check=render_check, work=work)
-        report['rounds'].append({'round': r, 'problems': problems})
-        log(f'validation round {r}: {len(problems)} problem(s)')
+        report['rounds'].append({'round': r, 'autofix': notes, 'problems': problems})
+        log(f'validation round {r}: {len(notes)} automatic fix(es), {len(problems)} problem(s)')
         if not problems:
             report['passed'] = True
             return plan, report
         if r == rounds:
+            fb, changed = _fallback(raw, problems)
+            if changed:
+                fb, notes = autofix(fb)
+                plan, problems = check_plan(fb, render_check=render_check, work=work)
+                report['rounds'].append({'round': 'fallback', 'autofix': changed + notes, 'problems': problems})
+                log(f'fallback: {len(changed)} shot(s) replaced, {len(problems)} problem(s)')
+                if not problems:
+                    report['passed'] = True; report['fallback_used'] = True
+                    return plan, report
             break
         bad = _beats_of(problems) or set(range(len(script.beats)))
         part = [(i, script.beats[i]) for i in sorted(bad) if i < len(script.beats)]
@@ -204,6 +216,29 @@ def direct(prompt: str, *, fmt: str = 'vertical', language: str = 'en', seconds:
         raw = assemble(script, visuals, fmt=fmt, language=language, brand=brand)
     report['passed'] = False
     raise DirectorFailed(report)
+
+
+def _fallback(raw: dict, problems: list[str]) -> tuple[dict, list[str]]:
+    """Last resort after the repair rounds: a shot that still draws badly is replaced by a simple built-in
+    card for that moment (same timing), so one bad drawing does not cost the whole video."""
+    raw = copy.deepcopy(raw); changed = []
+    for p in problems:
+        m = re.match(r"shot (\d+)\.(\d+) \((\w+)\) (draws|does not change)", p)
+        if not m:
+            continue
+        bi, si = int(m.group(1)), int(m.group(2))
+        try:
+            shot = raw['beats'][bi]['shots'][si]
+        except (IndexError, KeyError):
+            continue
+        words = [w for w in spoken(raw['beats'][bi]['narration']).split() if len(w.strip('.,!?')) > 3][:4]
+        new = {'scene': 'title', 'params': {'text': ' '.join(words).strip('.,!?;:') or raw['title'][:30]},
+               'cues': [{'name': 'punch', 'phrase': c['phrase']} for c in shot.get('cues', []) if c.get('phrase')]}
+        if shot.get('starts_at'):
+            new['starts_at'] = shot['starts_at']
+        raw['beats'][bi]['shots'][si] = new
+        changed.append(f'beat {bi} shot {si}: {m.group(3)} replaced by a title card ({p})')
+    return raw, changed
 
 
 class DirectorFailed(RuntimeError):

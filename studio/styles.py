@@ -7,7 +7,7 @@ import copy
 BASE = {
     'palette': {'bg': '#0b1021', 'bg2': '#121a33', 'grid': '#141c38', 'ink': '#ffffff', 'muted': '#9fb3c8',
                 'accent': '#f7bf75', 'accent2': '#7bf1d0', 'danger': '#ff5a5f', 'ok': '#22c55e',
-                'paper': '#f8fafc', 'paperInk': '#0f172a', 'capbg': '#1c2233'},
+                'paper': '#f8fafc', 'paperInk': '#0f172a', 'capbg': '#1c2233', 'capink': '#ffffff'},
     'background': 'grid',          # grid | paper | plain | glow
     'captions': 'box',             # box | karaoke | none
     'headline': True,

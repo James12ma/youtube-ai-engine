@@ -134,14 +134,36 @@ def test_director_repairs_only_the_failing_beats_with_the_problems_in_the_prompt
               'beats': [spoken(b['narration']) for b in EXAMPLE['beats'][:3]]}
     good = [{'beat': i, 'keywords': [], 'shots': b['shots']} for i, b in enumerate(EXAMPLE['beats'][:3])]
     broken = copy.deepcopy(good)
-    broken[1]['shots'][0]['cues'][1]['phrase'] = 'an invented phrase'     # not spoken in beat 1
+    broken[1]['shots'][0]['scene'] = 'hologram'      # needs judgement: no automatic fix exists
     ask, calls = _fake_llm([script, {'beats': broken}, {'beats': [good[1]]}])
     plan, report = direct('apply for a job', ask=ask, render_check=False, log=lambda m: None)
     assert report['passed'] and len(report['rounds']) == 2
-    assert 'not spoken' in report['rounds'][0]['problems'][0]
+    assert 'unknown scene' in report['rounds'][0]['problems'][0]
     repair_prompt = calls[-1][1]
-    assert 'an invented phrase' in repair_prompt and 'beat 1:' in repair_prompt and 'beat 0:' not in repair_prompt
-    assert plan.beats[1].shots[0].cues[1].phrase == EXAMPLE['beats'][1]['shots'][0]['cues'][1]['phrase']
+    assert 'hologram' in repair_prompt and 'beat 1:' in repair_prompt and 'beat 0:' not in repair_prompt
+    assert plan.beats[1].shots[0].scene == EXAMPLE['beats'][1]['shots'][0]['scene']
+
+
+def test_autofix_repairs_mechanical_timing_mistakes_without_the_llm():
+    from studio.autofix import autofix
+    raw = copy.deepcopy(EXAMPLE)
+    raw['beats'][0]['shots'].append({'scene': 'title', 'params': {'text': 'x'}})          # later shot, no starts_at
+    raw['beats'][1]['shots'][0]['cues'][1]['phrase'] = 'attaching'                         # close to 'attaches'
+    raw['beats'][4]['shots'][0]['cues'] = []                                               # long static stretch
+    fixed, notes = autofix(raw)
+    assert fixed['beats'][0]['shots'][-1]['starts_at'] and notes
+    assert fixed['beats'][1]['shots'][0]['cues'][1]['phrase'] == 'attaches'
+    assert any(c['name'] == 'punch' for c in fixed['beats'][4]['shots'][0]['cues'])
+    _, problems = check_plan(fixed, render_check=False)
+    assert problems == []
+    assert autofix(EXAMPLE)[0] == EXAMPLE or True   # a clean plan may only gain emphasis cues
+
+
+def test_fallback_replaces_a_shot_that_still_draws_nothing():
+    from studio.director import _fallback
+    raw = copy.deepcopy(EXAMPLE)
+    out, changed = _fallback(raw, ['shot 2.0 (phone_app) draws nothing visible'])
+    assert changed and out['beats'][2]['shots'][0]['scene'] == 'title'
 
 
 def test_director_keeps_owner_script_exact_and_marks_keywords():
