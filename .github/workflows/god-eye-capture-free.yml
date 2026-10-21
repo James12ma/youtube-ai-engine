@@ -1,0 +1,61 @@
+name: God Eye capture verification (free only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/gods-eye-view-integration]
+    paths:
+      - .github/workflows/god-eye-capture-free.yml
+      - scripts/capture_god_eye.mjs
+      - scripts/geo_capture/**
+permissions:
+  contents: read
+jobs:
+  cold-capture:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Pinned open-source viewer and free CPU browser
+        run: |
+          git clone https://github.com/bilawalsidhu/gods-eye-view "$RUNNER_TEMP/gev"
+          git -C "$RUNNER_TEMP/gev" checkout 713285b554bbc99c8ae0261fe307beb3cbeb2adf
+          cd "$RUNNER_TEMP/gev"
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx puppeteer browsers install chrome-headless-shell
+      - name: Actual cold-start Cesium capture with all third-party requests blocked
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('examples/god_eye_atlantic.json').read_text())
+          s['duration']=1
+          for c,t in zip(s['cues'],[0,.3,.7]):c['at']=t
+          Path('outputs').mkdir(exist_ok=True)
+          Path('outputs/cold-spec.json').write_text(json.dumps(s))
+          PY
+          node scripts/capture_god_eye.mjs "$RUNNER_TEMP/gev" outputs/cold-spec.json outputs/cold-capture
+      - name: Verify actual MP4 frames and dimensions
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          p='outputs/cold-capture/capture.mp4'
+          s=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-of','json',p]))['streams'][0]
+          assert (s['width'],s['height'],s['codec_name'],int(s['nb_frames']))==(1280,720,'h264',30),s
+          subprocess.run(['ffmpeg','-v','error','-i',p,'-f','null','-'],check=True)
+          print('Actual upstream viewer cold capture: 30 frames, 1280x720, H.264, full decode passed')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: god-eye-cold-capture
+          path: |
+            outputs/cold-capture/capture.mp4
+            outputs/cold-capture/capture.json
+            outputs/cold-capture/frame_00000.png
+          retention-days: 1

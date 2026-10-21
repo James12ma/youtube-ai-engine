@@ -38,6 +38,7 @@ try{
  await page.waitForFunction('window.captureReady===true',{timeout:60000});
  await page.evaluate(s=>{document.querySelector('h1').textContent=s.title;window.setupCapture(s)},spec);
  await page.evaluate(()=>window.renderFrame(0));await page.screenshot({path:path.join(out,'warm.png')});console.log('WARM',await page.evaluate(()=>({tiles:window.captureViewer.scene.globe.tilesLoaded,url:window.location.href})));
+ await page.evaluate(()=>{window.captureViewer.useDefaultRenderLoop=true;});
  // Warm all local basemap tiles along the camera path before any frame is admitted.
  for(const frame of [0,90,180,270,359]){
   let loaded=false;
@@ -52,6 +53,7 @@ try{
   if(!loaded){console.log('TILE DEBUG',await page.evaluate(()=>{const g=window.captureViewer.scene.globe,s=g._surface;return {show:g.show,tiles:s._tilesToRender.length,high:s._tileLoadQueueHigh.length,medium:s._tileLoadQueueMedium.length,low:s._tileLoadQueueLow.length,roots:s._levelZeroTiles?.map(t=>({state:t.state,renderable:t.renderable,terrain:t.data?.terrainState,imagery:t.data?.imagery?.map(i=>i.loadingImagery?.state)}))}}));await page.screenshot({path:path.join(out,'failed.png')});throw Error('Local basemap failed to finish loading');}
  }
 
+ await page.evaluate(()=>{window.captureViewer.useDefaultRenderLoop=false;window.captureViewer.resize();});
  const rendererHash=createHash('sha256').update(await fs.readFile(entry)).update(await fs.readFile(new URL(import.meta.url))).digest('hex');
  const fingerprint=createHash('sha256').update(JSON.stringify({spec,upstreamCommit,rendererHash,viewport:[1280,720],fps:30})).digest('hex');
  let prior;try{prior=JSON.parse(await fs.readFile(path.join(out,'capture.json'),'utf8'))}catch{}

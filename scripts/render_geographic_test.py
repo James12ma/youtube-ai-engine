@@ -41,7 +41,19 @@ def render(upstream, spec_file, out, browser=None, voice_plan=None, capture_dir=
     storyboard=out/'storyboard.json';storyboard.write_text(json.dumps(spec,indent=2))
     (voice_dir/'voice_plan.json').write_text(json.dumps(plan,indent=2))
     capture=capture_dir.resolve() if capture_dir else out/'capture'
-    subprocess.run(['node',str(ROOT/'scripts/capture_god_eye.mjs'),str(upstream.resolve()),str(storyboard),str(capture)],cwd=ROOT,check=True)
+    # A fully rendered, matching capture is reusable without opening WebGL again.
+    # Its source hash must match both the browser renderer and capture driver.
+    renderer_hash=hashlib.sha256((ROOT/'scripts/geo_capture/browser.mjs').read_bytes()+(ROOT/'scripts/capture_god_eye.mjs').read_bytes()).hexdigest()
+    cached=False
+    if (capture/'capture.json').is_file() and (capture/'capture.mp4').is_file():
+        metadata=json.loads((capture/'capture.json').read_text())
+        if metadata.get('spec')==spec and metadata.get('rendererHash')==renderer_hash:
+            probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-select_streams','v:0','-show_entries','stream=nb_frames,width,height,codec_name','-of','json',str(capture/'capture.mp4')]))['streams'][0]
+            cached=(int(probe.get('nb_frames',0))==round(spec['duration']*30) and (probe['width'],probe['height'],probe['codec_name'])==(1280,720,'h264'))
+    if not cached:
+        subprocess.run(['node',str(ROOT/'scripts/capture_god_eye.mjs'),str(upstream.resolve()),str(storyboard),str(capture)],cwd=ROOT,check=True)
+    else:
+        print('Reusing complete source-bound geographic capture',flush=True)
     validate_clip_duration(capture/'capture.mp4',spec['duration'])
     public=REMOTION/'public/job';public.mkdir(exist_ok=True)
     shutil.copyfile(capture/'capture.mp4',public/'god_eye_director.mp4')
