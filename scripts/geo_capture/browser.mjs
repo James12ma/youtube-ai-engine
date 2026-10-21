@@ -33,17 +33,19 @@ window.setupCapture=spec=>{
  const routeLines=viewer.scene.primitives.add(new C.PolylineCollection());
  const path=routeLines.add({positions:[C.Cartesian3.fromDegrees(a.lon,a.lat,60000),C.Cartesian3.fromDegrees(b.lon,b.lat,60000)],width:6,material:C.Material.fromType('Color',{color:C.Color.fromCssColorString('#5cffe1')})});
  const marker=viewer.entities.add({position:C.Cartesian3.fromDegrees(a.lon,a.lat,10000),point:{pixelSize:14,color:C.Color.WHITE,outlineColor:C.Color.fromCssColorString('#5cffe1'),outlineWidth:5,disableDepthTestDistance:Number.POSITIVE_INFINITY}});
- for(const p of [a,b])viewer.entities.add({position:C.Cartesian3.fromDegrees(p.lon,p.lat,10000),point:{pixelSize:9,color:C.Color.fromCssColorString('#ffcc82')},label:{text:p.label,font:'bold 22px sans-serif',fillColor:C.Color.WHITE,showBackground:true,backgroundColor:C.Color.fromCssColorString('#071420dd'),pixelOffset:new C.Cartesian2(0,-30),disableDepthTestDistance:Number.POSITIVE_INFINITY}});
+ const endpointLabels=[];
+ for(const p of [a,b])endpointLabels.push(viewer.entities.add({position:C.Cartesian3.fromDegrees(p.lon,p.lat,10000),point:{pixelSize:9,color:C.Color.fromCssColorString('#ffcc82')},label:{text:p.label,font:'bold 22px sans-serif',fillColor:C.Color.WHITE,showBackground:true,backgroundColor:C.Color.fromCssColorString('#071420dd'),pixelOffset:new C.Cartesian2(0,-30),disableDepthTestDistance:Number.POSITIVE_INFINITY}}));
  const trace=spec.cues[1].at,arrival=spec.cues[2].at;
  window.renderFrame=async frame=>{
   const t=frame/30, zoom=smooth(t/trace), progress=smooth((t-trace)/(arrival-trace));
   const mid=geodesic.interpolateUsingFraction(.5);
   const finish=smooth((t-arrival)/(spec.duration-arrival));
-  viewer.camera.setView({destination:C.Cartesian3.fromDegrees(-55+(C.Math.toDegrees(mid.longitude)+55)*zoom+(b.lon-C.Math.toDegrees(mid.longitude))*finish,20+(C.Math.toDegrees(mid.latitude)-20)*zoom+(b.lat-C.Math.toDegrees(mid.latitude))*finish,22000000*(1-zoom)+8500000*zoom-4500000*finish),orientation:{heading:0,pitch:-Math.PI/2,roll:0}});
+  viewer.camera.setView({destination:C.Cartesian3.fromDegrees(-55+(C.Math.toDegrees(mid.longitude)+55)*zoom+(b.lon-C.Math.toDegrees(mid.longitude))*finish,20+(C.Math.toDegrees(mid.latitude)-20)*zoom+(b.lat-C.Math.toDegrees(mid.latitude))*finish,22000000*(1-zoom)+8500000*zoom-800000*progress-3700000*finish),orientation:{heading:0,pitch:-Math.PI/2,roll:0}});
   const positions=[];
   for(let i=0;i<=100;i++){const p=geodesic.interpolateUsingFraction(progress*i/100);positions.push(C.Cartesian3.fromRadians(p.longitude,p.latitude,60000));}
   path.positions=positions;path.show=t>=trace;
   const p=geodesic.interpolateUsingFraction(progress); marker.position=C.Cartesian3.fromRadians(p.longitude,p.latitude,60000);
+  endpointLabels[0].label.show=t<arrival+.8;
   document.getElementById('phase').textContent=t<trace?'01 / LOCATE THE DEPARTURE':t<arrival?'02 / TRACE THE CROSSING':'03 / ARRIVE AT THE DESTINATION';
   const active=[...spec.cues].reverse().find(c=>t>=c.at);document.getElementById('caption').textContent=active?.phrase||'';
   document.getElementById('progress').style.width=(100*progress)+'%';
