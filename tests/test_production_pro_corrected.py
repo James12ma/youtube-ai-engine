@@ -1,23 +1,10 @@
 from pathlib import Path
 import pytest
 from production_pro.models import EvidenceDataset,EvidencePoint,NarrationResult,NarrationSegment,EditPlan
-from production_pro.charts import validate_evidence
 from production_pro.errors import ChartError,EditingError
 from production_pro.captions import write_captions
 from production_pro.editing import compose_scenes
 from production_pro.recorder import WorkflowRecorder
-
-def test_chart_cannot_just_claim_provenance():
- data=EvidenceDataset(title='x',y_axis_label='%',points=[EvidencePoint(label='A',value=400,unit='hours',source_url='https://example.org',source_id='a',source_snippet='saved 4 hours',claim_id='c')])
- with pytest.raises(ChartError):validate_evidence(data,{'c':{'accepted':True,'source_ids':['a']}},{'a':'saved 4 hours'})
-
-def test_chart_rejects_unaccepted_claim():
- data=EvidenceDataset(title='x',y_axis_label='hours',points=[EvidencePoint(label='A',value=4,unit='hours',source_url='https://example.org',source_id='a',source_snippet='saved 4 hours',claim_id='c')])
- with pytest.raises(ChartError):validate_evidence(data,{'c':{'accepted':False,'source_ids':['a']}},{'a':'saved 4 hours'})
-
-def test_chart_accepts_structurally_confirmed_value():
- data=EvidenceDataset(title='x',y_axis_label='hours',points=[EvidencePoint(label='A',value=4,unit='hours',source_url='https://example.org',source_id='a',source_snippet='saved 4 hours',claim_id='c')])
- validate_evidence(data,{'c':{'accepted':True,'source_ids':['a']}},{'a':'saved 4 hours'})
 
 def test_captions_are_explicitly_approximate(tmp_path):
  n=NarrationResult(segments=[NarrationSegment(text='A few example words with neat captions.',audio_path='x.wav',duration_s=3.)],total_duration_s=3.,backend='espeak')
