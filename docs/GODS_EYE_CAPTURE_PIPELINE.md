@@ -49,7 +49,10 @@ node scripts/capture_god_eye.mjs ../gods-eye-view-upstream \
 Each frame is sampled at `frame/30`; wall-clock speed cannot change route position
 or camera pose. Warm-up explicitly renders until local terrain/imagery tiles load
 at representative poses. A manifest binds storyboard, viewport, upstream commit
-and renderer source hashes. Interrupted capture resumes only matching captures;
+and renderer source hashes. The flat-terrain provider uses Cesium’s own synchronous tessellator to avoid
+worker startup stalls; this private API is checked explicitly against the pinned
+upstream/Cesium dependency. No non-flat terrain provider is altered.
+Interrupted capture resumes only matching captures;
 frames write atomically. External requests, changed upstream and mismatched output
 manifests fail closed. Encoding limits the output frame count explicitly.
 
@@ -71,3 +74,8 @@ universal micro-detail scene generation remain outside this demonstrated scope.
 Original Alan7, LogicScript, finance, Blender and communication codepaths remain.
 
 Review the rendered frames and MP4 before approving any downstream publishing.
+
+Completed matching MP4 captures are reusable in the orchestration script only
+after checking storyboard equality, capture-driver/browser source hash, frame
+count, codec, dimensions and duration. Cold capture is also checked on the
+standard GitHub runner behind the existing ZERO_COST_ACTIONS_CONFIRMED gate.

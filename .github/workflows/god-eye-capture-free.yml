@@ -7,6 +7,9 @@ on:
       - .github/workflows/god-eye-capture-free.yml
       - scripts/capture_god_eye.mjs
       - scripts/geo_capture/**
+concurrency:
+  group: god-eye-capture-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

@@ -13,7 +13,16 @@ viewer.scene.globe.show=true;
 viewer.scene.globe.enableLighting=false;
 viewer.scene.globe.baseColor=C.Color.fromCssColorString('#12354b');
 viewer.scene.backgroundColor=C.Color.fromCssColorString('#020812');
-viewer.terrainProvider=new C.EllipsoidTerrainProvider();
+// Flat terrain needs no worker pool. Use Cesium's own synchronous tessellator
+// in this pinned, CPU-only capture adapter; fail explicitly if its API changes.
+const terrain=new C.EllipsoidTerrainProvider();
+const requestGeometry=terrain.requestTileGeometry.bind(terrain);
+terrain.requestTileGeometry=(...args)=>Promise.resolve(requestGeometry(...args)).then(data=>{
+ if(typeof data._createMeshSync!=='function')throw Error('Pinned Cesium synchronous terrain API changed');
+ data.createMesh=options=>Promise.resolve(data._createMeshSync(options));
+ return data;
+});
+viewer.terrainProvider=terrain;
 const basemap=viewer.imageryLayers.addImageryProvider(await C.TileMapServiceImageryProvider.fromUrl(C.buildModuleUrl('Assets/Textures/NaturalEarthII')));
 basemap.brightness=.8;basemap.contrast=1.15;
 viewer.scene.screenSpaceCameraController.enableInputs=false;
