@@ -71,7 +71,7 @@ def test_plan_needs_three_kinds():
 
 
 def test_plan_max_two_hero():
-    scenes = [example("hero") for _ in range(3)] + [example() for _ in range(3)]
+    scenes = [example("hero") for _ in range(3)] + [example(), example("document"), example()]
     with pytest.raises(ValidationError, match="two hero"):
         FinancePlan(title="Finance explainer", scenes=scenes)
 
