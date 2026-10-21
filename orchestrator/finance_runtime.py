@@ -8,10 +8,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from adapters import (
-    GROQ_CONFIG, GEMINI_CONFIG, OPENROUTER_CONFIG,
-    GroqAdapter, GeminiAdapter, OpenRouterAdapter,
-)
+from adapters import GROQ_CONFIG, GroqAdapter
 from router import Router, RouterConfig
 from state_store import StateStore
 from .finance_planner import plan, to_premium_script
@@ -24,18 +21,14 @@ def finance_payload(owner_data: dict) -> dict:
         raise ValueError("Live Router access is disabled")
     if owner_data.get("profile") != "premium" or owner_data.get("language", "en") != "en":
         raise ValueError("Unsupported finance narration profile")
-    adapter_classes = {
-        "groq": (GroqAdapter, GROQ_CONFIG),
-        "gemini": (GeminiAdapter, GEMINI_CONFIG),
-        "openrouter": (OpenRouterAdapter, OPENROUTER_CONFIG),
-    }
+    # Only Groq Free Plan is approved for this pilot.
+    if os.environ.get("FINANCE_FREE_PROVIDER") != "groq":
+        raise ValueError("Finance pilot is restricted to Groq Free Plan")
+    if not os.environ.get("GROQ_API_KEY"):
+        raise ValueError("GROQ_API_KEY has not been configured")
     adapters = {}
     try:
-        for name, (cls, cfg) in adapter_classes.items():
-            if os.environ.get(cfg.env_var):
-                adapters[name] = cls(config=cfg)
-        if not adapters:
-            raise ValueError("No approved free-tier API key configured")
+        adapters["groq"] = GroqAdapter(config=GROQ_CONFIG)
         # This Git state store is isolated to the branch runner. No remote push.
         state = StateStore(Path.cwd(), push_required=False)
         router = Router(state, adapters,
