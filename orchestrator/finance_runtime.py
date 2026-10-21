@@ -6,6 +6,8 @@ verified against the SHA-256 before finance_payload is called.
 from __future__ import annotations
 
 import os
+import subprocess
+import tempfile
 from pathlib import Path
 
 from adapters import GROQ_CONFIG, GroqAdapter
@@ -29,11 +31,15 @@ def finance_payload(owner_data: dict) -> dict:
     adapters = {}
     try:
         adapters["groq"] = GroqAdapter(config=GROQ_CONFIG)
-        # This Git state store is isolated to the branch runner. No remote push.
-        state = StateStore(Path.cwd(), push_required=False)
-        router = Router(state, adapters,
-                        RouterConfig(provider_order=tuple(adapters)))
-        storyboard = plan(owner_data["script"], router)
+        # Review job: isolated Git repo without remotes or inherited credentials.
+        # No cross-run cache; avoid touching the shared production router-state branch.
+        with tempfile.TemporaryDirectory(prefix="finance-router-") as work:
+            subprocess.run(["git", "init", "-q", work], check=True,
+                           capture_output=True)
+            state = StateStore(Path(work), push_required=False)
+            router = Router(state, adapters,
+                            RouterConfig(provider_order=("groq",)))
+            storyboard = plan(owner_data["script"], router)
         return {
             "script": to_premium_script(storyboard),
             "visual_mode": "premium",
