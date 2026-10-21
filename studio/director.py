@@ -116,6 +116,9 @@ RULES
 - Optional "headline" (1-2 short lines, uppercase style, accent = index of the coloured line) on key shots only.
 - "keywords": 1-2 words of the beat to highlight in captions.
 - Use "custom" with code only when no built-in scene fits; code must follow the custom-scene rules.
+- Characters must match the story: a robot uses look robot/robot2, a cat cat/cat2, a dog dog; people a-d.
+- Fill screens with real content: a "ui" window gets 3-6 elements, a "table" 3-6 rows, a "phone_app" 2-4 fields.
+- "title" is for the hook or a chapter only (at most 2 per video), never to repeat the narration.
 {context}
 EXAMPLE (another video):
 {json.dumps(ex)[:3500]}
@@ -131,10 +134,14 @@ def plan_visuals(script: Script, *, fmt: str, ask: Ask, batch: int = 4, context:
     idx = list(enumerate(script.beats))
     for k in range(0, len(idx), batch):
         part = idx[k:k + batch]
-        got = ask(_plan_prompt(script, fmt, part, context + _continuity(out), []), VisualBatch)
-        for bv in got.beats:
-            if any(bv.beat == i for i, _ in part):
-                out[bv.beat] = bv
+        for attempt in range(3):          # models sometimes skip beats: ask again for the missing ones only
+            got = ask(_plan_prompt(script, fmt, part, context + _continuity(out), []), VisualBatch)
+            for bv in got.beats:
+                if any(bv.beat == i for i, _ in part) and bv.shots:
+                    out[bv.beat] = bv
+            part = [(i, t) for i, t in part if i not in out]
+            if not part:
+                break
     return out
 
 
@@ -159,7 +166,11 @@ def assemble(script: Script, visuals: dict[int, BeatVisual], *, fmt: str, langua
             kw = kw.strip('* ')
             if kw and re.search(r'\b' + re.escape(kw) + r'\b', narration) and f'*{kw}*' not in narration:
                 narration = re.sub(r'\b' + re.escape(kw) + r'\b', f'*{kw}*', narration, count=1)
-        shots = [s.model_dump() for s in bv.shots] if bv else [{'scene': 'title', 'params': {'text': text[:40]}}]
+        if bv:
+            shots = [s.model_dump() for s in bv.shots]
+        else:   # never planned: a short title of the beat's key words (whole words only), flagged in the report
+            words = [w.strip('.,!?;:"') for w in text.split() if len(w.strip('.,!?;:"')) > 3][:4]
+            shots = [{'scene': 'title', 'params': {'text': ' '.join(words) or script.title}}]
         beats.append({'narration': narration, 'shots': shots})
     return {'title': script.title, 'format': fmt, 'style': script.style if script.style in PACKS else 'explainer-dark',
             'language': language, 'brand': brand, 'music': script.music, 'beats': beats}
@@ -187,6 +198,7 @@ def direct(prompt: str, *, fmt: str = 'vertical', language: str = 'en', seconds:
     log(f'script: {len(script.beats)} beats, style {script.style}')
     visuals = plan_visuals(script, fmt=fmt, ask=ask)
     raw = assemble(script, visuals, fmt=fmt, language=language, brand=brand)
+    report['unplanned_beats'] = [i for i in range(len(script.beats)) if i not in visuals]
     for r in range(rounds + 1):
         raw, notes = autofix(raw)
         plan, problems = check_plan(raw, render_check=render_check, work=work)

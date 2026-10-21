@@ -88,7 +88,7 @@ jobs:
               print(f"::notice title=studio job {i}::exit {r.returncode}")
           json.dump(results, open('outputs/studio/results.json', 'w'), indent=2)
           PY
-          ls -R outputs/studio | head -80
+          find outputs/studio -maxdepth 2 | sort | head -80 || true
       - name: Send finished videos to the owner on Telegram
         if: always()
         env:
