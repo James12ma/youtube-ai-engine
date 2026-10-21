@@ -1,0 +1,68 @@
+name: Deliver completed finance preview to Alan7 Telegram owner
+on:
+  push:
+    branches:
+      - feature/finance-integration-reviewed
+    paths:
+      - .github/workflows/finance-preview-telegram.yml
+permissions:
+  actions: read
+  contents: read
+jobs:
+  deliver:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+      OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+    steps:
+      - name: Download completed, successful finance preview (no rerender)
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh run view 39536637987 --json conclusion --jq '.conclusion' | grep -qx success
+          mkdir -p preview
+          gh run download 39536637987 -n finance-preview-evidence-39536637987 -D preview
+          find preview -name final.mp4 -type f -print
+          test "$(find preview -name final.mp4 -type f | wc -l)" -eq 1
+          echo "VIDEO_PATH=$(find preview -name final.mp4 -type f | head -1)" >> "$GITHUB_ENV"
+      - name: Prepare safe iPhone Telegram preview
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg
+          ffprobe -v error -show_entries format=duration -of default=nw=1 "$VIDEO_PATH"
+          ffmpeg -y -loglevel error -i "$VIDEO_PATH" -vf scale=720:1280 -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart telegram-finance-preview.mp4
+          test "$(stat -c%s telegram-finance-preview.mp4)" -lt 49000000
+      - name: Deliver private review MP4 to Alan7 owner
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'httpx>=0.27,<1'
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import httpx
+          token=os.environ.get('TG','')
+          owner=os.environ.get('OWNER','')
+          if not token or not owner:
+              raise SystemExit('Telegram owner delivery secrets missing')
+          path=Path('telegram-finance-preview.mp4')
+          with path.open('rb') as file:
+              try:
+                  response=httpx.post(
+                      'https://api.telegram.org/bot'+token+'/sendVideo',
+                      data={'chat_id':owner,'supports_streaming':'true',
+                            'caption':'🎬 Alan7 · Finance Preview · 8 sèn (hero, data, document, map). Videyo prive pou revizyon, pa pibliye sou YouTube.'},
+                      files={'video':(path.name,file,'video/mp4')},
+                      timeout=180,
+                  )
+                  ok=response.status_code==200 and response.json().get('ok') is True
+              except Exception:
+                  ok=False
+          if not ok:
+              raise SystemExit('Telegram video delivery failed; token and response intentionally not logged')
+          print('Telegram owner video delivery confirmed by API: accepted=true')
+          PY
