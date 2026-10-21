@@ -29,6 +29,7 @@ const KINDS = {
 const HELP = [
   '<b>Alan7 — kòmand</b>',
   '/script en <script> — videyo premium ak egzak mo ou yo; liy vid se nouvo sèn',
+  '/finance en <script> — tès planifikasyon finans ak egzak script ou; gratis sèlman, prive',
   '/film education en <script> — premye istwa semantik aplikan/rekritè; lòt aksyon mande revizyon',
   '/filmtest — aplikan → telefòn → siyal → rekritè, aperçu prive',
   '/motiontest — tès motion premium ak nouvo vwa anglè a',
@@ -256,6 +257,8 @@ export async function handleCommand(env, text, context={}) {
     case 'script':
     case 'video':
       return premiumCommand(env,arg,context);
+    case 'finance':
+      return premiumCommand(env,arg,context,false,false,false,'finance');
     case 'motiontest':
       return premiumCommand(env,'',context,true);
     case 'premium3d':
@@ -865,7 +868,7 @@ export async function directorDraftCommand(env, raw) {
 }
 
 // Owner-authenticated entrypoint; private source bytes stay on Telegram, never in public workflow inputs.
-export async function premiumCommand(env,raw,context={},test=false,focus3d=false,cinematic=false){
+export async function premiumCommand(env,raw,context={},test=false,focus3d=false,cinematic=false,mode=null){
   let request;
   try { request=focus3d?{profile:'focus3d',voice:'none'}:cinematic?filmRequest(raw,test):premiumRequest(raw,test); } catch(e){return esc(e.message);}
   let id=newId();
@@ -878,6 +881,7 @@ export async function premiumCommand(env,raw,context={},test=false,focus3d=false
   }
   let payload;
   try { payload=focus3d?request:await privateScriptFile(env,request); } catch(e){return esc(e.message);}
+  if(mode==='finance')payload.mode='finance';
   const result=await env.DB.prepare("INSERT OR IGNORE INTO jobs(id,kind,arg,state,attempts,created_at,updated_at) VALUES (?1,?2,?3,'queued',0,?4,?4)").bind(id,cinematic?'cinematic_video':'premium_video',JSON.stringify(payload),now()).run();
   if(result.meta?.changes===0)return `Travay <code>${id}</code> deja anrejistre.`;
   await logEvent(env,id,'created','premium_video');
