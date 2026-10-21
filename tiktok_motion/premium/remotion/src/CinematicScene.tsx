@@ -104,7 +104,7 @@ const MapScene:React.FC<{scene:StoryVisual;f:number;accent:string}>=({scene,f,ac
  */
 const GodEyeScene:React.FC<{scene:StoryVisual}>=({scene})=>{
   const clip=scene.geo_clip||'';
-  if(!/^job\\/god_eye_[a-zA-Z0-9_-]{1,64}\\.mp4$/.test(clip)){
+  if(!/^job\/god_eye_[a-zA-Z0-9_-]{1,64}\.mp4$/.test(clip)){
     throw new Error('Unreviewed God Eye clip path');
   }
   return <div style={{position:'relative',height:690,overflow:'hidden',borderRadius:28,background:'#0a1524'}}>
