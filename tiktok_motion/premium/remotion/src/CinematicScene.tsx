@@ -1,19 +1,19 @@
 /** Grounded storyboard shots. Vector scenes only: no fabricated footage or human likeness. */
 import React from 'react';
-import {useCurrentFrame,interpolate} from 'remotion';
+import {useCurrentFrame,interpolate,OffthreadVideo,staticFile} from 'remotion';
 
 export type StoryVisual = {
   kind:string; headline:string; items:string[];
   actors?:string[]; setting?:string; action?:string; camera?:string;
   flow?:{from?:string;to?:string}; data?:{label:string;value:number}[];
-  excerpt?:string; source_label?:string;
+  excerpt?:string; source_label?:string; geo_clip?:string; geo_attribution?:string;
 };
-export const isStoryKind=(kind:string)=>['character','device','signal_flow','document','data','map','hero'].includes(kind);
+export const isStoryKind=(kind:string)=>['character','device','signal_flow','document','data','map','hero','god_eye'].includes(kind);
 const shotPalette:Record<string,[string,string,string]>={
   character:['#102440','#ebf3fd','#69c8f8'], device:['#161b37','#f5f4ff','#a9a0ff'],
   signal_flow:['#051e2c','#edfcff','#55e0e5'], document:['#29221e','#fff8ed','#ffd16a'],
   data:['#102a2a','#edfff9','#71e5bf'], map:['#151e39','#f0f5ff','#9cb4ff'],
-  hero:['#241431','#fff4fe','#f2a8d8']
+  hero:['#241431','#fff4fe','#f2a8d8'], god_eye:['#101f36','#e6f6ff','#7fc5ff']
 };
 const appear=(f:number,start=0)=>interpolate(f,[start,start+20],[0,1],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
 const titleCase=(s:string)=>s.length>60?s.slice(0,59)+'…':s;
@@ -98,6 +98,24 @@ const MapScene:React.FC<{scene:StoryVisual;f:number;accent:string}>=({scene,f,ac
   </svg>
   <div style={{position:'absolute',bottom:35,fontSize:24,color:'#fff'}}>Conceptual visualization · not a geographic locator</div>
 </div>;
+/** Reviewed silent scene clip prepared from the upstream God's Eye View/Cesium app.
+ *  Local-only; never embeds iframe or loads live map tiles at render time.
+ *  Real-world imagery usage is reviewed by the video owner before publishing.
+ */
+const GodEyeScene:React.FC<{scene:StoryVisual}>=({scene})=>{
+  const clip=scene.geo_clip||'';
+  if(!/^job\\/god_eye_[a-zA-Z0-9_-]{1,64}\\.mp4$/.test(clip)){
+    throw new Error('Unreviewed God Eye clip path');
+  }
+  return <div style={{position:'relative',height:690,overflow:'hidden',borderRadius:28,background:'#0a1524'}}>
+    <OffthreadVideo src={staticFile(clip)} muted volume={0}
+      style={{position:'absolute',width:'100%',height:'100%',objectFit:'cover'}}/>
+    <div style={{position:'absolute',left:20,right:20,bottom:16,padding:'10px 14px',fontSize:19,
+      color:'#f4fbff',background:'#07111dcc',borderRadius:12}}>
+      {scene.geo_attribution||'Source attribution required · not for publication'}
+    </div>
+  </div>;
+};
 const HeroScene:React.FC<{scene:StoryVisual;f:number;accent:string}>=({scene,f,accent})=><div style={{height:680,display:'grid',placeItems:'center',position:'relative'}}>
   {[0,1,2].map(i=><div key={i} style={{position:'absolute',width:500+i*100,height:500+i*100,borderRadius:'50%',border:'4px solid '+accent,opacity:.28,transform:'scale('+(appear(f,i*8)*(.8+i*.2))+') rotate('+f/8+'deg)'}}/>)}
   <div style={{fontFamily:'InterTight',fontSize:100,fontWeight:900,textAlign:'center',lineHeight:.95,letterSpacing:-4,padding:'0 55px',transform:'scale('+(0.8+appear(f,4)*.2)+')'}}>{titleCase(scene.items[0]||scene.headline)}</div>
@@ -113,6 +131,7 @@ export const CinematicScene:React.FC<{scene:StoryVisual}>=({scene})=>{
     scene.kind==='document'?<DocumentScene scene={scene} f={f} accent={accent}/>:
     scene.kind==='data'?<DataScene scene={scene} f={f} accent={accent}/>:
     scene.kind==='map'?<MapScene scene={scene} f={f} accent={accent}/>:
+    scene.kind==='god_eye'?<GodEyeScene scene={scene}/>:
     <HeroScene scene={scene} f={f} accent={accent}/>;
   return <div style={{position:'absolute',inset:0,color:ink,background:'radial-gradient(ellipse at 25% 30%,'+bg+' 0%,#080d18 100%)',overflow:'hidden'}}>
     <div style={{position:'absolute',top:110,left:72,right:72,fontFamily:'InterTight',fontSize:25,letterSpacing:4,opacity:.65}}>{(scene.setting||'PREMIUM VISUAL STORY').toUpperCase()}</div>
