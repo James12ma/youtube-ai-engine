@@ -131,5 +131,32 @@ def main(argv=None) -> int:
     return 0
 
 
+def _redact(text: str) -> str:
+    import os
+    for k, v in os.environ.items():
+        if v and len(v) > 8 and any(w in k for w in ('KEY', 'TOKEN', 'SECRET')):
+            text = text.replace(v, '***')
+    return text
+
+
+def run(argv=None) -> int:
+    """main() with a written record of any crash (error.json next to the outputs) and a CI annotation."""
+    import os
+    import traceback
+    try:
+        return main(argv)
+    except Exception as exc:  # noqa: BLE001 - report every failure, never silently
+        ap = argparse.ArgumentParser(add_help=False); ap.add_argument('--out', type=Path)
+        out = ap.parse_known_args(argv)[0].out
+        info = {'error': _redact(f'{type(exc).__name__}: {exc}'), 'traceback': _redact(traceback.format_exc())}
+        if out:
+            out.mkdir(parents=True, exist_ok=True)
+            (out / 'error.json').write_text(json.dumps(info, indent=2), encoding='utf-8')
+        print(info['traceback'], file=sys.stderr)
+        if os.environ.get('GITHUB_ACTIONS'):
+            print(f"::error title=studio {out}::{info['error'][:900]}".replace('\n', ' '))
+        return 1
+
+
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(run())

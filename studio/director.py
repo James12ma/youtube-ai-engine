@@ -71,7 +71,10 @@ def free_model(prompt: str, schema: type[BaseModel], *, max_tokens: int = 4096, 
                 return got
             except Exception as exc:  # noqa: BLE001 - try the next free model
                 errors.append(f'{kind}:{model or "default"}: {type(exc).__name__}: {str(exc)[:200]}')
+                print(f'[director] {kind}:{model or "default"} failed: {errors[-1]}', file=sys.stderr)
         time.sleep(30 * (r + 1))
+    if not errors:
+        raise RuntimeError('no free model configured: set GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY')
     raise RuntimeError('no free model answered: ' + ' | '.join(errors[-6:]))
 
 
