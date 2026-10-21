@@ -1,34 +1,35 @@
 {
- "note": "System test: one fixed plan (proves voice + render) and four very different prompts written and directed by free AI.",
- "delivery_pubkey": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQ0lqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUF0RHZwVy9SMkdIbjEzNWVvaUpWUgo0SmUrTlZseElhbUgvb3I0UkZaNTRIWHU2UDMwUWp2NHJsT1NKa3ByUERTNmxIRm96aEpKWDRIY2RtODc1bUY2CnlxbUV1WjFQK0xHODd0VWRSUlplb2t3dkVKM0xHUVJpcWptV3ZrS1NOUGtUdW5mSGlyUjJabTlPbGF5TTlIOXQKeGU4c1JGOU9ic25jbVZtbG4vU2pLbjJpZmZ2dy92ZTJKQzh3WlYrVStFZmIwdzJRb3EweWZidCtnMXBwanBOTwpYOU5ydFNmeE93ZjJXYng3WUsrVnp0MHo0NU4wdDU1MVR0YjU3enIwZGNpYmhzbzdCeElFRmhWclA2eXFtUDdTCnd1dm9CUzBHa2JDWklkYXVZQ3FHTlJrT0hwei95dnhPTzRPQ2pLSWRUWGx4V09NUU1EWVFCTENlMmxKbm5xUFoKdkhzUytwOHVEdmRGeWVkYmhVYjE3L050Rkg0US9wY3pNeFovNlVJbll5eFhacTJFWXNGbmFBVVdON1VkbkRHeApveFUxdjJjUXFUMitZVHA2Uk9tNGlQWXo0N0tCQ0ZBRm9JS3huL2h6SUVLdDhhUHFDZGFpbENTVTJkYytSNS80CkgreUlJRVJMUVR4cUdJQm5CTGR2SStMdkNzMjZDT1FBRFlZbk8zeXlocGNteEF3UCtwTGd0YjZVTVE0aStKU0oKNVlGenc3dU45L1JmOUprRk85SE9NRGppUTZiWlhOdzZHVDJDN3dLK1JsT1NxaEFYQkJQeGQrZEt2TjJmZGJKcApBbjA4SEdwSkhxTjVlbm04SGVZdU95bUFkMmlVZXpmU2VOeHViL0U5a2V1V1RJK0dUdWdKcDVwS3FNVkVZM0ZxCjBUTVE5cGFYN2pJaUdkaWUzbVFSTHlFQ0F3RUFBUT09Ci0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo=",
- "jobs": [
-  {
-   "plan": "studio/examples/job_application.json",
-   "format": "vertical"
-  },
-  {
-   "prompt": "Show what really happens after someone applies for a job on their phone: filling the form, pressing send, how it reaches the company, and the recruiter reviewing it.",
-   "format": "vertical",
-   "style": "auto",
-   "seconds": 40
-  },
-  {
-   "prompt": "Explain how a spreadsheet expense tracker can catch its own mistakes: an amount typed as text, a duplicate entry, and a missing receipt.",
-   "format": "vertical",
-   "style": "explainer-light",
-   "seconds": 40
-  },
-  {
-   "prompt": "A short bedtime story for kids about a little robot who learns to share its toys with a friend.",
-   "format": "horizontal",
-   "style": "storybook",
-   "seconds": 35
-  },
-  {
-   "prompt": "What is an AI agent? Explain simply how it plans steps, uses tools like a web browser, and asks a person for approval before it acts.",
-   "format": "vertical",
-   "style": "ai-dark",
-   "seconds": 40
-  }
- ]
+  "note": "System test: one fixed plan (proves voice + render) and four very different prompts written and directed by free AI.",
+  "delivery_pubkey": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQ0lqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUF0RHZwVy9SMkdIbjEzNWVvaUpWUgo0SmUrTlZseElhbUgvb3I0UkZaNTRIWHU2UDMwUWp2NHJsT1NKa3ByUERTNmxIRm96aEpKWDRIY2RtODc1bUY2CnlxbUV1WjFQK0xHODd0VWRSUlplb2t3dkVKM0xHUVJpcWptV3ZrS1NOUGtUdW5mSGlyUjJabTlPbGF5TTlIOXQKeGU4c1JGOU9ic25jbVZtbG4vU2pLbjJpZmZ2dy92ZTJKQzh3WlYrVStFZmIwdzJRb3EweWZidCtnMXBwanBOTwpYOU5ydFNmeE93ZjJXYng3WUsrVnp0MHo0NU4wdDU1MVR0YjU3enIwZGNpYmhzbzdCeElFRmhWclA2eXFtUDdTCnd1dm9CUzBHa2JDWklkYXVZQ3FHTlJrT0hwei95dnhPTzRPQ2pLSWRUWGx4V09NUU1EWVFCTENlMmxKbm5xUFoKdkhzUytwOHVEdmRGeWVkYmhVYjE3L050Rkg0US9wY3pNeFovNlVJbll5eFhacTJFWXNGbmFBVVdON1VkbkRHeApveFUxdjJjUXFUMitZVHA2Uk9tNGlQWXo0N0tCQ0ZBRm9JS3huL2h6SUVLdDhhUHFDZGFpbENTVTJkYytSNS80CkgreUlJRVJMUVR4cUdJQm5CTGR2SStMdkNzMjZDT1FBRFlZbk8zeXlocGNteEF3UCtwTGd0YjZVTVE0aStKU0oKNVlGenc3dU45L1JmOUprRk85SE9NRGppUTZiWlhOdzZHVDJDN3dLK1JsT1NxaEFYQkJQeGQrZEt2TjJmZGJKcApBbjA4SEdwSkhxTjVlbm04SGVZdU95bUFkMmlVZXpmU2VOeHViL0U5a2V1V1RJK0dUdWdKcDVwS3FNVkVZM0ZxCjBUTVE5cGFYN2pJaUdkaWUzbVFSTHlFQ0F3RUFBUT09Ci0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo=",
+  "jobs": [
+    {
+      "plan": "studio/examples/job_application.json",
+      "format": "vertical"
+    },
+    {
+      "prompt": "Show what really happens after someone applies for a job on their phone: filling the form, pressing send, how it reaches the company, and the recruiter reviewing it.",
+      "format": "vertical",
+      "style": "auto",
+      "seconds": 40
+    },
+    {
+      "prompt": "Explain how a spreadsheet expense tracker can catch its own mistakes: an amount typed as text, a duplicate entry, and a missing receipt.",
+      "format": "vertical",
+      "style": "explainer-light",
+      "seconds": 40
+    },
+    {
+      "prompt": "A short bedtime story for kids about a little robot who learns to share its toys with a friend.",
+      "format": "horizontal",
+      "style": "storybook",
+      "seconds": 35
+    },
+    {
+      "prompt": "What is an AI agent? Explain simply how it plans steps, uses tools like a web browser, and asks a person for approval before it acts.",
+      "format": "vertical",
+      "style": "ai-dark",
+      "seconds": 40
+    }
+  ],
+  "run": "002"
 }
