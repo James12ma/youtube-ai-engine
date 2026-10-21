@@ -48,7 +48,9 @@ jobs:
           assert re.fullmatch('[0-9a-f]{8}',os.environ['JOB_ID'])
           p=json.loads(os.environ['PREMIUM_PAYLOAD'])
           assert p.get('profile') in ('premium','focus3d')
-          assert set(p)<= {'profile','voice','source_sha256','file_id'}
+          assert set(p)<= {'profile','voice','source_sha256','file_id','mode'}
+          assert p.get('mode') in (None,'finance')
+          if p.get('mode')=='finance':assert p['profile']=='premium'
           if p['profile']=='premium':
               assert p['voice'] in ('af_heart','am_michael')
               assert re.fullmatch('[0-9a-f]{64}',p['source_sha256'])
@@ -79,11 +81,30 @@ jobs:
           "$BPY_RUNTIME" -m venv "$RUNNER_TEMP/bpy-env"
           "$RUNNER_TEMP/bpy-env/bin/python" -m pip install bpy==5.2.2
           echo "BPY_PYTHON=$RUNNER_TEMP/bpy-env/bin/python" >> "$GITHUB_ENV"
+      - name: Require explicit free LLM authorization for finance
+        if: fromJSON(inputs.payload).mode == 'finance'
+        env:
+          FINANCE_LLM_APPROVED: ${{ vars.FINANCE_LLM_APPROVED }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          test "$FINANCE_LLM_APPROVED" = "1" || { echo "::error::Finance LLM requires explicit owner approval"; exit 1; }
+          if [ -z "$GROQ_API_KEY" ] && [ -z "$GEMINI_API_KEY" ] && [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::error::No free-tier finance LLM key configured"
+            exit 1
+          fi
       - name: Exact script, native English voice, premium render, private Telegram delivery
         env:
           TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
           OWNER: ${{ secrets.ALAN7_OWNER_ID }}
           PREMIUM_PAYLOAD: ${{ inputs.payload }}
+          FINANCE_LLM_APPROVED: ${{ (fromJSON(inputs.payload).mode == 'finance' && vars.FINANCE_LLM_APPROVED == '1') && '1' || '0' }}
+          ROUTER_ALLOW_LIVE_API: ${{ (fromJSON(inputs.payload).mode == 'finance' && vars.FINANCE_LLM_APPROVED == '1') && '1' || '0' }}
+          ENABLE_LIVE_LLM: ${{ (fromJSON(inputs.payload).mode == 'finance' && vars.FINANCE_LLM_APPROVED == '1') && '1' || '0' }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python -m scripts.premium_private_job
       - name: Encrypted owner-session video copy
         if: success() && inputs.delivery_pubkey != ''
