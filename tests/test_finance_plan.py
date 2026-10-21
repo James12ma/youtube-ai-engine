@@ -114,3 +114,25 @@ def test_planner_rejects_short_owner_script_before_api():
     with pytest.raises(ValueError, match="20\+ words"):
         plan("Too short", router)
     assert not router.calls
+
+
+def test_existing_premium_make_plan_accepts_finance_json(tmp_path):
+    """Real interface check, without a narrator, model or browser."""
+    from tiktok_motion.premium_job import make_plan
+    scenes = [
+        example("hero"), example(), example("document"),
+        example("map", narration="Inflation affects the world in different ways."),
+        example(), example()
+    ]
+    fplan = FinancePlan(title="Finance visual contract", scenes=scenes)
+    request = {
+        "script": to_premium_script(fplan),
+        "profile": "premium", "visual_mode": "premium",
+        "language": "en", "voice": "af_heart"
+    }
+    premium_plan = make_plan(request, tmp_path)
+    assert len(premium_plan["scenes"]) == 6
+    assert premium_plan["scenes"][1]["kind"] == "data"
+    assert len(premium_plan["scenes"][1]["data"]) == 2
+    assert premium_plan["auto_publish"] is False
+    assert premium_plan["narration_rewritten"] is False
