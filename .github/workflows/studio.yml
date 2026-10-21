@@ -1,0 +1,96 @@
+name: Studio — prompt to video (free AI, Kokoro voice, Telegram preview; no upload)
+# Runs the jobs listed in studio/jobs/request.json: Director (free LLMs) -> plan checks -> Kokoro narration ->
+# frame-exact render -> QA. Each finished MP4 is sent privately to the owner on Telegram. Nothing is published.
+on:
+  push:
+    branches: ['studio/run-**']
+    paths: ['studio/jobs/request.json']
+  workflow_dispatch:
+permissions:
+  contents: write   # only for the optional encrypted review pack (qa/<run id>)
+concurrency:
+  group: studio-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  studio:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      PYTHONUNBUFFERED: '1'
+      CUDA_VISIBLE_DEVICES: ''
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Dependencies (CPU only, free)
+        run: |
+          set -euo pipefail
+          echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng libsndfile1
+          python -m pip install -q --index-url https://download.pytorch.org/whl/cpu torch==2.8.0
+          python -m pip install -q -r requirements.txt -r requirements-premium.txt playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Offline Studio tests
+        run: python -m pytest -q tests/test_studio.py
+      - name: Produce every requested video
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -uo pipefail
+          python - <<'PY'
+          import json, subprocess, sys
+          req = json.load(open('studio/jobs/request.json'))
+          results = []
+          for i, j in enumerate(req['jobs']):
+              out = f'outputs/studio/{i:02d}'
+              cmd = [sys.executable, '-m', 'studio.make', '--out', out, '--format', j.get('format', 'vertical'),
+                     '--style', j.get('style', 'auto'), '--seconds', str(j.get('seconds', 40)),
+                     '--language', j.get('language', 'en'), '--brand', j.get('brand', '@logicscript')]
+              cmd += ['--prompt', j['prompt']] if 'prompt' in j else ['--plan', j['plan']]
+              if j.get('voice'): cmd += ['--voice', j['voice']]
+              print('::group::job', i, j.get('prompt', j.get('plan'))[:80]); r = subprocess.run(cmd); print('::endgroup::')
+              results.append({'job': i, 'exit': r.returncode, 'request': j})
+              print(f"::notice title=studio job {i}::exit {r.returncode}")
+          json.dump(results, open('outputs/studio/results.json', 'w'), indent=2)
+          PY
+          ls -R outputs/studio | head -80
+      - name: Send finished videos to the owner on Telegram
+        if: always()
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+        run: |
+          set -uo pipefail
+          for d in outputs/studio/*/; do
+            [ -f "$d/final.mp4" ] || continue
+            title=$(python -c "import json;print(json.load(open('$d/report.json'))['title'])" 2>/dev/null || echo video)
+            size=$(stat -c %s "$d/final.mp4"); f="$d/final.mp4"
+            if [ "$size" -gt 48000000 ]; then
+              dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
+              vb=$(python -c "print(int(46*8*1024/$dur - 96))")
+              ffmpeg -y -hide_banner -loglevel error -i "$f" -c:v libx264 -preset slow -b:v ${vb}k -maxrate ${vb}k -bufsize $((vb*2))k -c:a aac -b:a 96k -movflags +faststart "$d/telegram.mp4"; f="$d/telegram.mp4"
+            fi
+            code=$(curl -s -o /dev/null -w '%{http_code}' -F chat_id="$OWNER" -F supports_streaming=true \
+              -F caption="LogicScript Studio — $title (tès sistèm, pa pibliye)" -F video=@"$f" "https://api.telegram.org/bot$TG/sendVideo")
+            echo "::notice title=telegram $d::HTTP $code"
+          done
+      - name: Delivery key (public key from the request; optional)
+        id: key
+        if: always()
+        run: echo "pub=$(python -c "import json;print(json.load(open('studio/jobs/request.json')).get('delivery_pubkey',''))")" >> "$GITHUB_OUTPUT"
+      - name: Encrypted review pack (plans, reports, frames, MP4s)
+        if: always() && steps.key.outputs.pub != ''
+        uses: ./.github/actions/encrypted-pack
+        with:
+          dir: outputs/studio
+          pubkey_b64: ${{ steps.key.outputs.pub }}
+          token: ${{ github.token }}
+          label: studio review

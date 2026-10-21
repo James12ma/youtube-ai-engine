@@ -1,0 +1,40 @@
+@font-face{font-family:'InterTight';src:url(fonts/inter-tight-latin-500-normal.woff2) format('woff2');font-weight:500}
+@font-face{font-family:'InterTight';src:url(fonts/inter-tight-latin-700-normal.woff2) format('woff2');font-weight:700}
+@font-face{font-family:'InterTight';src:url(fonts/inter-tight-latin-800-normal.woff2) format('woff2');font-weight:800}
+@font-face{font-family:'StudioMono';src:url(fonts/DejaVuSansMono-Bold.ttf) format('truetype');font-weight:700}
+
+:root{
+  --bg:#0b1021; --bg2:#121a33; --grid:#141c38; --ink:#ffffff; --muted:#9fb3c8;
+  --accent:#f7bf75; --accent2:#7bf1d0; --danger:#ff5a5f; --ok:#22c55e;
+  --paper:#f8fafc; --paperInk:#0f172a; --paperMuted:#64748b; --line:#cbd5e1;
+  --capbg:#1c2233;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#000;overflow:hidden}
+#stage{position:relative;overflow:hidden;background:var(--bg);font-family:'InterTight',sans-serif;color:var(--ink)}
+#bg{position:absolute;inset:0;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);
+  background-size:60px 60px}
+#shots{position:absolute;inset:0}
+.shot{position:absolute;inset:0;will-change:transform,opacity}
+.art{position:absolute;transform-origin:50% 50%}
+.art svg{width:100%;height:100%;overflow:visible}
+
+/* headline: reference style (2 lines, accent word) */
+#headline{position:absolute;left:0;right:0;text-align:center;pointer-events:none;z-index:10}
+#headline .pills{display:flex;gap:12px;justify-content:center;margin-bottom:26px}
+#headline .pill{font-family:'StudioMono',monospace;font-size:24px;letter-spacing:.06em;padding:8px 16px;border-radius:8px}
+#headline .pill.a{background:var(--danger);color:#fff}
+#headline .pill.b{background:#fff;color:var(--bg)}
+#headline .line{font-weight:800;line-height:1.02;letter-spacing:-.01em;text-transform:uppercase}
+#headline .acc{color:var(--accent)}
+#headline .src{font-family:'StudioMono',monospace;color:var(--muted);letter-spacing:.06em;margin-top:18px}
+
+/* captions: dark box, 3-5 words, keyword in accent */
+#caption{position:absolute;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:10}
+#caption .box{background:var(--capbg);border-radius:20px;font-weight:800;text-align:center;line-height:1.18;
+  box-shadow:0 10px 30px #0006}
+#caption .k{color:var(--accent)}
+#brand{position:absolute;z-index:10;font-weight:500;color:var(--muted);letter-spacing:.02em}
+#progress{position:absolute;z-index:10;height:6px;background:#ffffff1f;border-radius:3px;overflow:hidden}
+#progress div{height:100%;width:0;background:var(--accent2)}
