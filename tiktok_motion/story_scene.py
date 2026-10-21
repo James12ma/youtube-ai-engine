@@ -64,7 +64,7 @@ def enrich_visual(scene):
     if kind == "god_eye":
         import re
         if not isinstance(geo_clip, str) or not re.fullmatch(
-            r"job/god_eye_[a-zA-Z0-9_-]{1,64}\\.mp4", geo_clip
+            r"job/god_eye_[a-zA-Z0-9_-]{1,64}\.mp4", geo_clip
         ):
             raise ValueError("God's Eye View scene requires a reviewed local job/god_eye_*.mp4 clip")
         if not geo_attribution:
