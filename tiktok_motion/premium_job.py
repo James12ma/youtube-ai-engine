@@ -51,6 +51,13 @@ def make_plan(data, out):
         if not isinstance(items,list) or len(items)>6 or any(not isinstance(v,str) or len(v)>60 for v in items): raise ValueError('Invalid labels')
         headline=s.get('on_screen') or ' '.join(n.split()[:7])
         if not isinstance(headline,str) or len(headline)>110: raise ValueError('Headline too long')
+        # Fail closed if the vetted Cesium capture has not been installed.
+        # A local God Eye clip is pre-rendered, never fetched during film rendering.
+        if kind == 'god_eye':
+            checked=enrich_visual(s)
+            geo_file=REMOTION/'public'/checked['geo_clip']
+            if not geo_file.is_file() or geo_file.stat().st_size<=0:
+                raise ValueError('God Eye capture missing: prepare reviewed local MP4 first')
         scenes.append({'narration':n,'kind':kind,'headline':headline,'items':items,
                        'visual_notes':s.get('visual_notes',''), **enrich_visual(s)})
     plan={'title':str(title)[:150], 'scenes':scenes, 'language':'en','voice':data.get('voice','af_heart'),
