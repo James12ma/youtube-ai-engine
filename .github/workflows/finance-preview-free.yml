@@ -1,0 +1,75 @@
+name: Finance preview MP4 · zero-cost gated · branch only
+on:
+  push:
+    branches:
+      - feature/finance-integration-reviewed
+    paths:
+      - .github/workflows/finance-preview-free.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+      YOUTUBE_PUBLIC_ALLOWED: '0'
+      ROUTER_ALLOW_LIVE_API: '0'
+      ENABLE_LIVE_LLM: '0'
+      CUDA_VISIBLE_DEVICES: ''
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install CPU-only renderer dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng libsndfile1
+          echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchaudio==2.8.0
+          python -m pip install -r requirements-premium.txt
+          (cd tiktok_motion/premium/remotion && npm ci --no-audit --no-fund)
+          (cd tiktok_motion/premium/remotion && npx --no-install remotion browser ensure)
+      - name: Render 8 illustrative finance scenes, natural narration, subtitles
+        run: |
+          python -m scripts.finance_preview_demo --out outputs/finance-preview
+      - name: Summarize acceptance evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("outputs/finance-preview/report.json")
+          if p.exists():
+              v=json.loads(p.read_text())
+              print("rendered:",v.get("rendered"),"duration:",v.get("duration_seconds"),"target:",v.get("duration_in_target"))
+              print("private Telegram delivery:",v.get("telegram_accepted",False))
+          else:
+              print("No report.json: rendering blocked or failed. Review step logs.")
+          PY
+      - name: Upload private-to-repository Actions artifact for human review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finance-preview-evidence-${{ github.run_id }}
+          path: |
+            outputs/finance-preview/final.mp4
+            outputs/finance-preview/plan.json
+            outputs/finance-preview/props.json
+            outputs/finance-preview/report.json
+            outputs/finance-preview/ffprobe.json
+            outputs/finance-preview/review/*.png
+          if-no-files-found: warn
+          retention-days: 2
