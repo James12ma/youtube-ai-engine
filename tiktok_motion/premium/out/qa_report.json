@@ -1,0 +1,31 @@
+{
+  "file": "out/focus_prototype_bt709.mp4",
+  "size_mb": 12.99,
+  "width": 1080,
+  "height": 1920,
+  "fps": 30.0,
+  "frames": 390,
+  "duration_s": 13.056,
+  "video_bitrate_kbps": 7668,
+  "audio_peak_db": -3.3,
+  "audio_mean_db": -28.2,
+  "checks": {
+    "resolution_1080x1920": true,
+    "fps_30": true,
+    "frame_count": true,
+    "duration_10_15s": true,
+    "codec_h264_yuv420p": true,
+    "audio_aac": true,
+    "no_black_segments": true,
+    "no_freeze_over_1s": true,
+    "audio_not_clipping": true
+  },
+  "passed": true,
+  "evidence_frames": [
+    "01_open_f024.png",
+    "02_doing_more_f096.png",
+    "03_dialog_click_f158.png",
+    "04_what_to_cut_f252.png",
+    "05_more_impact_f380.png"
+  ]
+}
