@@ -215,6 +215,7 @@ def direct(prompt: str, *, fmt: str = 'vertical', language: str = 'en', seconds:
                 visuals[bv.beat] = bv
         raw = assemble(script, visuals, fmt=fmt, language=language, brand=brand)
     report['passed'] = False
+    report['last_plan'] = raw          # kept so a failure can be reproduced and debugged
     raise DirectorFailed(report)
 
 

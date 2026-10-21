@@ -47,7 +47,7 @@ def produce(plan: VideoPlan, out: Path, *, draft: bool = False, voice: str = '',
     else:
         log('narration: kokoro')
         narration = kokoro(texts, out / 'voice', language=plan.language, voice=voice or plan.voice)
-    res = resolve(plan, narration)
+    res = resolve(plan, narration, strict=False)
     style = resolve_style(plan.style)
     (out / 'render.json').write_text(json.dumps(res.data, indent=1, ensure_ascii=False), encoding='utf-8')
     audio = out / 'mix.wav'

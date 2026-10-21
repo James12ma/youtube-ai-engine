@@ -34,6 +34,21 @@ function applyStyle(style){
   if(style.font)document.getElementById('stage').style.fontFamily=style.font;
 }
 
+/* bounding box (in the shot's own 1000x1000 units) of what is actually visible: elements hidden by
+   opacity 0 / display none (waiting for their cue) are ignored, so they do not count as overflow */
+const SHAPES='rect,circle,ellipse,path,line,polyline,polygon,text,image,use';
+function visBox(outer){const svg=outer.ownerSVGElement;const inv=svg.getScreenCTM().inverse();
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  outer.querySelectorAll(SHAPES).forEach(el=>{
+    if(el.closest('clipPath,defs,mask'))return;
+    for(let n=el;n&&n!==outer.parentNode;n=n.parentNode){if(n.nodeType!==1)continue;const o=n.getAttribute('opacity');const st=n.style||{};
+      if(o!==null&&+o<=0.001)return;if(st.opacity!==''&&st.opacity!==undefined&&+st.opacity<=0.001)return;if(st.display==='none')return}
+    let b;try{b=el.getBBox()}catch(e){return}if(!(b.width||b.height))return;
+    const m=inv.multiply(el.getScreenCTM());
+    [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].forEach(([x,y])=>{
+      const X=m.a*x+m.c*y+m.e,Y=m.b*x+m.d*y+m.f;x0=Math.min(x0,X);y0=Math.min(y0,Y);x1=Math.max(x1,X);y1=Math.max(y1,Y)})});
+  return x1>x0?{x:x0,y:y0,width:x1-x0,height:y1-y0}:{x:0,y:0,width:0,height:0}}
+
 function buildShot(shot,i,L){
   const host=document.createElement('div');host.className='shot';host.dataset.i=i;
   const full=shot.layout==='full';
@@ -42,7 +57,7 @@ function buildShot(shot,i,L){
   Object.assign(art.style,{left:box.x+'px',top:box.y+'px',width:box.w+'px',height:box.h+'px'});
   const W=full?L.w:1000,H=full?L.h:1000;
   const svg=A.svg(W,H);art.appendChild(svg);host.appendChild(art);
-  const root=A.g(svg);
+  const outer=A.g(svg);const root=A.g(outer);
   const cues=(shot.cues||[]).map(c=>({name:c.name,at:c.at-shot.start,args:c.args||{}})).sort((a,b)=>a.at-b.at);
   const S={root,svg,W,H,A,theme:ST.plan.style.palette||{},p:shot.params||{},dur:shot.end-shot.start,cues,
     at:(name,fb)=>{const c=cues.find(c=>c.name===name);return c?c.at:(fb===undefined?1e9:fb)},
@@ -56,6 +71,18 @@ function buildShot(shot,i,L){
     else throw new Error('unknown scene '+shot.scene);
     if(typeof update!=='function')throw new Error('scene did not return an update(t) function');
   }catch(e){ST.errors.push(`shot ${shot.id} (${shot.scene}) build: ${e.message}`);update=()=>{}}
+  // auto-fit: sample the drawing over the shot; if it would leave its box, scale it to fit (never crop)
+  if(shot.fit!==false){try{host.style.display='block';document.getElementById('shots').appendChild(host);
+    const d=Math.max(.6,(shot.end||0)-(shot.start||0));const ts=[0,d*.3,d*.6,d-.05].concat(cues.map(c=>c.at+.6)).filter(t=>t>=0&&t<=d);
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    ts.forEach(t=>{try{update(t)}catch(e){}const b=visBox(outer);if(b.width*b.height>0){x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.width);y1=Math.max(y1,b.y+b.height)}});
+    const m=20;if(x1>x0&&(x0<-2||y0<-2||x1>W+2||y1>H+2)){const k=Math.min(1,(W-2*m)/(x1-x0),(H-2*m)/(y1-y0));
+      const cx=(x0+x1)/2,cy=(y0+y1)/2;
+      root.setAttribute('transform',`translate(${(W/2-cx*k).toFixed(1)} ${(H/2-cy*k).toFixed(1)}) scale(${k.toFixed(4)})`);
+      if(x1-x0<=W-2*m&&y1-y0<=H-2*m){ // fits without scaling: only shift back inside
+        const dx=x0<m?m-x0:(x1>W-m?W-m-x1:0),dy=y0<m?m-y0:(y1>H-m?H-m-y1:0);root.setAttribute('transform',`translate(${dx.toFixed(1)} ${dy.toFixed(1)})`)}
+      ST.fitted=(ST.fitted||[]).concat([shot.id])}
+  }catch(e){}finally{host.style.display='none'}}
   return {shot,host,art,update,box};
 }
 
@@ -134,10 +161,10 @@ window.STUDIO={
   },
   errors:()=>ST.errors.slice(),
   /* fraction of a shot's drawing box covered by its drawing (QA: is anything drawn?) */
-  area(i){const sh=ST.shots[i];if(!sh)return 0;try{const b=sh.host.querySelector('svg > g').getBBox();
+  area(i){const sh=ST.shots[i];if(!sh)return 0;try{const b=visBox(sh.host.querySelector('svg > g'));
     const W=sh.shot.layout==='full'?ST.w:1000,H=sh.shot.layout==='full'?ST.h:1000;return (b.width*b.height)/(W*H)}catch(e){return 0}},
   /* bounds check for QA: fraction of a shot's drawing that falls outside its box */
-  overflow(i){const sh=ST.shots[i];if(!sh)return 0;try{const b=sh.host.querySelector('svg > g').getBBox();
+  overflow(i){const sh=ST.shots[i];if(!sh)return 0;try{const b=visBox(sh.host.querySelector('svg > g'));
     const W=sh.shot.layout==='full'?ST.w:1000,H=sh.shot.layout==='full'?ST.h:1000;
     const ox=Math.max(0,-b.x)+Math.max(0,b.x+b.width-W),oy=Math.max(0,-b.y)+Math.max(0,b.y+b.height-H);
     return Math.max(ox/W,oy/H)}catch(e){return 0}},

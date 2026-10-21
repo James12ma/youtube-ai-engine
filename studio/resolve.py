@@ -63,7 +63,9 @@ class Resolved:
     shot_starts: list[float]
 
 
-def resolve(plan: VideoPlan, narration: Narration, *, brand: str = '') -> Resolved:
+def resolve(plan: VideoPlan, narration: Narration, *, brand: str = '', strict: bool = True) -> Resolved:
+    """strict=False (final render with the real voice): a shot squeezed under 0.6s by the real timing is
+    merged into the shot before it instead of failing; everything else is still an error."""
     if len(narration.beats) != len(plan.beats):
         raise PlanTimingError('narration does not match the plan beats')
     style = resolve_style(plan.style)
@@ -93,6 +95,15 @@ def resolve(plan: VideoPlan, narration: Narration, *, brand: str = '') -> Resolv
         captions += caption_chunks(words, keywords(beat.narration))
         t += audio.duration + BEAT_GAP_S
     duration = round(t - BEAT_GAP_S + TAIL_S, 3)
+    if not strict:
+        i = 1
+        while i < len(shots):
+            nxt = shots[i + 1]['start'] if i + 1 < len(shots) else duration
+            if nxt - shots[i]['start'] < 0.6:
+                shots[i - 1]['cues'] += [c for c in shots[i]['cues'] if c['name'] == 'punch']
+                del shots[i]
+            else:
+                i += 1
     for i, s in enumerate(shots):
         s['end'] = shots[i + 1]['start'] if i + 1 < len(shots) else duration
         if s['end'] - s['start'] < 0.6:

@@ -156,19 +156,22 @@ SC.ui=S=>{const th=T(S);const els=S.p.elements||[];const win=A.g(S.root);
    params: columns:[..], rows:[[..]], status:[..] (OK|ERROR|CHECK|''), title
    cues: row:<i>  status:<i> (args.value)  highlight:<i>  callout (args.text, args.row) */
 SC.table=S=>{const th=T(S);const cols=S.p.columns||['Item','Amount','Status'];const rows=S.p.rows||[];const st=S.p.status||[];
-  const card=A.g(S.root);const top=120,rh=104,x0=40,x1=960;const n=rows.length;
+  const card=A.g(S.root);const n=rows.length;const rh=Math.max(64,Math.min(104,Math.floor(660/Math.max(1,n))));const top=Math.max(60,(1000-(110+n*rh))/2-60),x0=40,x1=960;
+  const fs=Math.round(Math.min(44,rh*.42,220/Math.max(3,cols.length)*1.0+8));
   A.el('rect',{x:x0,y:top,width:x1-x0,height:110+n*rh,rx:28,fill:th.paper},card);
-  const cw=(x1-x0-60)/cols.length;cols.forEach((c,j)=>A.text(card,x0+30+j*cw,top+55,c,{fill:'#475569','font-size':40,'text-anchor':'start','font-weight':700}));
+  const cw=(x1-x0-60)/cols.length;const fit=(v,f)=>{v=String(v);const m=Math.max(3,Math.floor((cw-14)/(f*.56)));return v.length>m?v.slice(0,m-1)+'…':v};
+  cols.forEach((c,j)=>A.text(card,x0+30+j*cw,top+55,fit(c,fs*.9),{fill:'#475569','font-size':Math.round(fs*.9),'text-anchor':'start','font-weight':700}));
   const R=rows.map((r,i)=>{const g=A.g(card);const y=top+110+i*rh;const bg=A.el('rect',{x:x0,y,width:x1-x0,height:rh,fill:'#fde2e1',opacity:0},g);const bar=A.el('rect',{x:x0,y,width:12,height:rh,fill:th.danger,opacity:0},g);
     A.el('line',{x1:x0,x2:x1,y1:y,y2:y,stroke:'#cbd5e1','stroke-width':3},g);
-    const tx=r.map((v,j)=>A.text(g,x0+30+j*cw,y+rh/2,String(v),{fill:'#0f172a','font-size':44,'text-anchor':'start','font-weight':500}));
-    const chip=A.g(g);const cr=A.el('rect',{x:0,y:-28,width:120,height:56,rx:12},chip);const ct=A.text(chip,60,1,'',{'font-size':32,'font-weight':800});
+    const hasChip=(st.length||S.cues.some(c=>c.name.startsWith('status:')))&&cols.length>1;
+    const tx=r.map((v,j)=>A.text(g,x0+30+j*cw,y+rh/2,hasChip&&j===cols.length-1?'':fit(v,fs),{fill:'#0f172a','font-size':fs,'text-anchor':'start','font-weight':500}));
+    const chip=A.g(g);const cr=A.el('rect',{x:0,y:-rh*.27,width:120,height:rh*.54,rx:12},chip);const ct=A.text(chip,60,1,'',{'font-size':Math.round(fs*.72),'font-weight':800});
     chip.setAttribute('transform',`translate(${x0+30+(cols.length-1)*cw} ${y+rh/2})`);return {g,bg,bar,tx,chip,cr,ct,y}});
   const call=A.g(S.root,{opacity:0});const cb=A.el('rect',{x:-300,y:0,width:600,height:84,rx:18,fill:th.accent},call);A.el('path',{d:'M-30 0 L30 0 L0 -44 Z',fill:th.accent},call);const ctx=A.text(call,0,43,'',{fill:'#0b1021','font-size':34,'font-weight':800});
   const colors={OK:['#dcfce7','#15803d'],ERROR:['#b91c1c','#fff'],CHECK:['#fef3c7','#b45309']};
   return t=>{R.forEach((k,i)=>{const at=S.at(`row:${i}`,0);const p=A.eOut(A.prog(t,at,.35));A.op(k.g,t>=at?p:0);k.g.setAttribute('transform',`translate(${(1-p)*40} 0)`);
       const sc=S.cues.filter(c=>c.name===`status:${i}`&&c.at<=t).pop();const v=sc?sc.args.value:(st[i]||'');
-      if(v){const [bg,fg]=colors[v]||colors.CHECK;A.set(k.cr,{fill:bg,width:v.length*24+40});A.set(k.ct,{fill:fg,x:(v.length*24+40)/2});k.ct.textContent=v;A.op(k.chip,1);
+      if(v){const [bg,fg]=colors[v]||colors.CHECK;const cwid=Math.min(cw-6,v.length*fs*.55+30);A.set(k.cr,{fill:bg,width:cwid});A.set(k.ct,{fill:fg,x:cwid/2});k.ct.textContent=v;A.op(k.chip,1);
         const sp=sc?A.back(A.prog(t,sc.at,.35)):1;k.chip.setAttribute('transform',`translate(${x0+30+(cols.length-1)*cw} ${k.y+rh/2}) scale(${Math.max(.01,sp)})`)}else A.op(k.chip,0);
       const err=v==='ERROR';A.op(k.bg,err?1:0);A.op(k.bar,err?1:0);k.tx.forEach((e,j)=>A.set(e,{fill:err&&j==1?'#b91c1c':'#0f172a'}));
       const hl=S.at(`highlight:${i}`);if(t>=hl)A.op(k.bg,Math.max(err?1:0,.5+.3*Math.sin((t-hl)*6)))});
