@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 
 LEGACY_KINDS = frozenset({"kinetic", "cards", "process", "ui", "timeline", "chart"})
-STORY_KINDS = frozenset({"character", "device", "signal_flow", "document", "data", "map", "hero"})
+STORY_KINDS = frozenset({"character", "device", "signal_flow", "document", "data", "map", "hero", "god_eye"})
 ALL_KINDS = LEGACY_KINDS | STORY_KINDS
 CAMERAS = frozenset({"static", "push_in", "pan_left", "pan_right", "orbit"})
 
@@ -57,6 +57,25 @@ def enrich_visual(scene):
         points.append({"label": label, "value": value})
     if kind == "data" and not points:
         raise ValueError("Data scene requires supplied numeric measurements")
+    # God's Eye View is an explicit, locally-rendered and reviewed video asset.
+    # Never fetch third-party tiles or launch paid providers from this validator.
+    geo_clip = scene.get("geo_clip", "")
+    geo_attribution = _short_text(scene.get("geo_attribution", ""), "geographic attribution", 160)
+    if kind == "god_eye":
+        import re
+        if not isinstance(geo_clip, str) or not re.fullmatch(
+            r"job/god_eye_[a-zA-Z0-9_-]{1,64}\\.mp4", geo_clip
+        ):
+            raise ValueError("God's Eye View scene requires a reviewed local job/god_eye_*.mp4 clip")
+        if not geo_attribution:
+            raise ValueError("God's Eye View scene requires source attribution and imagery license review")
+        if not any(word in scene.get("narration", "").lower() for word in (
+            "world", "global", "country", "countries", "region", "ocean",
+            "earth", "geograph", "continent", "migration", "route", "map",
+        )):
+            raise ValueError("God's Eye View is only for geographically meaningful narration")
+    elif geo_clip:
+        raise ValueError("Only a god_eye scene may contain a geographic video clip")
     excerpt = _short_text(scene.get("excerpt", ""), "document excerpt", 180)
     if kind == "document" and not excerpt:
         raise ValueError("Document scene requires a supplied excerpt")
@@ -69,4 +88,6 @@ def enrich_visual(scene):
         "data": points,
         "excerpt": excerpt,
         "source_label": _short_text(scene.get("source_label", ""), "source label", 100),
+        "geo_clip": geo_clip,
+        "geo_attribution": geo_attribution,
     }
