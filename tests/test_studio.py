@@ -17,7 +17,8 @@ from studio.styles import PACKS, resolve as resolve_style
 from studio.validate import check_plan
 
 EXAMPLE = json.loads(Path('studio/examples/job_application.json').read_text())
-HAS_BROWSER = Path('/opt/pw-browsers').exists() or bool(shutil.which('chromium'))
+HAS_BROWSER = (Path('/opt/pw-browsers').exists() or bool(shutil.which('chromium'))
+               or any(Path.home().glob('.cache/ms-playwright/chromium*')))
 
 
 def test_plan_schema_and_keywords():
