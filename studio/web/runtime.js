@@ -52,7 +52,8 @@ function visBox(outer){const svg=outer.ownerSVGElement;const inv=svg.getScreenCT
 function buildShot(shot,i,L){
   const host=document.createElement('div');host.className='shot';host.dataset.i=i;
   const full=shot.layout==='full';
-  const box=full?{x:0,y:0,w:L.w,h:L.h}:L.art;
+  // vertical shot without a headline: centre the drawing in the free space instead of leaving the top empty
+  const box=full?{x:0,y:0,w:L.w,h:L.h}:(ST.plan.format==='vertical'&&!shot.headline?Object.assign({},L.art,{y:L.art.y-150}):L.art);
   const art=document.createElement('div');art.className='art';
   Object.assign(art.style,{left:box.x+'px',top:box.y+'px',width:box.w+'px',height:box.h+'px'});
   const W=full?L.w:1000,H=full?L.h:1000;
