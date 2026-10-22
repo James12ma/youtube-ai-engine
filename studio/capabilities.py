@@ -29,7 +29,35 @@ class ClipParams(_P):
     grade: Literal["none", "night", "warm", "mono", "teal_orange", "morning"] = "none"
 
 
-UIScreen = Literal["listing", "form", "confirm", "inbox", "detail", "incoming_call", "notification"]
+class UIField(_P):
+    label: str
+    value: str
+    at_word: int | None = Field(None, description="Word where the value starts being typed (omit = already filled)")
+    highlight: bool = False
+
+
+class UIRow(_P):
+    name: str
+    role: str = ""
+    tag: str = ""
+    new: bool = Field(False, description="The row that arrives during the shot")
+
+
+class UIScreenSpec(_P):
+    """One screen of a device. Only these kinds render; fields not listed here are rejected."""
+    kind: Literal["listing", "form", "confirm", "inbox", "detail", "incoming_call"]
+    at_word: int | None = Field(None, description="Word where this screen appears")
+    title: str = ""
+    company: str = Field("", description="listing: company name")
+    meta: str = Field("", description="listing: one line under the title")
+    cta: str = Field("", description="listing/form: button label")
+    tap_cta_word: int | None = Field(None, description="form/listing: word where the button is pressed")
+    body: str = Field("", description="confirm: line under the title")
+    fields: list[UIField] = Field(default_factory=list, description="form/detail: labelled values")
+    rows: list[UIRow] = Field(default_factory=list, description="inbox: list rows")
+    arrive_word: int | None = Field(None, description="inbox: word where the new row lands")
+    highlight_word: int | None = Field(None, description="detail: word where the highlighted field is marked")
+    caller: str = Field("", description="incoming_call: caller name")
 
 
 class UIFlowParams(_P):
@@ -37,8 +65,7 @@ class UIFlowParams(_P):
     device: Literal["phone", "laptop"] = "phone"
     app_name: str = "App"
     accent: str = Field("#2f6bff", pattern=r"^#[0-9a-fA-F]{6}$")
-    screens: list[dict[str, Any]] = Field(..., min_length=1,
-                                          description="Ordered screens: {kind: UIScreen, at_word?: int, ...data}")
+    screens: list[UIScreenSpec] = Field(..., min_length=1, description="Ordered screens; each changes on its word")
     background: Literal["paper", "dark", "asset"] = "paper"
     background_image: str | None = None
     hand: bool = Field(True, description="Show a thumb/cursor performing the taps")
@@ -119,7 +146,8 @@ def validate_params(name: str, params: dict[str, Any]) -> BaseModel:
     try:
         return tech.params(**params)
     except ValidationError as e:
-        raise TechniqueError(f"bad params for {name}: {e.errors()[0]['loc']} {e.errors()[0]['msg']}") from None
+        errs = "; ".join(f"{'.'.join(map(str, x['loc']))}: {x['msg']}" for x in e.errors()[:4])
+        raise TechniqueError(f"bad params for {name}: {errs}") from None
 
 
 def catalog_for_director() -> list[dict[str, Any]]:
