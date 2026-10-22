@@ -217,10 +217,11 @@ const Detail: React.FC<{s: Screen; accent: string}> = ({s, accent}) => {
 const IncomingCall: React.FC<{s: Screen; accent: string}> = ({s, accent}) => {
   const f = useCurrentFrame();
   const at = s.at_frame ?? 0;
-  const appear = tween(f, [at, at + 10], [0, 1]);
+  const appear = tween(f, [at - 3, at + 8], [0, 1]);
   const shake = f > at + 6 ? Math.sin(f * 1.9) * 6 * Math.max(0, Math.sin((f - at) * 0.22)) : 0;
   return (
-    <AbsoluteFill style={{background: 'linear-gradient(180deg,#1d2a35,#0b1218)', alignItems: 'center', fontFamily: FONT, opacity: appear}}>
+    <AbsoluteFill style={{background: 'linear-gradient(180deg,#1d2a35,#0b1218)', alignItems: 'center', fontFamily: FONT}}>
+      <AbsoluteFill style={{alignItems: 'center', opacity: appear}}>
       <div style={{marginTop: 220, fontSize: 28, color: 'rgba(255,255,255,0.65)'}}>incoming call…</div>
       <div style={{marginTop: 18, fontSize: 52, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', textAlign: 'center', padding: '0 30px'}}>{s.caller}</div>
       <div style={{position: 'relative', marginTop: 90, width: 220, height: 220}}>
@@ -235,6 +236,7 @@ const IncomingCall: React.FC<{s: Screen; accent: string}> = ({s, accent}) => {
         <div style={{width: 120, height: 120, borderRadius: '50%', background: '#ef4444'}} />
         <div style={{width: 120, height: 120, borderRadius: '50%', background: '#22c55e', transform: `scale(${1 + 0.06 * Math.sin(f * 0.5)})`}} />
       </div>
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

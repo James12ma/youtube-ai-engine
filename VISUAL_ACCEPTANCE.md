@@ -8,6 +8,8 @@ MP4 files are not stored in git (`*.mp4` is ignored repo-wide); each entry lists
 | V0-baseline-60s | 2026-10-18 (received) | — (prior engine output) | Not recorded. Used as the failure baseline. |
 | V1-focus-13s | 2026-10-18 / 2026-10-21 | Style test before the mission | **Awaiting owner review.** Does not qualify as a Gate A candidate (see below). |
 | P1-gate-a-preview | 2026-10-22 | Gate A preview (not a candidate) | Sent to owner. Explain-world shots only; story shots show ASSET PENDING; no voice; estimated timing. |
+| A1-gate-a-v1 | 2026-10-22 | **Gate A candidate** | Delivered to owner's Telegram by the pipeline (run 39794737218). Superseded by A1-v2 (white flash fixed). |
+| A1-gate-a-v2 | 2026-10-22 | **Gate A candidate** | **Awaiting owner verdict.** Sent in chat. |
 
 ---
 
@@ -57,3 +59,27 @@ These exist per their own docs but were encrypted to the owner or sent privately
 - `qa/*` premium-motion packs
 
 The owner's verdicts on them, if any, should be added here.
+
+---
+
+## A1 — Gate A "The honest line" (v1 pipeline run, v2 local fix)
+
+- **Produced by:** `studio-film.yml` run 39794737218 (order `studio/orders/gate_a.json`). Total 14 min, $0.
+  - Tools: 2 min.
+  - Kokoro voice: 26 s.
+  - WanGP on Kaggle T4: 8 min (first still 102 s including model download, then 14 s each).
+  - Render, master and inspect: 3 min.
+  - Telegram delivery: 10 s.
+- **Spec:** `studio/films/gate_a/spec.json`. 11 shots, 71 words, 30.7 s, 1080×1920, 30 fps. Two worlds:
+  - Story world: 4 Z-Image Turbo stills with camera moves.
+  - Explain world: phone/laptop UI flows, the city transfer, the quote card.
+- **Inspector:** no technical defects. −14.3 LUFS integrated, −1.0 dBTP, H.264 yuv420p BT.709, AAC, no black or frozen stretches, 16 beats placed inside their shots.
+- **My own visual review:**
+  - Maya's identity is consistent across 3 separate generations (curly hair, grey hoodie, silver hoops, sage-green phone case). Daniel matches his description.
+  - Every narrated action is on screen at its word: finds, taps Apply, types name / experience / honest line, Submit, Sent, departs, lands, inbox row arrives, opens, highlight, quote, call.
+- **Defect found and fixed (v1 → v2):** a white phone screen flashed for about 0.3 s before the incoming call (the call screen faded in from transparent). v2 keeps the dark call background opaque. v2 SHA256 prefix `64f2d03babaa3628`.
+- **Known limits:**
+  - Story stills move only with camera (2.5D). Generated video is not used, because Wan 14B is too heavy for the free T4.
+  - Laptop UI text is small on a phone screen even with the push-in.
+  - There is no music bed yet (SFX only).
+- **Owner verdict:** pending.
