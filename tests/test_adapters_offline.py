@@ -30,6 +30,7 @@ def test_success_path_parses_and_validates(cls,config):
     assert isinstance(response.parsed,Answer)
     assert response.parsed.answer=="ok"
     assert response.parsed.confidence==pytest.approx(0.9)
+    assert response.attempts_used == 1
     assert response.provider==config.name
     assert response.usage["total_tokens"]==15
 
@@ -45,6 +46,7 @@ def test_retry_after_is_respected():
     adapter=_adapter(GroqAdapter,GROQ_CONFIG,handler,sleep=fake_sleep,monotonic=fake_clock)
     response=adapter.complete(LLMRequest(messages=[{"role":"user","content":"hi"}],schema=Answer))
     assert response.parsed is not None and response.parsed.answer=="ok"
+    assert response.attempts_used == 2
     assert calls["n"]==2
     assert any(s>=2.0 for s in sleeps),sleeps
 
@@ -56,6 +58,7 @@ def test_5xx_retries_then_succeeds():
         return httpx.Response(200,json=_body(json.dumps({"answer":"ok","confidence":1.0})))
     adapter=_adapter(GeminiAdapter,GEMINI_CONFIG,handler,sleep=sleeps.append)
     response=adapter.complete(LLMRequest(messages=[{"role":"user","content":"hi"}],schema=Answer))
+    assert response.attempts_used == 3
     assert calls["n"]==3
     assert response.parsed is not None and response.parsed.confidence==1.0
     assert len(sleeps)>=2
@@ -121,3 +124,47 @@ def test_rate_limiter_penalize():
     limiter=RateLimiter(rpm=100,rpd=100,monotonic=monotonic,sleep=sleep)
     limiter.penalize(5.0);limiter.acquire()
     assert any(s>=4.9 for s in sleeps),sleeps
+
+
+def test_native_json_failure_retries_without_echoing_provider_body():
+    calls=[]
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(400,json={'error':{'code':'json_validate_failed',
+            'message':'Failed to generate JSON. PRIVATE_KEY_AND_PROMPT',
+            'failed_generation':'PRIVATE_CONTENT'}})
+    adapter=_adapter(GroqAdapter,GROQ_CONFIG,handler)
+    with pytest.raises(SchemaValidationError,match='provider rejected generated JSON after bounded retries') as error:
+        adapter.complete(LLMRequest(messages=[{'role':'user','content':'json'}],schema=Answer))
+    assert 'PRIVATE' not in str(error.value)
+    assert len(calls)==GROQ_CONFIG.max_retries
+    adapter.close()
+
+
+def test_director_groq_strict_schema_closes_nested_objects(monkeypatch):
+    from pipeline.models import ScriptOutput
+    monkeypatch.setenv('GROQ_STRUCTURED_OUTPUTS','1')
+    adapter=_adapter(GroqAdapter,GROQ_CONFIG,lambda req:httpx.Response(200,json={}))
+    try:
+        payload=adapter._build_payload(LLMRequest(messages=[{'role':'user','content':'json script'}],schema=ScriptOutput))
+        spec=payload['response_format']
+        assert spec['type']=='json_schema' and spec['json_schema']['strict'] is True
+        root=spec['json_schema']['schema']
+        assert root['additionalProperties'] is False
+        assert set(root['required'])==set(root['properties'])
+        section=root['$defs']['ScriptSection']
+        assert section['additionalProperties'] is False
+        assert set(section['required'])==set(section['properties'])
+        assert payload['reasoning_effort']=='low'
+    finally:adapter.close()
+
+
+def test_reviewed_free_gemini_replacement_is_allowed(monkeypatch):
+    from router.policy import require_free_model
+    monkeypatch.setenv('GEMINI_MODEL','gemini-3.1-flash-lite')
+    adapter=_adapter(GeminiAdapter,GEMINI_CONFIG,lambda req:httpx.Response(200,json={}))
+    try:
+        model=adapter._resolve_model(LLMRequest(messages=[]))
+        assert model=='gemini-3.1-flash-lite'
+        require_free_model('gemini',model)
+    finally:adapter.close()

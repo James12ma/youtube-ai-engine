@@ -2,6 +2,11 @@
   "name": "alan7-bot",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test --test-reporter=tap test/worker.test.mjs" },
-  "devDependencies": { "miniflare": "^4.20250927.0", "wrangler": "^4.40.0" }
+  "scripts": {
+    "test": "node --test --test-reporter=tap test/*.test.mjs"
+  },
+  "devDependencies": {
+    "miniflare": "^4.20250927.0",
+    "wrangler": "^4.40.0"
+  }
 }

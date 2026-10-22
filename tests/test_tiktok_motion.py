@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
 import shutil
@@ -57,7 +58,8 @@ class TestRenderSmoke(unittest.TestCase):
 
 
 class TestEngineRouting(unittest.TestCase):
-    def test_visual_director_routes(self):
+    @patch("tiktok_motion.visual_director.available_engines", return_value={"manim":{"available":True},"pillow":{"available":True}})
+    def test_visual_director_routes(self,_status):
         from tiktok_motion.visual_director import choose_engine, route_storyboard
         from tiktok_motion.storyboard import build_demo
         self.assertEqual(choose_engine("statistics"), "manim")
@@ -70,7 +72,7 @@ class TestEngineRouting(unittest.TestCase):
         st = engine_status()
         self.assertIn("manim", st)
         self.assertIn("remotion", st)
-        self.assertTrue(st["manim"]["available"] or True)  # may or may not be installed in CI
+        self.assertIsInstance(st["manim"]["available"], bool)  # may or may not be installed in CI
 
 
 if __name__ == "__main__":

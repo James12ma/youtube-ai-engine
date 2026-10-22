@@ -7,7 +7,7 @@ from __future__ import annotations
 from .errors import BillableModelRejected
 APPROVED = {
     'groq': frozenset({'openai/gpt-oss-120b', 'openai/gpt-oss-20b'}),
-    'gemini': frozenset({'gemini-2.5-flash'}),
+    'gemini': frozenset({'gemini-2.5-flash', 'gemini-3.1-flash-lite'}),
 }
 def is_free_model(provider: str, model: str) -> bool:
     if provider == 'openrouter':

@@ -1,0 +1,102 @@
+name: Alan7 premium motion (exact owner script, private delivery)
+run-name: alan7 ${{ inputs.job_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+      payload:
+        description: Private Telegram source reference and SHA256 only
+        required: true
+      delivery_pubkey:
+        description: Optional owner-session public key for encrypted review copy
+        default: ''
+permissions:
+  contents: write
+concurrency:
+  group: alan7-premium-${{ inputs.job_id }}
+  cancel-in-progress: false
+jobs:
+  premium:
+    if: vars.ZERO_COST_ACTIONS_CONFIRMED == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      CUDA_VISIBLE_DEVICES: ''
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      PYTHONUNBUFFERED: '1'
+      YOUTUBE_UPLOAD_ALLOWED: '0'
+      YOUTUBE_PUBLIC_ALLOWED: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate reference metadata only
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          PREMIUM_PAYLOAD: ${{ inputs.payload }}
+        run: |
+          python - <<'PY'
+          import json,os,re
+          assert re.fullmatch('[0-9a-f]{8}',os.environ['JOB_ID'])
+          p=json.loads(os.environ['PREMIUM_PAYLOAD'])
+          assert p.get('profile') in ('premium','focus3d')
+          assert set(p)<= {'profile','voice','source_sha256','file_id'}
+          if p['profile']=='premium':
+              assert p['voice'] in ('af_heart','am_michael')
+              assert re.fullmatch('[0-9a-f]{64}',p['source_sha256'])
+              assert isinstance(p['file_id'],str) and 1<=len(p['file_id'])<=512
+          PY
+      - name: Free CPU dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg espeak-ng libsndfile1
+          echo "HF_HOME=$RUNNER_TEMP/hf" >> "$GITHUB_ENV"
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchaudio==2.8.0
+          python -m pip install -r requirements-premium.txt
+          cd tiktok_motion/premium/remotion && npm ci --no-audit --no-fund
+          npx --no-install remotion browser ensure
+      - name: Python required by Blender wheel
+        if: fromJSON(inputs.payload).profile == 'focus3d'
+        uses: actions/setup-python@v5
+        id: bpy-runtime
+        with:
+          python-version: '3.13'
+          update-environment: false
+      - name: Isolated Blender runtime for explicit 3D profile
+        if: fromJSON(inputs.payload).profile == 'focus3d'
+        env:
+          BPY_RUNTIME: ${{ steps.bpy-runtime.outputs.python-path }}
+        run: |
+          "$BPY_RUNTIME" -m venv "$RUNNER_TEMP/bpy-env"
+          "$RUNNER_TEMP/bpy-env/bin/python" -m pip install bpy==5.2.2
+          echo "BPY_PYTHON=$RUNNER_TEMP/bpy-env/bin/python" >> "$GITHUB_ENV"
+      - name: Exact script, native English voice, premium render, private Telegram delivery
+        env:
+          TG: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+          OWNER: ${{ secrets.ALAN7_OWNER_ID }}
+          PREMIUM_PAYLOAD: ${{ inputs.payload }}
+        run: python -m scripts.premium_private_job
+      - name: Encrypted owner-session video copy
+        if: success() && inputs.delivery_pubkey != ''
+        uses: ./.github/actions/encrypted-pack
+        with:
+          dir: outputs/premium
+          pubkey_b64: ${{ inputs.delivery_pubkey }}
+          token: ${{ github.token }}
+          label: premium-motion
+      - name: Save metadata evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: premium-report-${{ inputs.job_id }}
+          path: outputs/premium/report.json
+          if-no-files-found: error

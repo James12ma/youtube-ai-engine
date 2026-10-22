@@ -59,7 +59,35 @@ def main(argv=None):
     o.add_argument('--token-file',type=Path,required=True)
     s=sub.add_parser('oauth-status',help='Inspect local OAuth readiness without network calls')
     s.add_argument('--token-file',type=Path,required=True)
+    z=sub.add_parser('seo-review',help='Read-only official YouTube SEO competitor review; no uploads')
+    z.add_argument('--topic',required=True);z.add_argument('--region',default='US')
+    z.add_argument('--mode',choices=('documentary','tutorial'))
+    z.add_argument('--language',default='en');z.add_argument('--max-results',type=int,default=8)
+    z.add_argument('--video-url',default='');z.add_argument('--channel-id',default='')
+    z.add_argument('--snapshot',type=Path);z.add_argument('--live',action='store_true')
+    z.add_argument('--draft',type=Path);z.add_argument('--out',type=Path,required=True)
+    director=sub.add_parser('director-review',help='Combine source-verified script, visuals and SEO observations; no publication')
+    director.add_argument('--draft',type=Path,required=True)
+    director.add_argument('--mode',choices=('tutorial','documentary'),required=True)
+    director.add_argument('--seo-snapshot',type=Path)
+    director.add_argument('--out',type=Path,required=True)
     args=p.parse_args(argv)
+    if args.command=='director-review':
+        from .director import director_cli
+        result=director_cli(args.draft,args.out,args.mode,args.seo_snapshot)
+        print(json.dumps(result,indent=2))
+        return 0
+    if args.command=='seo-review':
+        from .seo_intelligence import main as seo_main
+        opts=['--topic',args.topic,'--region',args.region,'--language',args.language,
+              '--max-results',str(args.max_results),'--out',str(args.out)]
+        if args.mode:opts.extend(['--mode',args.mode])
+        if args.video_url:opts.extend(['--video-url',args.video_url])
+        if args.channel_id:opts.extend(['--channel-id',args.channel_id])
+        if args.snapshot:opts.extend(['--snapshot',str(args.snapshot)])
+        if args.live:opts.append('--live')
+        if args.draft:opts.extend(['--draft',str(args.draft)])
+        return seo_main(opts)
     if args.command=='draft':
         from .research import generate_draft
         result=generate_draft(args.repo,args.topic,args.url,args.out,allow_live=args.allow_free_live_api)

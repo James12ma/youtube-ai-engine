@@ -45,3 +45,7 @@ SOFTWARE.
 [@fontsource/inter-tight](https://fontsource.org/fonts/inter-tight) (Inter Tight, © The Inter Project Authors) and
 [@fontsource/playfair-display](https://fontsource.org/fonts/playfair-display) (Playfair Display, © Claus Eggers Sørensen),
 both licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).
+## Integrated premium motion and native English speech
+- Premium Blender/Remotion sources and OFL fonts are preserved from the existing premium branch.
+- Kokoro-82M model weights: Apache-2.0, https://huggingface.co/hexgrad/Kokoro-82M . Native English af_heart/am_michael are synthetic voices; no person's voice is cloned.
+- Remotion remains subject to its free/company license eligibility. No billable renderer is configured.
