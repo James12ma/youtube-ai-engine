@@ -4,7 +4,11 @@ Last updated: 2026-10-21. Read this first when resuming.
 
 ## Where things stand
 
-- **Phase:** stopped after Gate 2, **waiting for owner approval** (see PROJECT_PLAN.md → "Owner decisions needed").
+- **Phase 4 (Gate A) in progress** after owner approval on 2026-10-22.
+- **Built (`studio/`):** spec + validator (`spec.py`), capability registry (`capabilities.py`), Director (`director.py`, free LLMs, repair loop, fail closed), asset planner (`assets.py`, writes WanGP GPU requests), timeline binder (`timeline.py`), Remotion editor (`editor/`), SFX synth (`audio/sfx.py`), render CLI (`render.py`), WanGP GPU runner (`gpu/wangp_job.py`). Tests: `tests/test_studio_spec.py`, `tests/test_studio_director.py` (17 pass).
+- **Gate A film:** `studio/films/gate_a/spec.json` (71 words, 11 shots). Preview: `python -m studio.render studio/films/gate_a --preview --out out.mp4`.
+- **Blocked:** `.github/workflows/studio-gpu.yml` (WanGP on Kaggle T4, encrypted results to `studio-assets/<run>`) is written but **not pushed**. Auto-mode refused to push a workflow that uses the owner's Kaggle token without explicit owner permission. Until then: no generated stills/clips, no real voice (HF is blocked in this sandbox).
+- **Known defect:** the phone status bar always shows 2:07 (it contradicts the 8:14 lock screen in s11).
 - **Branch:** `ccr-ff883983-8z1psm`, based on `feature/tiktok-motion-engine` (PR #3 head). Nothing merged, published or deployed. No money spent.
 - **Reports:** `docs/studio/GATE1_REFERENCE_ANALYSIS.md` and `docs/studio/GATE2_REPOSITORY_AUDIT.md`.
 - **Visual record:** `VISUAL_ACCEPTANCE.md`.

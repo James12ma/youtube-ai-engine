@@ -10,8 +10,8 @@ Budget: **$0 additional**. Publication, merging, deployment and spending all nee
 | 0 | Inputs and access | **Done.** Gaps: only 1 reference video supplied; earlier outputs from other sessions are encrypted or Telegram-only; no ASR models reachable in this sandbox. |
 | 1 | Reference analysis | **Done**: [`docs/studio/GATE1_REFERENCE_ANALYSIS.md`](docs/studio/GATE1_REFERENCE_ANALYSIS.md) |
 | 2 | Repository audit + architecture | **Done**: [`docs/studio/GATE2_REPOSITORY_AUDIT.md`](docs/studio/GATE2_REPOSITORY_AUDIT.md). Recommends **Option A (Deep Reconstruction)**. |
-| — | **Owner approval of the audit, architecture and plan** | **WAITING.** No reconstruction until approved. |
-| A | Cinematic visual quality MP4 (15–30 s, narrated) | Not started. Owner acceptance required. |
+| — | Owner approval of the audit, architecture and plan | **Approved 2026-10-22** ("full access": build the complete system; references are the quality bar, not to be copied). WanGP chosen as the generation engine. |
+| A | Cinematic visual quality MP4 (15–30 s, narrated) | **In progress.** Spec, registry, director, editor, asset planner done; preview renders end to end. **Blocked:** GPU workflow (WanGP stills/clips, voice) needs owner permission to push. |
 | B | Real screen tutorial MP4 | Not started. Owner acceptance required. |
 | C | Documentary segment MP4 | Not started. Owner acceptance required. |
 | D | Telegram → MP4 end to end | Not started. Owner readiness acceptance required. |

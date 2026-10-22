@@ -239,6 +239,13 @@ const IncomingCall: React.FC<{s: Screen; accent: string}> = ({s, accent}) => {
   );
 };
 
+const LockScreen: React.FC = () => (
+  <AbsoluteFill style={{background: 'linear-gradient(180deg,#26313b,#11171d)', alignItems: 'center', fontFamily: FONT, color: '#fff'}}>
+    <div style={{marginTop: 150, fontSize: 30, opacity: 0.7}}>Tuesday</div>
+    <div style={{fontSize: 170, fontWeight: 500, letterSpacing: '-0.05em', lineHeight: 1}}>8:14</div>
+  </AbsoluteFill>
+);
+
 /* ---------- devices ---------- */
 
 const Phone: React.FC<{children: React.ReactNode; tilt: number}> = ({children, tilt}) => (
@@ -283,7 +290,9 @@ export const UIFlow: React.FC<ShotProps> = ({shot, local, duration}) => {
   const enter = tween(f, [0, 16], [0, 1], EASE_OUT);
   const tilt = (1 - enter) * 14 + Math.sin(f / 40) * 2.2 - 3;
   const isPhone = p.device !== 'laptop';
+  const waiting = (screens[0].at_frame ?? 0) > f + 3; // before the first screen's moment: idle device
   const render = (s: Screen, pressAt?: number) => {
+    if (waiting && s === screens[0]) return <LockScreen />;
     switch (s.kind) {
       case 'listing': return <Listing s={s} accent={accent} tapAt={pressAt} />;
       case 'form': return <Form s={s} accent={accent} tapAt={pressAt} />;
