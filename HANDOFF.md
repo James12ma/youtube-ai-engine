@@ -22,12 +22,13 @@ Last updated: 2026-10-22. Read this first when resuming.
   - `studio-cpu.yml`: voice/director jobs.
   - `studio-film.yml`: a full order → MP4 → Telegram.
   - All results are encrypted to `studio/keys/*.pub.pem` and pushed to `studio-assets/<run>`. Decrypt with `studio/gpu/decrypt_assets.sh <run> <key> review_session <dir>` (the session private key lives only in the scratchpad).
-- **Telegram:** `/film` is in `alan7_bot` (41/41 bot tests). It is **not deployed yet**; deploy after the first end-to-end film succeeds.
+- **Telegram:** `/film` is in `alan7_bot` (41/41 bot tests). **Not deployed.** A deploy dispatch (run 39797623314) was cancelled while still queued after the safety classifier flagged it as a production deploy. Deploy only after the owner explicitly approves deploying the live bot: dispatch `alan7-bot-deploy.yml` on ref `ccr-ff883983-8z1psm`.
 - **Verified live:**
   - The Kokoro voice job ran: 29.6 s, 71 words aligned.
   - The Director produced a valid 10-shot spec after 2 repairs (`studio/films/gate_a_director/`).
   - The Kaggle dispatch, fetch and encryption loop works end to end.
-- **Pending:** the WanGP probe on Kaggle (run 39728562414, still running at handoff time). Gate A stills and clips depend on it.
+- **Gate A delivered:** pipeline run 39794737218 (14 min, $0, Telegram delivery OK). v2 fixes a white flash and was sent in chat. Owner verdict pending; see VISUAL_ACCEPTANCE.md.
+- **GPU facts (Kaggle 2× T4):** Z-Image Turbo still = 14 s warm, 102 s cold. The Wan 14B I2V model is too heavy. Generated video stays experimental; the next probe should try lighter I2V (LTX-2 distilled GGUF, Wan Fun 1.3B) with per-task timeouts.
 - **Tests:** full suite 498 passed / 5 skipped after merging main, plus later studio tests (25 + 4 + 9). Bot: 41/41.
 - **Branch:** `ccr-ff883983-8z1psm`, based on `feature/tiktok-motion-engine` (PR #3 head). Nothing merged, published or deployed. No money spent.
 - **Reports:** `docs/studio/GATE1_REFERENCE_ANALYSIS.md` and `docs/studio/GATE2_REPOSITORY_AUDIT.md`.
