@@ -193,38 +193,58 @@ def _unshown_events(analysis: dict, spec: FilmSpec) -> list[str]:
 
 # ---------------------------------------------------------------- free providers (no SDKs)
 
-PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model) - models main uses live, strongest first
-    ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash"),
-    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"),
+PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model), strongest first. Re-check names when a
+    # provider answers 404 "no longer available" (the error body names the replacement).
+    ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.8-flash"),
     ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.1-flash-lite"),
+    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"),
+    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-20b"),
     ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "google/gemma-4-26b-a4b-it:free"),
 ]
+RETRYABLE = {429, 500, 502, 503, 504}
 
 
-def free_llm(timeout: float = 240) -> LLM:
+def free_llm(timeout: float = 240, rounds: int = 4, sleep=None) -> LLM:
+    import time
+
+    sleep = sleep or time.sleep
     available = [(k, u, m) for k, u, m in PROVIDERS if os.environ.get(k)]
     if not available:
         raise RuntimeError("no free LLM key in env (GEMINI_API_KEY / GROQ_API_KEY / OPENROUTER_API_KEY)")
+    dead: set[str] = set()  # models that answered 404/400 (gone or unsupported) are skipped afterwards
 
     def call(system: str, user: str) -> str:
         errors = []
-        for key, base, model in available:
-            body = json.dumps({"model": model, "temperature": 0.4, "response_format": {"type": "json_object"},
-                               "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}).encode()
-            req = urllib.request.Request(base + "/chat/completions", data=body, method="POST", headers={
-                "Authorization": f"Bearer {os.environ[key]}", "Content-Type": "application/json",
-                "User-Agent": "youtube-ai-engine-studio/1.0"})
-            try:
-                with urllib.request.urlopen(req, timeout=timeout) as r:
-                    content = json.loads(r.read())["choices"][0]["message"]["content"]
-                print(f"[llm] {model} answered ({len(content)} chars)", flush=True)
-                return content
-            except urllib.error.HTTPError as e:
-                detail = e.read()[:300].decode("utf-8", "replace").replace(os.environ[key], "***")
-                errors.append(f"{model}: HTTP {e.code} {detail}")
-            except (urllib.error.URLError, KeyError, json.JSONDecodeError, TimeoutError) as e:
-                errors.append(f"{model}: {type(e).__name__}")
-        raise RuntimeError("all free providers failed: " + " | ".join(errors))
+        for rnd in range(rounds):
+            wait = 0.0
+            for key, base, model in available:
+                if model in dead:
+                    continue
+                body = json.dumps({"model": model, "temperature": 0.4, "response_format": {"type": "json_object"},
+                                   "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}).encode()
+                req = urllib.request.Request(base + "/chat/completions", data=body, method="POST", headers={
+                    "Authorization": f"Bearer {os.environ[key]}", "Content-Type": "application/json",
+                    "User-Agent": "youtube-ai-engine-studio/1.0"})
+                try:
+                    with urllib.request.urlopen(req, timeout=timeout) as r:
+                        content = json.loads(r.read())["choices"][0]["message"]["content"]
+                    print(f"[llm] {model} answered ({len(content)} chars)", flush=True)
+                    return content
+                except urllib.error.HTTPError as e:
+                    detail = e.read()[:240].decode("utf-8", "replace").replace(os.environ[key], "***")
+                    errors.append(f"r{rnd} {model}: HTTP {e.code} {detail}")
+                    if e.code in RETRYABLE:
+                        ra = e.headers.get("Retry-After") if e.headers else None
+                        wait = max(wait, float(ra) if ra and ra.replace(".", "", 1).isdigit() else 20.0)
+                    elif e.code in (400, 404):
+                        dead.add(model)
+                except (urllib.error.URLError, KeyError, json.JSONDecodeError, TimeoutError) as e:
+                    errors.append(f"r{rnd} {model}: {type(e).__name__}")
+                    wait = max(wait, 10.0)
+            if rnd + 1 < rounds and wait:
+                print(f"[llm] all busy; retrying in {min(wait, 90):.0f}s", flush=True)
+                sleep(min(wait, 90))
+        raise RuntimeError("all free providers failed: " + " | ".join(errors[-6:]))
 
     return call
 

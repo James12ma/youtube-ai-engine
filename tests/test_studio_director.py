@@ -90,3 +90,32 @@ class DirectorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FreeLLMTests(unittest.TestCase):
+    def test_retries_busy_providers_and_skips_dead_models(self):
+        import io
+        import os
+        import urllib.error
+        from unittest import mock
+
+        from studio import director
+
+        answers = iter([404, 503, 503, 503, 503, "ok"])
+        seen = []
+
+        def fake_urlopen(req, timeout=0):
+            model = json.loads(req.data)["model"]
+            seen.append(model)
+            a = next(answers)
+            if a == "ok":
+                return mock.MagicMock(__enter__=lambda s: io.BytesIO(json.dumps({"choices": [{"message": {"content": "{}"}}]}).encode()),
+                                      __exit__=lambda *a: False)
+            raise urllib.error.HTTPError(req.full_url, a, "x", {}, io.BytesIO(b"busy"))
+
+        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "k", "GROQ_API_KEY": "k"}, clear=False), \
+             mock.patch.object(director.urllib.request, "urlopen", fake_urlopen):
+            llm = director.free_llm(sleep=lambda s: None)
+            self.assertEqual(llm("s", "u"), "{}")
+        self.assertEqual(seen[0], "gemini-3.8-flash")
+        self.assertNotIn("gemini-3.8-flash", seen[1:])  # 404 = gone, not retried
