@@ -74,10 +74,12 @@ const Listing: React.FC<{s: Screen; accent: string; tapAt?: number}> = ({s, acce
   const card = pop(f, (s.at_frame ?? 0) + 2, 16, 1.2);
   return (
     <div style={{padding: '40px 34px', fontFamily: FONT}}>
-      <div style={{fontWeight: 800, fontSize: 52, letterSpacing: '-0.04em', color: INK}}>Jobs</div>
-      <div style={{marginTop: 18, height: 70, borderRadius: 20, background: '#f0f1f4', display: 'flex', alignItems: 'center', padding: '0 24px', color: '#8a8d96', fontSize: 28}}>
-        🔍&nbsp; design · remote
-      </div>
+      {s.heading ? <div style={{fontWeight: 800, fontSize: 52, letterSpacing: '-0.04em', color: INK}}>{s.heading}</div> : null}
+      {s.subheading ? (
+        <div style={{marginTop: 18, height: 70, borderRadius: 20, background: '#f0f1f4', display: 'flex', alignItems: 'center', padding: '0 24px', color: '#8a8d96', fontSize: 28}}>
+          🔍&nbsp; {s.subheading}
+        </div>
+      ) : null}
       {[0, 1].map((k) => (
         <div key={k} style={{marginTop: 22, height: 120, borderRadius: 24, background: '#f6f7f9', opacity: 0.6}} />
       ))}
@@ -103,8 +105,8 @@ const Form: React.FC<{s: Screen; accent: string; tapAt?: number}> = ({s, accent,
   const f = useCurrentFrame();
   return (
     <div style={{padding: '40px 34px', fontFamily: FONT}}>
-      <div style={{fontWeight: 800, fontSize: 44, letterSpacing: '-0.04em', color: INK}}>Apply</div>
-      <div style={{fontSize: 24, color: '#6b6e78', marginTop: 4}}>Product Designer · Northwind Studio</div>
+      <div style={{fontWeight: 800, fontSize: 44, letterSpacing: '-0.04em', color: INK}}>{s.heading || s.title}</div>
+      {s.subheading ? <div style={{fontSize: 24, color: '#6b6e78', marginTop: 4}}>{s.subheading}</div> : null}
       {(s.fields ?? []).map((fld: Screen, k: number) => {
         const start: number | undefined = fld.at_frame;
         const active = start !== undefined && f >= start - 2 && f < start + fld.value.length / 2.4 + 14;
@@ -143,26 +145,26 @@ const Confirm: React.FC<{s: Screen}> = ({s}) => {
             pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} />
         </svg>
       </div>
-      <div style={{marginTop: 46, fontSize: 84, fontWeight: 800, letterSpacing: '-0.05em', color: INK, opacity: tween(f, [at + 6, at + 14], [0, 1])}}>{s.title}</div>
-      <div style={{marginTop: 8, fontSize: 32, color: '#6b6e78', opacity: tween(f, [at + 10, at + 18], [0, 1])}}>{s.body}</div>
+      <div style={{marginTop: 46, fontSize: 84, fontWeight: 800, letterSpacing: '-0.05em', color: INK, opacity: tween(f, [at + 6, at + 14], [0, 1])}}>{s.title || s.body}</div>
+      {s.title ? <div style={{marginTop: 8, fontSize: 32, color: '#6b6e78', opacity: tween(f, [at + 10, at + 18], [0, 1])}}>{s.body}</div> : null}
     </AbsoluteFill>
   );
 };
 
-const Inbox: React.FC<{s: Screen; accent: string}> = ({s, accent}) => {
+const Inbox: React.FC<{s: Screen; accent: string; app: string}> = ({s, accent, app}) => {
   const f = useCurrentFrame();
   const arrive = s.arrive_frame ?? s.at_frame ?? 0;
   const rows: Screen[] = s.rows ?? [];
   return (
     <div style={{display: 'flex', height: '100%', fontFamily: FONT}}>
       <div style={{width: 210, background: '#f3f4f6', padding: 22}}>
-        <div style={{fontWeight: 800, fontSize: 24, color: INK}}>Northwind</div>
-        {['Inbox', 'Interviews', 'Offers'].map((x, k) => (
+        <div style={{fontWeight: 800, fontSize: 24, color: INK}}>{app}</div>
+        {((s.nav ?? []).length ? s.nav : ['Inbox']).map((x: string, k: number) => (
           <div key={x} style={{marginTop: 18, fontSize: 19, fontWeight: k ? 500 : 700, color: k ? '#6b6e78' : accent}}>{x}</div>
         ))}
       </div>
       <div style={{flex: 1, padding: '22px 26px'}}>
-        <div style={{fontWeight: 800, fontSize: 30, color: INK, letterSpacing: '-0.03em'}}>Applications</div>
+        <div style={{fontWeight: 800, fontSize: 30, color: INK, letterSpacing: '-0.03em'}}>{s.heading || s.title || 'Inbox'}</div>
         {rows.map((r, k) => {
           const isNew = r.new;
           const t = isNew ? pop(f, arrive, 14, 1.3) : 1;
@@ -195,9 +197,10 @@ const Detail: React.FC<{s: Screen; accent: string}> = ({s, accent}) => {
   return (
     <div style={{padding: '26px 34px', fontFamily: FONT, transform: `translateY(${tween(f, [at, at + 12], [40, 0])}px)`, opacity: tween(f, [at, at + 8], [0, 1])}}>
       <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
-        <div style={{width: 58, height: 58, borderRadius: '50%', background: accent, color: '#fff', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>M</div>
+        <div style={{width: 58, height: 58, borderRadius: '50%', background: accent, color: '#fff', fontWeight: 800, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{String(s.title || s.body || '·')[0]}</div>
         <div style={{fontWeight: 800, fontSize: 32, color: INK, letterSpacing: '-0.03em'}}>{s.title}</div>
       </div>
+      {s.body ? <div style={{marginTop: 34, fontSize: 56, fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.04em', color: INK}}>{s.body}</div> : null}
       {(s.fields ?? []).map((fld: Screen, k: number) => {
         const sweep = fld.highlight && hl !== undefined ? tween(f, [hl, hl + 18], [0, 100], EASE_IN_OUT) : 0;
         return (
@@ -299,7 +302,7 @@ export const UIFlow: React.FC<ShotProps> = ({shot, local, duration}) => {
       case 'listing': return <Listing s={s} accent={accent} tapAt={pressAt} />;
       case 'form': return <Form s={s} accent={accent} tapAt={pressAt} />;
       case 'confirm': return <Confirm s={s} />;
-      case 'inbox': return <Inbox s={s} accent={accent} />;
+      case 'inbox': return <Inbox s={s} accent={accent} app={p.app_name ?? ''} />;
       case 'detail': return <Detail s={s} accent={accent} />;
       case 'incoming_call': return <IncomingCall s={s} accent={accent} />;
       default: return null;

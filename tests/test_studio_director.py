@@ -6,7 +6,7 @@ from pathlib import Path
 
 from studio.assets import gpu_request
 from studio.director import DirectorFailed, direct
-from studio.spec import FilmSpec
+from studio.spec import FilmSpec, tokenize
 
 GATE_A = json.loads((Path(__file__).resolve().parents[1] / "studio/films/gate_a/spec.json").read_text())
 ANALYSIS = {"entities": {}, "events": [{"word": 30, "action": "presses Submit"}, {"word": 43, "action": "arrives"}]}
@@ -73,6 +73,15 @@ class DirectorTests(unittest.TestCase):
         self.assertEqual(llm.prompts[2], llm.prompts[1])  # re-planned from the analysis, not a repair of the stub
         self.assertEqual({k: e.kind for k, e in spec.entities.items()},
                          {k: e["kind"] for k, e in GATE_A["entities"].items()})
+
+    def test_filler_words_lose_emphasis(self):
+        plan = copy.deepcopy(GATE_A)
+        words = tokenize(GATE_A["narration"]["text"])
+        k, filler = next((k, i) for k, sh in enumerate(plan["shots"]) for i in range(sh["words"][0], sh["words"][1] + 1)
+                         if words[i].lower() in ("the", "to", "a"))
+        plan["shots"][k]["text"]["emphasis"] = [filler]
+        spec = direct(GATE_A["narration"]["text"], llm=Scripted(ANALYSIS, plan), film_id="t", log=lambda m: None)
+        self.assertEqual(spec.shots[k].text.emphasis, [])
 
     def test_malformed_shots_go_to_repair_not_crash(self):
         bad = copy.deepcopy(GATE_A)

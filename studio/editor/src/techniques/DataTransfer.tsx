@@ -96,7 +96,7 @@ export const DataTransfer: React.FC<ShotProps> = ({shot, local, duration}) => {
             fontFamily: 'InterTight', display: 'flex', flexDirection: 'column', gap: 12}}>
             <div style={{fontWeight: 800, fontSize: 24, color: '#0f9d76'}}>{p.packet_label}</div>
             {[90, 70, 84, 60].map((w, k) => <div key={k} style={{height: 12, width: `${w}%`, borderRadius: 6, background: k === 3 ? '#ffd60a' : '#e3e5e9'}} />)}
-            <div style={{marginTop: 'auto', fontWeight: 700, fontSize: 18, color: '#6b6e78'}}>Maya Rivera</div>
+            {p.packet_note ? <div style={{marginTop: 'auto', fontWeight: 700, fontSize: 18, color: '#6b6e78'}}>{p.packet_note}</div> : null}
           </div>
           {/* motion trail */}
           <div style={{position: 'absolute', left: -120, top: 100, width: 140, height: 60, background: 'linear-gradient(90deg, rgba(15,157,118,0), rgba(15,157,118,0.35))',

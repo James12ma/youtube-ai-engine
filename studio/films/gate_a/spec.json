@@ -116,7 +116,9 @@
       "title": "Product Designer",
       "company": "Northwind Studio",
       "meta": "Full-time · Remote",
-      "cta": "Apply"
+      "cta": "Apply",
+      "heading": "Jobs",
+      "subheading": "design · remote"
      }
     ],
     "clock": "2:07"
@@ -249,7 +251,9 @@
         "highlight": true
        }
       ],
-      "cta": "Submit"
+      "cta": "Submit",
+      "heading": "Apply",
+      "subheading": "Product Designer · Northwind Studio"
      }
     ],
     "clock": "2:07"
@@ -341,7 +345,9 @@
         "value": "I want to build things people actually use.",
         "highlight": true
        }
-      ]
+      ],
+      "heading": "Apply",
+      "subheading": "Product Designer · Northwind Studio"
      },
      {
       "kind": "confirm",
@@ -417,7 +423,8 @@
     "receiver_label": "Northwind Studio",
     "path": "city",
     "depart_word": 37,
-    "arrive_word": 43
+    "arrive_word": 43,
+    "packet_note": "Maya Rivera"
    },
    "entities": [
     "application",
@@ -506,6 +513,12 @@
         "role": "Front-end",
         "tag": "Reviewed"
        }
+      ],
+      "heading": "Applications",
+      "nav": [
+       "Inbox",
+       "Interviews",
+       "Offers"
       ]
      }
     ]

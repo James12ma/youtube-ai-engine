@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 
 class _P(BaseModel):
@@ -47,17 +47,29 @@ class UIScreenSpec(_P):
     """One screen of a device. Only these kinds render; fields not listed here are rejected."""
     kind: Literal["listing", "form", "confirm", "inbox", "detail", "incoming_call"]
     at_word: int | None = Field(None, description="Word where this screen appears")
+    heading: str = Field("", description="listing/form/inbox: large header at the top of the screen")
+    subheading: str = Field("", description="listing: search text; form: line under the header")
     title: str = ""
     company: str = Field("", description="listing: company name")
     meta: str = Field("", description="listing: one line under the title")
     cta: str = Field("", description="listing/form: button label")
     tap_cta_word: int | None = Field(None, description="form/listing: word where the button is pressed")
-    body: str = Field("", description="confirm: line under the title")
+    body: str = Field("", description="confirm/detail: the main message line")
     fields: list[UIField] = Field(default_factory=list, description="form/detail: labelled values")
     rows: list[UIRow] = Field(default_factory=list, description="inbox: list rows")
     arrive_word: int | None = Field(None, description="inbox: word where the new row lands")
     highlight_word: int | None = Field(None, description="detail: word where the highlighted field is marked")
     caller: str = Field("", description="incoming_call: caller name")
+    nav: list[str] = Field(default_factory=list, description="inbox: sidebar items")
+
+    @model_validator(mode="after")
+    def _shows_something(self):
+        # A screen with nothing to draw renders as a blank white phone (tap_card run 39812806136).
+        need = {"listing": self.title, "form": self.fields, "confirm": self.title or self.body, "inbox": self.rows,
+                "detail": self.title or self.body or self.fields, "incoming_call": True}[self.kind]
+        if not need:
+            raise ValueError(f"{self.kind} screen has nothing to show (see the field descriptions)")
+        return self
 
 
 class UIFlowParams(_P):
@@ -76,6 +88,7 @@ class DataTransferParams(_P):
     """An object leaves a sender and arrives at a receiver; the arrival is the visible cause of the next shot."""
     packet: Literal["document", "message", "money", "photo"] = "document"
     packet_label: str = ""
+    packet_note: str = Field("", description="Small line at the bottom of the packet (e.g. sender name)")
     sender_label: str
     receiver_label: str
     path: Literal["arc", "city", "network"] = "city"

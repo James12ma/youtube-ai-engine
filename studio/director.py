@@ -33,8 +33,11 @@ Non-negotiable rules:
 3. Two worlds alternate: "story" = photoreal stills or clips of people, places and emotion (the human
    side, the problem, time and place); "explain" = a clean paper-white world with UI, data and type
    (the mechanism, the insight). Cut from one world to the other where the narration turns.
-4. Interactions with software or devices (find, tap, type, submit, receive, open, read, call) use
-   ui_flow with screens whose at_word / field at_word land on the words that name them.
+4. A person using an app on a phone or laptop (find, tap, type, submit, receive, open, read, call)
+   uses ui_flow with screens whose at_word / field at_word land on the words that name them, and every
+   screen has its visible text filled in. Physical objects and machines (cards, chips, terminals,
+   counters, keys, packages) are NOT phone apps: show them with still_2_5d close-ups (macro photo of
+   the object doing the narrated thing) instead.
 5. Something travelling between two parties (a message, a file, money, an application) uses
    data_transfer with depart_word and arrive_word on the narrated words.
 6. People, places and emotions use still_2_5d (or clip for real motion). Each still/clip needs an
@@ -144,6 +147,7 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
         raw.setdefault("narration", {})["text"] = text
         raw["narration"]["language"] = language
         raw["format"] = {"width": width, "height": height, "fps": 30}
+        _drop_filler_emphasis(raw, words)
         _keyed(raw, "entities")
         _keyed(raw, "assets")
         _inherit_entities(analysis, raw)
@@ -183,6 +187,19 @@ def _keyed(raw: dict, field: str) -> None:
     v = raw.get(field)
     if isinstance(v, list) and all(isinstance(x, dict) and (x.get("id") or x.get("name")) for x in v):
         raw[field] = {str(x.get("id") or x.get("name")): {k: y for k, y in x.items() if k != "id"} for x in v}
+
+
+FILLER = {"a", "an", "the", "to", "of", "in", "on", "at", "for", "and", "or", "but", "is", "are", "was", "it",
+          "its", "her", "his", "their", "she", "he", "they", "this", "that", "with", "from", "by", "as", "be"}
+
+
+def _drop_filler_emphasis(raw: dict, words: list[str]) -> None:
+    """Emphasis is for meaning-carrying words; a big "TO" or "HER" reads as a mistake."""
+    for shot in raw.get("shots") or []:
+        t = shot.get("text") if isinstance(shot, dict) else None
+        if isinstance(t, dict) and isinstance(t.get("emphasis"), list):
+            t["emphasis"] = [i for i in t["emphasis"] if not (isinstance(i, int) and 0 <= i < len(words)
+                             and words[i].lower().strip(".,!?;:'\"") in FILLER)]
 
 
 def _has_shots(raw: dict) -> bool:

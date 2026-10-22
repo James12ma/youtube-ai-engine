@@ -145,7 +145,8 @@
         "label": "Full Name",
         "value": "Maya Chen"
        }
-      ]
+      ],
+      "heading": "Application Form"
      }
     ]
    },
@@ -239,7 +240,8 @@
         "at_word": 25,
         "highlight": true
        }
-      ]
+      ],
+      "heading": "Application Form"
      }
     ]
    },
@@ -354,7 +356,8 @@
         "value": "I want to build software that actually helps people.",
         "highlight": true
        }
-      ]
+      ],
+      "heading": "Apply"
      },
      {
       "kind": "confirm",
@@ -452,7 +455,8 @@
     "receiver_label": "Studio ATS",
     "path": "city",
     "depart_word": 39,
-    "arrive_word": 42
+    "arrive_word": 42,
+    "packet_note": "Maya Chen"
    },
    "beats": [
     {
@@ -542,6 +546,11 @@
         "role": "UX Researcher",
         "tag": "2d ago"
        }
+      ],
+      "nav": [
+       "Inbox",
+       "Interviews",
+       "Offers"
       ]
      }
     ]

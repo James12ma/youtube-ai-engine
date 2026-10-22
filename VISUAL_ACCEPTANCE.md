@@ -10,6 +10,7 @@ MP4 files are not stored in git (`*.mp4` is ignored repo-wide); each entry lists
 | P1-gate-a-preview | 2026-10-22 | Gate A preview (not a candidate) | Sent to owner. Explain-world shots only; story shots show ASSET PENDING; no voice; estimated timing. |
 | A1-gate-a-v1 | 2026-10-22 | **Gate A candidate** | Delivered to owner's Telegram by the pipeline (run 39794737218). Superseded by A1-v2 (white flash fixed). |
 | A1-gate-a-v2 | 2026-10-22 | **Gate A candidate** | **Awaiting owner verdict.** Sent in chat. |
+| T1-tap-card-v1 | 2026-10-22 | Owner's own script (first full AI-directed film) | Delivered to owner's Telegram by the pipeline (run 39812806136). **My review: below the Gate A bar** (see below). v2 queued. |
 
 ---
 
@@ -82,4 +83,24 @@ The owner's verdicts on them, if any, should be added here.
   - Story stills move only with camera (2.5D). Generated video is not used, because Wan 14B is too heavy for the free T4.
   - Laptop UI text is small on a phone screen even with the push-in.
   - There is no music bed yet (SFX only).
+- **Owner verdict:** pending.
+
+---
+
+## T1 — "What Happens When You Tap Your Card" (owner script; Director = free LLM, no hand edits)
+
+- **Produced by:** `studio-film.yml` run 39812806136 (order `studio/orders/tap_card.json`, attempt 5). Earlier attempts 3–4 failed in the Director (free LLM saturation, a stub answer outranking a real plan); fixed in `studio/director.py`.
+  - Timings: Director 16 min (provider retries), voice 36 s, Kaggle stills 8 min, render 3.5 min. $0.
+- **Inspector:** no technical defects. 37.9 s, 1080×1920, −14.3 LUFS, −2.0 dBTP, 11 beats placed. SHA256 prefix `123262e05678cb4a`.
+- **My visual review (not acceptable as a premium result):**
+  1. The Director used the phone-UI technique for the card chip and the terminal. Phones sat blank or locked for about 10 s (3–12 s, 30 s).
+  2. `detail`/`confirm` screens with only a body line rendered almost empty (renderer drew no body).
+  3. The data packet showed "Maya Rivera", a Gate A string hard-coded in the renderer. Other Gate A strings ("Jobs", "Apply · Northwind", inbox sidebar) were also hard-coded.
+  4. Kinetic emphasis landed on filler words ("TO").
+  5. "The bank checks three things" became a lone black dot (dots_subtract misused).
+  - Good: both Lena stills (tap at the counter, coffee smile) are photoreal and consistent. Voice and timing are clean.
+- **Fixes (v2):**
+  - Renderer: all screen text comes from the spec; detail draws its body; the packet note is a parameter.
+  - Validator: a screen with nothing to show is rejected.
+  - Director: phone UI only for a person using an app; physical objects get still close-ups; filler emphasis is removed.
 - **Owner verdict:** pending.
