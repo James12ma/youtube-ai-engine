@@ -16,7 +16,6 @@ Request format:
 request can chain still -> image-to-video. Every task records duration, peak VRAM and its error;
 one failed task never stops the rest. WanGP is used under the WanGP Community License.
 """
-from __future__ import annotations
 
 import json
 import os

@@ -52,5 +52,5 @@
    }
   }
  ],
- "launched": "2026-10-22 first run"
+ "launched": "2026-10-22 run 2 (fix: request prefix before __future__)"
 }
