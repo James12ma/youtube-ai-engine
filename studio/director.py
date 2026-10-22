@@ -98,6 +98,16 @@ class LLM(Protocol):
     def __call__(self, system: str, user: str) -> str: ...
 
 
+def _compact(schema):
+    """JSON schema without titles/descriptions/defaults: the field names already speak, and the free
+    tiers cap prompts (Groq gpt-oss: 8000 tokens per minute)."""
+    if isinstance(schema, dict):
+        return {k: _compact(v) for k, v in schema.items() if k not in ("title", "description", "default", "examples")}
+    if isinstance(schema, list):
+        return [_compact(v) for v in schema]
+    return schema
+
+
 def _json(text: str) -> dict:
     text = text.strip()
     fence = re.search(r"```(?:json)?\s*(.*?)```", text, re.S)
@@ -119,8 +129,11 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
     numbered = " ".join(f"{i}:{w}" for i, w in enumerate(words))
     analysis = _json(llm(GRAMMAR, STAGE1 + numbered))
     log(f"stage 1: {len(analysis.get('entities', {}))} entities, {len(analysis.get('events', []))} events")
-    schema = json.dumps(FilmSpec.model_json_schema(), separators=(",", ":"))
-    catalog = json.dumps(catalog_for_director(), separators=(",", ":"))
+    schema = json.dumps(_compact(FilmSpec.model_json_schema()), separators=(",", ":"))
+    catalog = json.dumps([{k: (_compact(v) if k == "params_schema" else v) for k, v in c.items()}
+                          for c in catalog_for_director() if c["available"]], separators=(",", ":"))
+    gaps = [c["technique"] for c in catalog_for_director() if not c["available"]]
+    catalog += f' (NOT available, report as capability_gaps if needed: {", ".join(gaps)})'
     user = STAGE2.format(schema=schema, catalog=catalog, analysis=json.dumps(analysis), film_id=film_id, example=EXAMPLE,
                          title=title or film_id, width=width, height=height, lang=language, text=text, words=numbered)
     raw = _json(llm(GRAMMAR, user))
@@ -205,7 +218,7 @@ PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model), strongest fi
 RETRYABLE = {429, 500, 502, 503, 504}
 
 
-def free_llm(timeout: float = 240, rounds: int = 4, sleep=None) -> LLM:
+def free_llm(timeout: float = 240, rounds: int = 8, sleep=None) -> LLM:
     import time
 
     sleep = sleep or time.sleep
@@ -243,8 +256,9 @@ def free_llm(timeout: float = 240, rounds: int = 4, sleep=None) -> LLM:
                     errors.append(f"r{rnd} {model}: {type(e).__name__}")
                     wait = max(wait, 10.0)
             if rnd + 1 < rounds and wait:
-                print(f"[llm] all busy; retrying in {min(wait, 90):.0f}s", flush=True)
-                sleep(min(wait, 90))
+                pause = min(max(wait, 20.0 * (rnd + 1)), 90)  # demand spikes last minutes, not seconds
+                print(f"[llm] all busy; retrying in {pause:.0f}s", flush=True)
+                sleep(pause)
         raise RuntimeError("all free providers failed: " + " | ".join(errors[-6:]))
 
     return call
