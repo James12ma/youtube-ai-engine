@@ -144,6 +144,8 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
         raw.setdefault("narration", {})["text"] = text
         raw["narration"]["language"] = language
         raw["format"] = {"width": width, "height": height, "fps": 30}
+        _keyed(raw, "entities")
+        _keyed(raw, "assets")
         merge_events(analysis, raw)
         try:
             spec = FilmSpec(**raw)
@@ -169,18 +171,29 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
     raise AssertionError("unreachable")
 
 
+def _keyed(raw: dict, field: str) -> None:
+    """LLMs sometimes send a keyed map as a list of objects; key it by its id/name so the rest of the
+    plan (shots referencing those keys) still validates. Anything else is left for validation to report."""
+    v = raw.get(field)
+    if isinstance(v, list) and all(isinstance(x, dict) and (x.get("id") or x.get("name")) for x in v):
+        raw[field] = {str(x.get("id") or x.get("name")): {k: y for k, y in x.items() if k != "id"} for x in v}
+
+
 def merge_events(analysis: dict, raw: dict) -> int:
     """Write stage-1 events the planner forgot into the shot that covers their word (no invention:
     action, actor, object and state change all come from the story analysis). Returns how many."""
-    entities = set((raw.get("entities") or {}).keys())
+    ents = raw.get("entities")
+    entities = set(ents.keys()) if isinstance(ents, dict) else set()
     added = 0
     for ev in analysis.get("events", []):
         w = ev.get("word")
         if not isinstance(w, int):
             continue
-        for shot in raw.get("shots") or []:
-            rng = shot.get("words") or [0, -1]
-            if not rng[0] <= w <= rng[1]:
+        shots = raw.get("shots")
+        for shot in shots if isinstance(shots, list) else []:
+            rng = shot.get("words") if isinstance(shot, dict) else None
+            if not (isinstance(rng, list) and len(rng) == 2 and all(isinstance(x, int) for x in rng)
+                    and rng[0] <= w <= rng[1]):
                 continue
             beats = shot.get("beats") or []
             if not any(isinstance(b, dict) and abs(b.get("at_word", -99) - w) <= 2 for b in beats):

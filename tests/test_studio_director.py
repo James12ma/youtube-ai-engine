@@ -53,6 +53,22 @@ class DirectorTests(unittest.TestCase):
         beat = next(b for s in spec.shots for b in s.beats)
         self.assertEqual((beat.at_word, beat.object), (43, "application"))
 
+    def test_list_shaped_entities_and_assets_are_keyed(self):
+        listed = copy.deepcopy(GATE_A)
+        listed["entities"] = [{"id": k, **v} for k, v in GATE_A["entities"].items()]
+        listed["assets"] = [{"id": k, **v} for k, v in GATE_A["assets"].items()]
+        spec = direct(GATE_A["narration"]["text"], llm=Scripted(ANALYSIS, listed), film_id="t", log=lambda m: None)
+        self.assertEqual(set(spec.entities), set(GATE_A["entities"]))
+        self.assertEqual(set(spec.assets), set(GATE_A["assets"]))
+
+    def test_malformed_shots_go_to_repair_not_crash(self):
+        bad = copy.deepcopy(GATE_A)
+        bad["shots"] = ["not a shot"] + bad["shots"]
+        llm = Scripted(ANALYSIS, bad, GATE_A)
+        spec = direct(GATE_A["narration"]["text"], llm=llm, film_id="t", log=lambda m: None)
+        self.assertEqual(len(spec.shots), len(GATE_A["shots"]))
+        self.assertEqual(len(llm.prompts), 3)
+
     def test_long_shots_are_blocking(self):
         long = copy.deepcopy(GATE_A)
         long["shots"][1]["words"] = [5, 27]
