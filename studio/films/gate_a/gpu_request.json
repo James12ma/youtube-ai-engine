@@ -1,0 +1,61 @@
+{
+ "purpose": "assets for film gate_a_application",
+ "wangp_commit": "9d25c60",
+ "cli_args": [
+  "--attention",
+  "sdpa",
+  "--profile",
+  "4"
+ ],
+ "max_seconds": 15000,
+ "tasks": [
+  {
+   "id": "still_maya_night",
+   "settings": {
+    "model_type": "z_image_twinflow_turbo",
+    "prompt": "Cinematic night photograph, vertical. Maya sits on the edge of her bed in a small apartment at 2 a.m., holding her phone in both hands, her face lit by the cool blue glow of the screen. Warm bedside lamp behind her, rain on the window, shallow depth of field, 35mm film grain, realistic skin texture, moody low-key light. (Maya: woman in her late twenties, brown skin, shoulder-length curly dark hair, grey oversized hoodie, small silver hoop earrings; Maya's phone: black smartphone with a sage-green case) Photorealistic, cinematic color grading, natural imperfections, no text, no watermark, no logos.",
+    "seed": 1997,
+    "resolution": "768x1344"
+   }
+  },
+  {
+   "id": "still_thumbs_typing",
+   "settings": {
+    "model_type": "z_image_twinflow_turbo",
+    "prompt": "Extreme close-up at night: two thumbs typing on a smartphone screen showing a job application form, blue screen light on fingers, blurred warm lamp bokeh behind, cinematic macro photograph, shallow depth of field, vertical. (Maya: woman in her late twenties, brown skin, shoulder-length curly dark hair, grey oversized hoodie, small silver hoop earrings; Maya's phone: black smartphone with a sage-green case) Photorealistic, cinematic color grading, natural imperfections, no text, no watermark, no logos.",
+    "seed": 1997,
+    "resolution": "768x1344"
+   }
+  },
+  {
+   "id": "still_daniel_morning",
+   "settings": {
+    "model_type": "z_image_twinflow_turbo",
+    "prompt": "Cinematic morning photograph, vertical. Daniel, a recruiter, sits at a wooden desk in a bright modern office, opening a laptop, a cup of coffee beside it, soft golden window light from the left, plants and shelves blurred behind, realistic, 35mm film look. (Daniel: man in his forties, short greying beard, rolled-up navy shirt sleeves, rectangular glasses) Photorealistic, cinematic color grading, natural imperfections, no text, no watermark, no logos.",
+    "seed": 2024,
+    "resolution": "768x1344"
+   }
+  },
+  {
+   "id": "still_maya_morning",
+   "settings": {
+    "model_type": "z_image_twinflow_turbo",
+    "prompt": "Cinematic morning photograph, vertical. Maya stands by her kitchen window in soft morning light, looking down at her phone with surprise and hope, steam from a mug, warm natural light, shallow depth of field, realistic, 35mm film look. (Maya: woman in her late twenties, brown skin, shoulder-length curly dark hair, grey oversized hoodie, small silver hoop earrings; Maya's phone: black smartphone with a sage-green case) Photorealistic, cinematic color grading, natural imperfections, no text, no watermark, no logos.",
+    "seed": 1997,
+    "resolution": "768x1344"
+   }
+  },
+  {
+   "id": "clip_thumbs_typing",
+   "settings": {
+    "model_type": "i2v_2_2_Enhanced_Lightning_v2",
+    "image_prompt_type": "S",
+    "prompt": "The thumbs type quickly on the phone screen, small natural finger movements, the screen glow flickers softly, slow push-in, shallow depth of field. Photorealistic, cinematic color grading, natural imperfections, no text, no watermark, no logos.",
+    "seed": 1234,
+    "resolution": "480x832",
+    "video_length": 57,
+    "image_start": "@still_thumbs_typing"
+   }
+  }
+ ]
+}

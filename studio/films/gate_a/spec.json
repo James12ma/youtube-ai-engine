@@ -758,5 +758,44 @@
   "gain_db": -21,
   "duck_db": -8
  },
- "tail_seconds": 1.4
+ "tail_seconds": 1.4,
+ "assets": {
+  "still_maya_night": {
+   "kind": "image",
+   "entities": [
+    "maya",
+    "phone"
+   ],
+   "prompt": "Cinematic night photograph, vertical. Maya sits on the edge of her bed in a small apartment at 2 a.m., holding her phone in both hands, her face lit by the cool blue glow of the screen. Warm bedside lamp behind her, rain on the window, shallow depth of field, 35mm film grain, realistic skin texture, moody low-key light."
+  },
+  "still_thumbs_typing": {
+   "kind": "image",
+   "entities": [
+    "maya",
+    "phone"
+   ],
+   "prompt": "Extreme close-up at night: two thumbs typing on a smartphone screen showing a job application form, blue screen light on fingers, blurred warm lamp bokeh behind, cinematic macro photograph, shallow depth of field, vertical."
+  },
+  "clip_thumbs_typing": {
+   "kind": "video",
+   "source_image": "still_thumbs_typing",
+   "seconds": 3.5,
+   "prompt": "The thumbs type quickly on the phone screen, small natural finger movements, the screen glow flickers softly, slow push-in, shallow depth of field."
+  },
+  "still_daniel_morning": {
+   "kind": "image",
+   "entities": [
+    "daniel"
+   ],
+   "prompt": "Cinematic morning photograph, vertical. Daniel, a recruiter, sits at a wooden desk in a bright modern office, opening a laptop, a cup of coffee beside it, soft golden window light from the left, plants and shelves blurred behind, realistic, 35mm film look."
+  },
+  "still_maya_morning": {
+   "kind": "image",
+   "entities": [
+    "maya",
+    "phone"
+   ],
+   "prompt": "Cinematic morning photograph, vertical. Maya stands by her kitchen window in soft morning light, looking down at her phone with surprise and hope, steam from a mug, warm natural light, shallow depth of field, realistic, 35mm film look."
+  }
+ }
 }

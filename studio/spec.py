@@ -108,6 +108,15 @@ class Narration(BaseModel):
     word_times: list[tuple[float, float]] | None = Field(None, description="[start, end] seconds per word")
 
 
+class AssetRequest(BaseModel):
+    """How to produce an asset the shots reference. Prompts are written for the generator, not the viewer."""
+    kind: Literal["image", "video", "music"]
+    prompt: str
+    entities: list[str] = Field(default_factory=list, description="Entities whose appearance is appended for consistency")
+    source_image: str | None = Field(None, description="For video: asset id of the start image (image-to-video)")
+    seconds: float = Field(5.0, gt=0, le=20)
+
+
 class Music(BaseModel):
     asset: str | None = None
     gain_db: float = -20.0
@@ -122,6 +131,7 @@ class FilmSpec(BaseModel):
     style: Literal["editorial_two_world", "documentary", "screen_tutorial", "clean_explainer"] = "editorial_two_world"
     narration: Narration
     entities: dict[str, Entity] = Field(default_factory=dict)
+    assets: dict[str, AssetRequest] = Field(default_factory=dict)
     shots: list[Shot]
     music: Music = Field(default_factory=Music)
     tail_seconds: float = Field(0.8, ge=0, le=5)
@@ -169,6 +179,10 @@ def validate(spec: FilmSpec, *, require_timing: bool = False) -> list[str]:
         else:
             if shot.world not in REGISTRY[shot.technique].worlds:
                 problems.append(f"{where}: technique {shot.technique} does not render the '{shot.world}' world")
+        for key in ("image", "video", "asset", "background_image"):
+            ref = shot.params.get(key)
+            if ref and ref not in spec.assets:
+                problems.append(f"{where}: asset '{ref}' has no AssetRequest (how would it be produced?)")
         for ent in shot.entities:
             if ent not in spec.entities:
                 problems.append(f"{where}: unknown entity '{ent}'")
@@ -191,6 +205,12 @@ def validate(spec: FilmSpec, *, require_timing: bool = False) -> list[str]:
                 problems.append(f"{where}: sfx at word {cue.at_word} outside the shot")
         if not shot.beats and shot.world in ("story", "screen"):
             warnings.append(f"{where}: no visible beat; make sure the picture still explains the words")
+    for aid, req in spec.assets.items():
+        for ent in req.entities:
+            if ent not in spec.entities:
+                problems.append(f"asset {aid}: unknown entity '{ent}'")
+        if req.kind == "video" and req.source_image and req.source_image not in spec.assets:
+            problems.append(f"asset {aid}: source image '{req.source_image}' is not requested")
     if n and expected != n:
         problems.append(f"words {expected}..{n - 1} are not covered by any shot")
     times = spec.narration.word_times
