@@ -113,7 +113,7 @@ class DirectorFailed(RuntimeError):
 
 
 def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str = "en",
-           width: int = 1080, height: int = 1920, repairs: int = 2, log: Callable[[str], None] = print) -> FilmSpec:
+           width: int = 1080, height: int = 1920, repairs: int = 4, log: Callable[[str], None] = print) -> FilmSpec:
     words = tokenize(text)
     numbered = " ".join(f"{i}:{w}" for i, w in enumerate(words))
     analysis = _json(llm(GRAMMAR, STAGE1 + numbered))
@@ -123,8 +123,10 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
     user = STAGE2.format(schema=schema, catalog=catalog, analysis=json.dumps(analysis), film_id=film_id, example=EXAMPLE,
                          title=title or film_id, width=width, height=height, lang=language, text=text, words=numbered)
     raw = _json(llm(GRAMMAR, user))
+    best: tuple[int, dict, list[str]] | None = None  # (problem count, raw, problems)
     for attempt in range(repairs + 1):
-        raw["id"], raw.setdefault("title", title or film_id)
+        raw["id"] = film_id
+        raw.setdefault("title", title or film_id)
         raw.setdefault("narration", {})["text"] = text
         raw["narration"]["language"] = language
         raw["format"] = {"width": width, "height": height, "fps": 30}
@@ -143,10 +145,13 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
             problems = [f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors()[:20]]
         except SpecError as e:
             problems = e.problems
-        log(f"attempt {attempt}: {len(problems)} problem(s)")
+        log(f"attempt {attempt}: {len(problems)} problem(s): " + " | ".join(problems[:6]))
+        if best is None or len(problems) < best[0]:
+            best = (len(problems), json.loads(json.dumps(raw)), problems)
         if attempt == repairs:
-            raise DirectorFailed(problems, raw)
-        raw = _json(llm(GRAMMAR, REPAIR.format(problems="\n".join(f"- {p}" for p in problems), previous=json.dumps(raw))))
+            raise DirectorFailed(best[2], best[1])
+        # Always repair the best version so far; a degenerate answer never replaces a good one.
+        raw = _json(llm(GRAMMAR, REPAIR.format(problems="\n".join(f"- {p}" for p in best[2]), previous=json.dumps(best[1]))))
     raise AssertionError("unreachable")
 
 
@@ -211,7 +216,9 @@ def free_llm(timeout: float = 240) -> LLM:
                 "User-Agent": "youtube-ai-engine-studio/1.0"})
             try:
                 with urllib.request.urlopen(req, timeout=timeout) as r:
-                    return json.loads(r.read())["choices"][0]["message"]["content"]
+                    content = json.loads(r.read())["choices"][0]["message"]["content"]
+                print(f"[llm] {model} answered ({len(content)} chars)", flush=True)
+                return content
             except urllib.error.HTTPError as e:
                 detail = e.read()[:300].decode("utf-8", "replace").replace(os.environ[key], "***")
                 errors.append(f"{model}: HTTP {e.code} {detail}")

@@ -39,7 +39,7 @@ class DirectorTests(unittest.TestCase):
     def test_fails_closed_after_repairs(self):
         broken = copy.deepcopy(GATE_A)
         broken["shots"][0]["technique"] = "character_animation"
-        llm = Scripted(ANALYSIS, broken, broken, broken)
+        llm = Scripted(ANALYSIS, *[broken] * 5)
         with self.assertRaises(DirectorFailed) as ctx:
             direct(GATE_A["narration"]["text"], llm=llm, film_id="t", log=lambda m: None)
         self.assertTrue(any("not renderable" in p for p in ctx.exception.problems))
@@ -58,8 +58,17 @@ class DirectorTests(unittest.TestCase):
         long["shots"][1]["words"] = [5, 27]
         del long["shots"][2:4]
         with self.assertRaises(DirectorFailed) as ctx:
-            direct(GATE_A["narration"]["text"], llm=Scripted(ANALYSIS, long, long, long), film_id="t", log=lambda m: None)
+            direct(GATE_A["narration"]["text"], llm=Scripted(ANALYSIS, *[long] * 5), film_id="t", log=lambda m: None)
         self.assertTrue(any("split it" in p for p in ctx.exception.problems))
+
+    def test_degenerate_repair_never_replaces_a_better_plan(self):
+        almost = copy.deepcopy(GATE_A)
+        almost["shots"][4]["beats"][0]["at_word"] = 50   # one problem
+        garbage = {"shots": [{"technique": "title"}]}      # many problems
+        llm = Scripted(ANALYSIS, almost, garbage, GATE_A)
+        direct(GATE_A["narration"]["text"], llm=llm, film_id="t", log=lambda m: None)
+        self.assertIn("outside its words", llm.prompts[-1])  # the repair after garbage still targets the good plan
+        self.assertIn('"s05"', llm.prompts[-1])
 
     def test_merged_beats_never_override_existing_ones(self):
         analysis = {"entities": {}, "events": [{"word": 30, "action": "presses Submit"}]}
