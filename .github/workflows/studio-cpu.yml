@@ -43,6 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends espeak-ng ffmpeg >/dev/null
+          python -m pip install -q torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -q 'kokoro>=0.9.4' soundfile pydantic numpy
           mkdir -p out
           python -m studio.voice "$FILM" ${VOICE:+--voice "$VOICE"} --out out

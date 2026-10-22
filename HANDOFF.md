@@ -22,7 +22,7 @@ Last updated: 2026-10-22. Read this first when resuming.
   - `studio-cpu.yml`: voice/director jobs.
   - `studio-film.yml`: a full order → MP4 → Telegram.
   - All results are encrypted to `studio/keys/*.pub.pem` and pushed to `studio-assets/<run>`. Decrypt with `studio/gpu/decrypt_assets.sh <run> <key> review_session <dir>` (the session private key lives only in the scratchpad).
-- **Telegram:** `/film` is in `alan7_bot` (41/41 bot tests). **Not deployed.** A deploy dispatch (run 39797623314) was cancelled while still queued after the safety classifier flagged it as a production deploy. Deploy only after the owner explicitly approves deploying the live bot: dispatch `alan7-bot-deploy.yml` on ref `ccr-ff883983-8z1psm`.
+- **Telegram:** `/film` is in `alan7_bot` (41/41 bot tests). **Live.** Deploy run 39797623314 finished every step before its cancel took effect, so the deployed bot already answers `/film` (the owner's screenshot confirms the usage reply). A bare `/film` only shows usage; the full script must follow on the same message.
 - **Verified live:**
   - The Kokoro voice job ran: 29.6 s, 71 words aligned.
   - The Director produced a valid 10-shot spec after 2 repairs (`studio/films/gate_a_director/`).

@@ -39,6 +39,8 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends espeak-ng ffmpeg >/dev/null
+          # CPU-only torch first: kokoro would otherwise pull the multi-GB CUDA build (~25 min).
+          python -m pip install -q torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -q pydantic numpy 'kokoro>=0.9.4' soundfile 'kaggle>=1.8'
           cd studio/editor && npm ci --no-audit --no-fund
       - name: Tell the owner the film started
