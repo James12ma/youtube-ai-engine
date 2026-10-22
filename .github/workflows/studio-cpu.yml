@@ -1,0 +1,89 @@
+name: Studio CPU job (voice / director, encrypted result)
+# Runs when a job file under studio/jobs/ is added or changed on the studio branch.
+# Job file: {"command": "voice" | "director", "film": "studio/films/<id>", "voice": "...", "script": "...", "language": "en"}
+# Only these whitelisted commands run. $0: public-repo runner + free LLM tiers already configured.
+on:
+  push:
+    branches: [ccr-ff883983-8z1psm]
+    paths: ['studio/jobs/*.json']
+permissions:
+  contents: write
+concurrency:
+  group: studio-cpu
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pick job
+        id: job
+        run: |
+          set -euo pipefail
+          f=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'studio/jobs/*.json' | tail -1)
+          [[ "$f" =~ ^studio/jobs/[A-Za-z0-9_.-]+\.json$ ]] || { echo "::error::no job file"; exit 1; }
+          python - "$f" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, re, sys
+          j = json.load(open(sys.argv[1]))
+          assert j["command"] in ("voice", "director"), "command not allowed"
+          assert re.fullmatch(r"studio/films/[A-Za-z0-9_-]+", j["film"]), "bad film path"
+          print("command=" + j["command"]); print("film=" + j["film"]); print("name=" + sys.argv[1].split("/")[-1][:-5])
+          print("voice=" + re.sub(r"[^a-z_]", "", j.get("voice", ""))); print("lang=" + re.sub(r"[^a-z]", "", j.get("language", "en")))
+          PY
+      - name: Voice (Kokoro, word timings)
+        if: steps.job.outputs.command == 'voice'
+        env: { FILM: '${{ steps.job.outputs.film }}', VOICE: '${{ steps.job.outputs.voice }}' }
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends espeak-ng ffmpeg >/dev/null
+          python -m pip install -q 'kokoro>=0.9.4' soundfile pydantic numpy
+          mkdir -p out
+          python -m studio.voice "$FILM" ${VOICE:+--voice "$VOICE"} --out out
+          echo "::notice title=voice::$(python -c "import json;d=json.load(open('out/voice.json'));print({k:d[k] for k in ('duration_s','words','engine_tokens_with_time','voice')})")"
+      - name: Director (free LLMs)
+        if: steps.job.outputs.command == 'director'
+        env:
+          FILM: ${{ steps.job.outputs.film }}
+          LANG_IN: ${{ steps.job.outputs.lang }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -uo pipefail
+          python -m pip install -q pydantic numpy
+          mkdir -p out
+          python -m studio.director "$FILM/script.txt" --out out/spec.json --id "$(basename "$FILM")" --lang "$LANG_IN" 2>&1 | tee out/director.log
+          exit "${PIPESTATUS[0]}"
+      - name: Encrypt and push to studio-assets/${{ github.run_id }}
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ steps.job.outputs.name }}
+        run: |
+          set -euo pipefail
+          umask 077
+          find out -type f 2>/dev/null | grep -q . || { echo "::warning::nothing to deliver"; exit 0; }
+          tar -C out -cf "$RUNNER_TEMP/pack.tar" .
+          o=$RUNNER_TEMP/enc; mkdir -p "$o"
+          openssl rand -hex 32 > "$RUNNER_TEMP/kk"
+          for pub in studio/keys/*.pub.pem; do
+            openssl pkeyutl -encrypt -pubin -inkey "$pub" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+              -in "$RUNNER_TEMP/kk" -out "$o/$(basename "$pub" .pub.pem).key.enc"
+          done
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/kk" -in "$RUNNER_TEMP/pack.tar" -out "$RUNNER_TEMP/pack.enc"
+          split -b 90m -d "$RUNNER_TEMP/pack.enc" "$o/pack.enc.part"
+          shred -u "$RUNNER_TEMP/kk" "$RUNNER_TEMP/pack.tar" "$RUNNER_TEMP/pack.enc"
+          printf '{"job":"%s","run_id":"%s","sha":"%s"}\n' "$NAME" "${{ github.run_id }}" "${{ github.sha }}" > "$o/meta.json"
+          (cd "$o" && sha256sum * > SHA256SUMS)
+          cd "$o"; git init -q -b "studio-assets/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Encrypted studio CPU output $NAME (${{ github.run_id }})"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "studio-assets/${{ github.run_id }}"
+          echo "::notice title=assets::studio-assets/${{ github.run_id }}"
