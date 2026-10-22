@@ -42,6 +42,7 @@ class UIFlowParams(_P):
     background: Literal["paper", "dark", "asset"] = "paper"
     background_image: str | None = None
     hand: bool = Field(True, description="Show a thumb/cursor performing the taps")
+    clock: str = Field("9:41", pattern=r"^\d{1,2}:\d{2}$", description="Time shown on the device (keep story time consistent)")
 
 
 class DataTransferParams(_P):

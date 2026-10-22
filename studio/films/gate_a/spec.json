@@ -118,7 +118,8 @@
       "meta": "Full-time · Remote",
       "cta": "Apply"
      }
-    ]
+    ],
+    "clock": "2:07"
    },
    "entities": [
     "phone",
@@ -241,7 +242,8 @@
       ],
       "cta": "Submit"
      }
-    ]
+    ],
+    "clock": "2:07"
    },
    "entities": [
     "application",
@@ -338,7 +340,8 @@
       "title": "Sent",
       "body": "Application APP-2207"
      }
-    ]
+    ],
+    "clock": "2:07"
    },
    "entities": [
     "application",
@@ -717,7 +720,8 @@
       "at_word": 68,
       "caller": "Daniel · Northwind Studio"
      }
-    ]
+    ],
+    "clock": "8:14"
    },
    "entities": [
     "maya",

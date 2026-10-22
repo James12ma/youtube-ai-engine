@@ -239,21 +239,21 @@ const IncomingCall: React.FC<{s: Screen; accent: string}> = ({s, accent}) => {
   );
 };
 
-const LockScreen: React.FC = () => (
+const LockScreen: React.FC<{clock: string}> = ({clock}) => (
   <AbsoluteFill style={{background: 'linear-gradient(180deg,#26313b,#11171d)', alignItems: 'center', fontFamily: FONT, color: '#fff'}}>
     <div style={{marginTop: 150, fontSize: 30, opacity: 0.7}}>Tuesday</div>
-    <div style={{fontSize: 170, fontWeight: 500, letterSpacing: '-0.05em', lineHeight: 1}}>8:14</div>
+    <div style={{fontSize: 170, fontWeight: 500, letterSpacing: '-0.05em', lineHeight: 1}}>{clock}</div>
   </AbsoluteFill>
 );
 
 /* ---------- devices ---------- */
 
-const Phone: React.FC<{children: React.ReactNode; tilt: number}> = ({children, tilt}) => (
+const Phone: React.FC<{children: React.ReactNode; tilt: number; clock: string}> = ({children, tilt, clock}) => (
   <div style={{width: 640, height: 1300, borderRadius: 86, background: '#0c0c0e', padding: 16, transform: `perspective(2200px) rotateX(${tilt * 0.6}deg) rotateY(${tilt}deg)`,
     boxShadow: '0 70px 120px rgba(0,0,0,0.38), 0 20px 40px rgba(0,0,0,0.25), inset 0 0 0 3px #2a2b30'}}>
     <div style={{position: 'relative', width: '100%', height: '100%', borderRadius: 70, overflow: 'hidden', background: '#fff'}}>
       <div style={{height: 64, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 46px', fontFamily: FONT, fontWeight: 700, fontSize: 24, color: INK}}>
-        <span>2:07</span><span style={{width: 150, height: 36, borderRadius: 20, background: '#0c0c0e'}} /><span>●●● ▮</span>
+        <span>{clock}</span><span style={{width: 150, height: 36, borderRadius: 20, background: '#0c0c0e'}} /><span>●●● ▮</span>
       </div>
       <div style={{position: 'absolute', top: 64, left: 0, right: 0, bottom: 0}}>{children}</div>
     </div>
@@ -292,7 +292,7 @@ export const UIFlow: React.FC<ShotProps> = ({shot, local, duration}) => {
   const isPhone = p.device !== 'laptop';
   const waiting = (screens[0].at_frame ?? 0) > f + 3; // before the first screen's moment: idle device
   const render = (s: Screen, pressAt?: number) => {
-    if (waiting && s === screens[0]) return <LockScreen />;
+    if (waiting && s === screens[0]) return <LockScreen clock={p.clock ?? '9:41'} />;
     switch (s.kind) {
       case 'listing': return <Listing s={s} accent={accent} tapAt={pressAt} />;
       case 'form': return <Form s={s} accent={accent} tapAt={pressAt} />;
@@ -332,7 +332,7 @@ export const UIFlow: React.FC<ShotProps> = ({shot, local, duration}) => {
         transform: `translateY(${(1 - enter) * 160}px) scale(${(isPhone ? 0.86 : 1) * (0.94 + 0.06 * enter) * camZoom})`,
         transformOrigin: isPhone ? '50% 0%' : `46% ${focusY * 100}%`, opacity: enter}}>
         {isPhone ? (
-          <Phone tilt={tilt}>
+          <Phone tilt={tilt} clock={p.clock ?? '9:41'}>
             {prev && swap < 1 ? <AbsoluteFill style={{transform: `translateX(${-swap * 30}%)`, opacity: 1 - swap}}>{render(prev)}</AbsoluteFill> : null}
             <AbsoluteFill style={{transform: `translateX(${(1 - swap) * 40}%)`, opacity: swap}}>{render(cur, tapAt)}</AbsoluteFill>
           </Phone>
