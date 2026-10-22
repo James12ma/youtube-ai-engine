@@ -169,10 +169,11 @@
     17
    ],
    "purpose": "Her real effort: thumbs typing on the phone, close.",
-   "technique": "clip",
+   "technique": "still_2_5d",
    "params": {
-    "video": "clip_thumbs_typing",
-    "grade": "night"
+    "image": "still_thumbs_typing",
+    "grade": "night",
+    "vignette": 0.45
    },
    "entities": [
     "maya",
@@ -201,7 +202,15 @@
      "at_word": 11,
      "sound": "type"
     }
-   ]
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.14,
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
   },
   {
    "id": "s04",
@@ -779,12 +788,6 @@
     "phone"
    ],
    "prompt": "Extreme close-up at night: two thumbs typing on a smartphone screen showing a job application form, blue screen light on fingers, blurred warm lamp bokeh behind, cinematic macro photograph, shallow depth of field, vertical."
-  },
-  "clip_thumbs_typing": {
-   "kind": "video",
-   "source_image": "still_thumbs_typing",
-   "seconds": 3.5,
-   "prompt": "The thumbs type quickly on the phone screen, small natural finger movements, the screen glow flickers softly, slow push-in, shallow depth of field."
   },
   "still_daniel_morning": {
    "kind": "image",

@@ -77,7 +77,10 @@ class DirectorTests(unittest.TestCase):
         self.assertEqual([b.at_word for b in s05.beats], [30, 31])  # the planner's own beats, nothing duplicated
 
     def test_gpu_request_orders_stills_before_clips_and_keeps_identity(self):
-        req = gpu_request(FilmSpec(**GATE_A))
+        raw = copy.deepcopy(GATE_A)
+        raw["assets"]["clip_thumbs_typing"] = {"kind": "video", "source_image": "still_thumbs_typing", "seconds": 3.5,
+                                               "prompt": "thumbs type on the phone"}
+        req = gpu_request(FilmSpec(**raw))
         ids = [t["id"] for t in req["tasks"]]
         self.assertLess(ids.index("still_thumbs_typing"), ids.index("clip_thumbs_typing"))
         maya = next(t for t in req["tasks"] if t["id"] == "still_maya_night")["settings"]

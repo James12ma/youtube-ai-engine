@@ -125,6 +125,18 @@ def run(request: dict, root: Path, out: Path) -> dict:
     for task in request["tasks"]:
         rec = {"id": task["id"], "model_type": task["settings"].get("model_type")}
         t = time.time()
+        limit = task.get("timeout", request.get("task_timeout", 1800))
+
+        def task_timeout(rec=rec, t=t, limit=limit):
+            # One stuck model must not hide the results of the others: record it, save, stop.
+            rec.update(success=False, errors=[f"task timeout after {limit} s"], seconds=round(time.time() - t, 1))
+            report["tasks"].append(rec)
+            report["error"] = f"stopped at task {rec['id']} (timeout {limit} s)"
+            save()
+            os._exit(4)
+
+        timer = threading.Timer(limit, task_timeout)
+        timer.start()
         try:
             torch.cuda.reset_peak_memory_stats()
             settings = {**session.get_default_settings(task["settings"]["model_type"]),
@@ -144,6 +156,7 @@ def run(request: dict, root: Path, out: Path) -> dict:
             rec["errors"] = [traceback.format_exc()[-2000:]]
         rec["seconds"] = round(time.time() - t, 1)
         rec["peak_vram_gb"] = round(torch.cuda.max_memory_allocated() / 1e9, 2) if torch.cuda.is_available() else None
+        timer.cancel()
         report["tasks"].append(rec)
         save()
     shutil.rmtree(out / "raw", ignore_errors=True)

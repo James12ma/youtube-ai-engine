@@ -12,6 +12,8 @@ from pathlib import Path
 from .spec import FilmSpec
 
 WANGP_COMMIT = "9d25c60"
+# Probe 2026-10-22 on Kaggle 2x T4: z_image_twinflow_turbo 95 s/still (incl. download, 2.8 GB VRAM),
+# flux2_klein_4b 54 s; Wan2.2 14B I2V did not finish in 4 h (too heavy for T4) -> video is experimental.
 MODELS = {
     "image": {"model_type": "z_image_twinflow_turbo"},
     "video": {"model_type": "i2v_2_2_Enhanced_Lightning_v2", "image_prompt_type": "S"},
@@ -52,7 +54,8 @@ def gpu_request(spec: FilmSpec, only: set[str] | None = None) -> dict:
             settings["duration_seconds"] = req.seconds
         tasks.append({"id": aid, "settings": settings})
     return {"purpose": f"assets for film {spec.id}", "wangp_commit": WANGP_COMMIT,
-            "cli_args": ["--attention", "sdpa", "--profile", "4"], "max_seconds": 15000, "tasks": tasks}
+            "cli_args": ["--attention", "sdpa", "--profile", "4"], "max_seconds": 15000,
+            "task_timeout": 1200, "tasks": tasks}
 
 
 def file_outputs(gpu_out: Path, film: Path) -> list[str]:
