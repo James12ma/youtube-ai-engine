@@ -61,6 +61,19 @@ class DirectorTests(unittest.TestCase):
         self.assertEqual(set(spec.entities), set(GATE_A["entities"]))
         self.assertEqual(set(spec.assets), set(GATE_A["assets"]))
 
+    def test_shotless_stub_never_becomes_the_repair_base(self):
+        # Run 39809209470: a 134-char stub ("shots: Field required") outranked a real 20-problem plan.
+        stub = {"title": "x"}
+        no_names = copy.deepcopy(GATE_A)
+        for e in no_names["entities"].values():
+            e.pop("name"), e.pop("kind")
+        analysis = {**ANALYSIS, "entities": copy.deepcopy(GATE_A["entities"])}
+        llm = Scripted(analysis, stub, no_names)
+        spec = direct(GATE_A["narration"]["text"], llm=llm, film_id="t", log=lambda m: None)
+        self.assertEqual(llm.prompts[2], llm.prompts[1])  # re-planned from the analysis, not a repair of the stub
+        self.assertEqual({k: e.kind for k, e in spec.entities.items()},
+                         {k: e["kind"] for k, e in GATE_A["entities"].items()})
+
     def test_malformed_shots_go_to_repair_not_crash(self):
         bad = copy.deepcopy(GATE_A)
         bad["shots"] = ["not a shot"] + bad["shots"]

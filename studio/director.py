@@ -146,6 +146,7 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
         raw["format"] = {"width": width, "height": height, "fps": 30}
         _keyed(raw, "entities")
         _keyed(raw, "assets")
+        _inherit_entities(analysis, raw)
         merge_events(analysis, raw)
         try:
             spec = FilmSpec(**raw)
@@ -162,10 +163,15 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
         except SpecError as e:
             problems = e.problems
         log(f"attempt {attempt}: {len(problems)} problem(s): " + " | ".join(problems[:6]))
-        if best is None or len(problems) < best[0]:
-            best = (len(problems), json.loads(json.dumps(raw)), problems)
+        # A plan without shots is a stub (e.g. a truncated answer): it ranks below any real plan.
+        score = len(problems) + (0 if _has_shots(raw) else 10_000)
+        if best is None or score < best[0]:
+            best = (score, json.loads(json.dumps(raw)), problems)
         if attempt == repairs:
             raise DirectorFailed(best[2], best[1])
+        if not _has_shots(best[1]):  # nothing worth repairing yet: plan again from the analysis
+            raw = _json(llm(GRAMMAR, user))
+            continue
         # Always repair the best version so far; a degenerate answer never replaces a good one.
         raw = _json(llm(GRAMMAR, REPAIR.format(problems="\n".join(f"- {p}" for p in best[2]), previous=json.dumps(best[1]))))
     raise AssertionError("unreachable")
@@ -177,6 +183,25 @@ def _keyed(raw: dict, field: str) -> None:
     v = raw.get(field)
     if isinstance(v, list) and all(isinstance(x, dict) and (x.get("id") or x.get("name")) for x in v):
         raw[field] = {str(x.get("id") or x.get("name")): {k: y for k, y in x.items() if k != "id"} for x in v}
+
+
+def _has_shots(raw: dict) -> bool:
+    return isinstance(raw.get("shots"), list) and any(isinstance(x, dict) for x in raw["shots"])
+
+
+def _inherit_entities(analysis: dict, raw: dict) -> None:
+    """Fields the planner left out of an entity (kind, name, appearance...) come from the stage-1
+    analysis of the same entity; the name falls back to its key. Nothing is invented."""
+    ents, known = raw.get("entities"), analysis.get("entities")
+    if not isinstance(ents, dict):
+        return
+    for key, ent in ents.items():
+        if not isinstance(ent, dict):
+            continue
+        for k, v in ((known or {}).get(key) or {}).items() if isinstance(known, dict) else ():
+            if v is not None and ent.get(k) in (None, ""):
+                ent[k] = v
+        ent.setdefault("name", key.replace("_", " "))
 
 
 def merge_events(analysis: dict, raw: dict) -> int:
