@@ -100,7 +100,9 @@ def run(request: dict, root: Path, out: Path) -> dict:
         save()
         os._exit(3)
 
-    threading.Timer(request.get("max_seconds", 12000), watchdog).start()
+    dog = threading.Timer(request.get("max_seconds", 12000), watchdog)
+    dog.daemon = True  # a finished job must exit at once, not wait for the safety timer
+    dog.start()
     report["env"] = environment(report["setup"])
     save()
     try:
@@ -136,6 +138,7 @@ def run(request: dict, root: Path, out: Path) -> dict:
             os._exit(4)
 
         timer = threading.Timer(limit, task_timeout)
+        timer.daemon = True
         timer.start()
         try:
             torch.cuda.reset_peak_memory_stats()

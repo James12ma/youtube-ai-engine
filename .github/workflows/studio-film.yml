@@ -81,7 +81,7 @@ jobs:
           print("assets to generate:", sorted(need))
           PY
           if python -c "import json,sys; sys.exit(0 if json.load(open('gpu_request.json'))['tasks'] else 1)"; then
-            slug=$(echo "studio-film-${{ steps.order.outputs.id }}" | tr -c "a-z0-9-\n" "-")
+            slug=$(echo "sf-${{ steps.order.outputs.id }}-${{ github.run_number }}" | tr -c "a-z0-9-\n" "-")
             bash studio/gpu/kaggle_run.sh gpu_request.json gpu_out "$slug"
             python -c "from pathlib import Path; from studio.assets import file_outputs; print(file_outputs(Path('gpu_out'), Path('$FILM')))"
           fi
