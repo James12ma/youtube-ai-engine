@@ -72,6 +72,9 @@ Available techniques (only those with available=true may be used; params must ma
 Story analysis from stage 1:
 {analysis}
 
+Worked example of two correct consecutive shots (structure only; never copy its content):
+{example}
+
 Film id: {film_id}. Title: {title}. Format: {width}x{height} at 30 fps. Language: {lang}.
 Narration text (put it verbatim in narration.text): {text}
 Narration words (index:word):
@@ -84,6 +87,10 @@ Problems:
 
 Your previous JSON:
 {previous}"""
+
+
+_GATE_A = Path(__file__).resolve().parent / "films" / "gate_a" / "spec.json"
+EXAMPLE = json.dumps(json.loads(_GATE_A.read_text())["shots"][3:5], separators=(",", ":")) if _GATE_A.exists() else "{}"
 
 
 class LLM(Protocol):
@@ -113,7 +120,7 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
     log(f"stage 1: {len(analysis.get('entities', {}))} entities, {len(analysis.get('events', []))} events")
     schema = json.dumps(FilmSpec.model_json_schema(), separators=(",", ":"))
     catalog = json.dumps(catalog_for_director(), separators=(",", ":"))
-    user = STAGE2.format(schema=schema, catalog=catalog, analysis=json.dumps(analysis), film_id=film_id,
+    user = STAGE2.format(schema=schema, catalog=catalog, analysis=json.dumps(analysis), film_id=film_id, example=EXAMPLE,
                          title=title or film_id, width=width, height=height, lang=language, text=text, words=numbered)
     raw = _json(llm(GRAMMAR, user))
     for attempt in range(repairs + 1):
@@ -121,6 +128,7 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
         raw.setdefault("narration", {})["text"] = text
         raw["narration"]["language"] = language
         raw["format"] = {"width": width, "height": height, "fps": 30}
+        merge_events(analysis, raw)
         try:
             spec = FilmSpec(**raw)
             warnings = validate(spec)
@@ -142,6 +150,31 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
     raise AssertionError("unreachable")
 
 
+def merge_events(analysis: dict, raw: dict) -> int:
+    """Write stage-1 events the planner forgot into the shot that covers their word (no invention:
+    action, actor, object and state change all come from the story analysis). Returns how many."""
+    entities = set((raw.get("entities") or {}).keys())
+    added = 0
+    for ev in analysis.get("events", []):
+        w = ev.get("word")
+        if not isinstance(w, int):
+            continue
+        for shot in raw.get("shots") or []:
+            rng = shot.get("words") or [0, -1]
+            if not rng[0] <= w <= rng[1]:
+                continue
+            beats = shot.get("beats") or []
+            if not any(isinstance(b, dict) and abs(b.get("at_word", -99) - w) <= 2 for b in beats):
+                beats.append({"action": str(ev.get("action", "event"))[:80],
+                              "actor": ev.get("actor") if ev.get("actor") in entities else None,
+                              "object": ev.get("object") if ev.get("object") in entities else None,
+                              "at_word": w, "note": str(ev.get("visual", ""))[:160]})
+                added += 1
+            shot["beats"] = beats
+            break
+    return added
+
+
 def _unshown_events(analysis: dict, spec: FilmSpec) -> list[str]:
     """Every event found in stage 1 must have a beat within 2 words of where it is narrated."""
     beats = [b.at_word for s in spec.shots for b in s.beats]
@@ -155,10 +188,10 @@ def _unshown_events(analysis: dict, spec: FilmSpec) -> list[str]:
 
 # ---------------------------------------------------------------- free providers (no SDKs)
 
-PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model) - same models main uses live
-    ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.1-flash-lite"),
+PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model) - models main uses live, strongest first
     ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash"),
     ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"),
+    ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.1-flash-lite"),
     ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "google/gemma-4-26b-a4b-it:free"),
 ]
 

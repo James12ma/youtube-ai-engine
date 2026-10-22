@@ -44,15 +44,28 @@ class DirectorTests(unittest.TestCase):
             direct(GATE_A["narration"]["text"], llm=llm, film_id="t", log=lambda m: None)
         self.assertTrue(any("not renderable" in p for p in ctx.exception.problems))
 
-    def test_event_without_visible_beat_is_blocking(self):
+    def test_forgotten_events_are_merged_from_the_analysis(self):
         no_beats = copy.deepcopy(GATE_A)
         for s in no_beats["shots"]:
-            s["beats"] = [b for b in s["beats"] if b["at_word"] < 40]
-        analysis = {"entities": {}, "events": [{"word": 43, "action": "arrives at company"}]}
-        llm = Scripted(analysis, no_beats, no_beats, no_beats)
+            s["beats"] = []
+        analysis = {"entities": {}, "events": [{"word": 43, "action": "arrives at company", "object": "application"}]}
+        spec = direct(GATE_A["narration"]["text"], llm=Scripted(analysis, no_beats), film_id="t", log=lambda m: None)
+        beat = next(b for s in spec.shots for b in s.beats)
+        self.assertEqual((beat.at_word, beat.object), (43, "application"))
+
+    def test_long_shots_are_blocking(self):
+        long = copy.deepcopy(GATE_A)
+        long["shots"][1]["words"] = [5, 27]
+        del long["shots"][2:4]
         with self.assertRaises(DirectorFailed) as ctx:
-            direct(GATE_A["narration"]["text"], llm=llm, film_id="t", log=lambda m: None)
-        self.assertTrue(any("no visible beat" in p for p in ctx.exception.problems))
+            direct(GATE_A["narration"]["text"], llm=Scripted(ANALYSIS, long, long, long), film_id="t", log=lambda m: None)
+        self.assertTrue(any("split it" in p for p in ctx.exception.problems))
+
+    def test_merged_beats_never_override_existing_ones(self):
+        analysis = {"entities": {}, "events": [{"word": 30, "action": "presses Submit"}]}
+        spec = direct(GATE_A["narration"]["text"], llm=Scripted(analysis, GATE_A), film_id="t", log=lambda m: None)
+        s05 = next(s for s in spec.shots if s.id == "s05")
+        self.assertEqual([b.at_word for b in s05.beats], [30, 31])  # the planner's own beats, nothing duplicated
 
     def test_gpu_request_orders_stills_before_clips_and_keeps_identity(self):
         req = gpu_request(FilmSpec(**GATE_A))

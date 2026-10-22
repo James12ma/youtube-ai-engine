@@ -1,0 +1,134 @@
+name: Studio film (script -> director -> voice -> WanGP assets -> render -> inspect -> private Telegram)
+# Triggered by an order file under studio/orders/ on the studio branch (the Telegram bot writes these).
+# Order: {"id": "...", "title": "...", "language": "en", "voice": "af_heart", "script": "..."}
+#    or: {"id": "...", "film": "studio/films/<id>"}   (use an existing spec / voice / assets)
+# $0: public-repo runner, the owner's free Kaggle GPU quota, free LLM tiers. Nothing is published.
+on:
+  push:
+    branches: [ccr-ff883983-8z1psm]
+    paths: ['studio/orders/*.json']
+permissions:
+  contents: write
+concurrency:
+  group: studio-film
+  cancel-in-progress: false
+jobs:
+  film:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_USERNAME }}
+      KUSER: goldgoat
+      TELEGRAM_BOT_TOKEN: ${{ secrets.ALAN7_TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_OWNER_ID: ${{ secrets.ALAN7_OWNER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2, persist-credentials: false }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Read order
+        id: order
+        run: |
+          set -euo pipefail
+          f=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'studio/orders/*.json' | tail -1)
+          [[ "$f" =~ ^studio/orders/[A-Za-z0-9_.-]+\.json$ ]] || { echo "::error::no order file"; exit 1; }
+          python - "$f" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, os, re, sys
+          o = json.load(open(sys.argv[1]))
+          fid = re.sub(r"[^a-z0-9_-]", "", o["id"].lower())[:60]
+          assert fid, "order id required"
+          film = o.get("film") or f"studio/films/{fid}"
+          assert re.fullmatch(r"studio/films/[A-Za-z0-9_-]+", film)
+          os.makedirs(film, exist_ok=True)
+          if o.get("script"):
+              open(f"{film}/script.txt", "w").write(o["script"].strip() + "\n")
+          print(f"id={fid}"); print(f"film={film}"); print("lang=" + re.sub(r"[^a-z]", "", o.get("language", "en")))
+          print("voice=" + re.sub(r"[^a-z_]", "", o.get("voice", ""))); print("title=" + o.get("title", fid).replace("\n", " ")[:120])
+          PY
+      - name: Install tools
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends espeak-ng ffmpeg >/dev/null
+          python -m pip install -q pydantic numpy 'kokoro>=0.9.4' soundfile 'kaggle>=1.8'
+          cd studio/editor && npm ci --no-audit --no-fund
+      - name: Tell the owner the film started
+        run: |
+          python -m studio.deliver --message "🎬 Studio — travay '${{ steps.order.outputs.title }}' kòmanse (run ${{ github.run_id }})." || true
+      - name: 1. Director (only when there is no spec yet)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          FILM: ${{ steps.order.outputs.film }}
+        run: |
+          set -euo pipefail
+          [ -f "$FILM/spec.json" ] && { echo "spec exists"; exit 0; }
+          python -m studio.director "$FILM/script.txt" --out "$FILM/spec.json" --id "${{ steps.order.outputs.id }}" \
+            --title "${{ steps.order.outputs.title }}" --lang "${{ steps.order.outputs.lang }}"
+      - name: 2. Voice (Kokoro, word times)
+        env: { FILM: '${{ steps.order.outputs.film }}', VOICE: '${{ steps.order.outputs.voice }}' }
+        run: |
+          set -euo pipefail
+          [ -f "$FILM/voice.json" ] && [ -f "$FILM/assets/voice.wav" ] && { echo "voice exists"; exit 0; }
+          mkdir -p "$FILM/assets"
+          python -m studio.voice "$FILM" ${VOICE:+--voice "$VOICE"} --out "$FILM/assets"
+          mv "$FILM/assets/voice.json" "$FILM/voice.json"
+      - name: 3. Assets on the free Kaggle GPU (WanGP)
+        env: { FILM: '${{ steps.order.outputs.film }}' }
+        run: |
+          set -euo pipefail
+          python - "$FILM" <<'PY'
+          import json, sys
+          from pathlib import Path
+          from studio.assets import gpu_request
+          from studio.spec import FilmSpec
+          film = Path(sys.argv[1])
+          spec = FilmSpec(**json.loads((film / "spec.json").read_text()))
+          have = {p.stem for p in (film / "assets").glob("*")}
+          need = {a for a in spec.assets if a not in have}
+          req = gpu_request(spec, only=need)
+          json.dump(req, open("gpu_request.json", "w"), indent=1)
+          print("assets to generate:", sorted(need))
+          PY
+          if python -c "import json,sys; sys.exit(0 if json.load(open('gpu_request.json'))['tasks'] else 1)"; then
+            bash studio/gpu/kaggle_run.sh gpu_request.json gpu_out "studio-film-${{ steps.order.outputs.id }}"
+            python -c "from pathlib import Path; from studio.assets import file_outputs; print(file_outputs(Path('gpu_out'), Path('$FILM')))"
+          fi
+      - name: 4. Render + master + inspect
+        env: { FILM: '${{ steps.order.outputs.film }}' }
+        run: python -m studio.render "$FILM" --out "out/${{ steps.order.outputs.id }}.mp4"
+      - name: 5. Deliver privately to the owner's Telegram
+        run: |
+          set -euo pipefail
+          id=${{ steps.order.outputs.id }}
+          python -m studio.deliver "out/$id.mp4" --report "out/${id}_inspection/inspection.json" --title "${{ steps.order.outputs.title }}"
+      - name: Tell the owner what failed
+        if: failure()
+        run: |
+          python -m studio.deliver --message "⚠️ Studio — '${{ steps.order.outputs.title }}' bloke. Gade run ${{ github.run_id }} (etap ki echwe a nan GitHub Actions). Pa gen videyo fo ki voye." || true
+      - name: Encrypted archive to studio-assets/${{ github.run_id }}
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILM: ${{ steps.order.outputs.film }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p pack && cp -r "$FILM" pack/film && { cp -r out pack/out 2>/dev/null || true; } && { cp -r gpu_out/report.json pack/gpu_report.json 2>/dev/null || true; }
+          tar -C pack -cf "$RUNNER_TEMP/pack.tar" .
+          o=$RUNNER_TEMP/enc; mkdir -p "$o"
+          openssl rand -hex 32 > "$RUNNER_TEMP/kk"
+          for pub in studio/keys/*.pub.pem; do
+            openssl pkeyutl -encrypt -pubin -inkey "$pub" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+              -in "$RUNNER_TEMP/kk" -out "$o/$(basename "$pub" .pub.pem).key.enc"
+          done
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/kk" -in "$RUNNER_TEMP/pack.tar" -out "$RUNNER_TEMP/pack.enc"
+          split -b 90m -d "$RUNNER_TEMP/pack.enc" "$o/pack.enc.part"
+          shred -u "$RUNNER_TEMP/kk" "$RUNNER_TEMP/pack.tar" "$RUNNER_TEMP/pack.enc"
+          printf '{"order":"%s","run_id":"%s","sha":"%s"}\n' "${{ steps.order.outputs.id }}" "${{ github.run_id }}" "${{ github.sha }}" > "$o/meta.json"
+          (cd "$o" && sha256sum * > SHA256SUMS)
+          cd "$o"; git init -q -b "studio-assets/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Encrypted studio film ${{ steps.order.outputs.id }} (${{ github.run_id }})"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "studio-assets/${{ github.run_id }}"

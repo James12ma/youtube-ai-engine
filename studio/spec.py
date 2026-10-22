@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .capabilities import REGISTRY, TechniqueError, validate_params
 
+MAX_WORDS_PER_SHOT = 14
 WORD_RE = re.compile(r"[\w$€£%]+(?:['’.,:][\w]+)*")
 
 
@@ -172,6 +173,9 @@ def validate(spec: FilmSpec, *, require_timing: bool = False) -> list[str]:
         if b < a or b >= n:
             problems.append(f"{where}: word range {shot.words} outside 0..{n - 1}")
         expected = b + 1
+        if b - a + 1 > MAX_WORDS_PER_SHOT:
+            problems.append(f"{where}: covers {b - a + 1} words; split it into shots of at most "
+                            f"{MAX_WORDS_PER_SHOT} words so the picture changes with the narration")
         try:
             validate_params(shot.technique, shot.params)
         except TechniqueError as e:
