@@ -155,10 +155,11 @@ def _unshown_events(analysis: dict, spec: FilmSpec) -> list[str]:
 
 # ---------------------------------------------------------------- free providers (no SDKs)
 
-PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model)
+PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model) - same models main uses live
+    ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.1-flash-lite"),
     ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash"),
-    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
-    ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free"),
+    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"),
+    ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "google/gemma-4-26b-a4b-it:free"),
 ]
 
 
@@ -172,14 +173,18 @@ def free_llm(timeout: float = 240) -> LLM:
         for key, base, model in available:
             body = json.dumps({"model": model, "temperature": 0.4, "response_format": {"type": "json_object"},
                                "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}).encode()
-            req = urllib.request.Request(base + "/chat/completions", data=body, method="POST",
-                                         headers={"Authorization": f"Bearer {os.environ[key]}", "Content-Type": "application/json"})
+            req = urllib.request.Request(base + "/chat/completions", data=body, method="POST", headers={
+                "Authorization": f"Bearer {os.environ[key]}", "Content-Type": "application/json",
+                "User-Agent": "youtube-ai-engine-studio/1.0"})
             try:
                 with urllib.request.urlopen(req, timeout=timeout) as r:
                     return json.loads(r.read())["choices"][0]["message"]["content"]
+            except urllib.error.HTTPError as e:
+                detail = e.read()[:300].decode("utf-8", "replace").replace(os.environ[key], "***")
+                errors.append(f"{model}: HTTP {e.code} {detail}")
             except (urllib.error.URLError, KeyError, json.JSONDecodeError, TimeoutError) as e:
-                errors.append(f"{key.split('_')[0].lower()}: {getattr(e, 'code', '')} {type(e).__name__}")
-        raise RuntimeError("all free providers failed: " + "; ".join(errors))
+                errors.append(f"{model}: {type(e).__name__}")
+        raise RuntimeError("all free providers failed: " + " | ".join(errors))
 
     return call
 
