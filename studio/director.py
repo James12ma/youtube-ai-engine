@@ -250,6 +250,10 @@ PROVIDERS = [  # (env key, OpenAI-compatible base URL, free model), strongest fi
     ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.8-flash"),
     ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.1-flash-lite"),
     ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"),
+    # gpt-oss has an 8k tokens-per-minute free limit, smaller than one planning call; these allow more.
+    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "meta-llama/llama-4-scout-17b-16e-instruct"),
+    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "moonshotai/kimi-k2-instruct-0905"),
+    ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
     ("GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-20b"),
     ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "google/gemma-4-26b-a4b-it:free"),
 ]
@@ -297,7 +301,10 @@ def free_llm(timeout: float = 240, rounds: int = 8, sleep=None) -> LLM:
                 pause = min(max(wait, 20.0 * (rnd + 1)), 90)  # demand spikes last minutes, not seconds
                 print(f"[llm] all busy; retrying in {pause:.0f}s", flush=True)
                 sleep(pause)
-        raise RuntimeError("all free providers failed: " + " | ".join(errors[-6:]))
+        last = {}  # the latest error of every model, so no provider's reason is hidden
+        for e in errors:
+            last[e.split(":", 1)[0].split(" ", 1)[1]] = e
+        raise RuntimeError("all free providers failed: " + " | ".join(last.values()))
 
     return call
 
