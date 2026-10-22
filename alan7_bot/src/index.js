@@ -1,4 +1,4 @@
-import {premiumRequest,privateScriptFile} from './premium_control.mjs';
+import {premiumRequest,privateScriptFile,filmRequest} from './premium_control.mjs';
 // Alan7 Telegram control bot — Cloudflare Worker (webhook) + D1 (jobs/queue).
 //
 // Design rules
@@ -16,6 +16,8 @@ const GH = 'https://api.github.com';
 const REPO = 'James12ma/youtube-ai-engine';
 const JOB_WORKFLOW = 'alan7-job.yml';
 const MAX_ATTEMPTS = 12;
+const STUDIO_BRANCH = 'ccr-ff883983-8z1psm';  // studio films run from this branch until merged
+const FILM_WORKFLOW = 'studio-film.yml';
 
 // Job kinds the bot can run today. Anything else is refused with an honest message.
 const KINDS = {
@@ -23,10 +25,12 @@ const KINDS = {
   test: { label: 'Tès sistèm (GitHub Actions, san GPU)', dispatch: true },
   lena: { label: 'Plan IA LENA 3 s (Kaggle GPU gratis, ~1 è)', dispatch: true, workflow: 'alan7-daily.yml' },
   director_draft: { label: 'Script verifye pou revizyon (resous gratis sèlman)', dispatch: true, workflow: 'alan7-director-draft.yml' },
+  film: { label: 'Fim studio (Direktè -> vwa -> WanGP -> montaj -> enspeksyon)', dispatch: true, workflow: FILM_WORKFLOW },
 };
 
 const HELP = [
   '<b>Alan7 — kòmand</b>',
+  '/film en title=Tit | <script> — fim studio konplè: Direktè, vwa natirèl, imaj WanGP, montaj, enspeksyon; MP4 la rive isit la (en, es, fr, pt)',
   '/script en <script> — videyo premium ak egzak mo ou yo; liy vid se nouvo sèn',
   '/motiontest — tès motion premium ak nouvo vwa anglè a',
   '/premium3d — rann referans Blender + Remotion Focus 13 s (CPU gratis, ka pran plizyè è)',
@@ -110,6 +114,7 @@ function ghHeaders(env) {
 // Returns {ok, status, detail}. Never throws; never includes the token.
 export async function dispatchJob(env, job) {
   if (!env.GITHUB_TOKEN) return { ok: false, status: 0, detail: 'GITHUB_TOKEN pa konfigire' };
+  if (job.kind === 'film') return writeFilmOrder(env, job);
   try {
     const wf = workflowFor(job.kind);
     const inputs = ['director_draft','premium_video'].includes(job.kind) ? { job_id: job.id, payload: job.arg || '' }
@@ -129,15 +134,37 @@ export async function dispatchJob(env, job) {
 
 const workflowFor = (kind) => (KINDS[kind] && KINDS[kind].workflow) || JOB_WORKFLOW;
 
+// The order holds only a private Telegram file reference and its hash: the script never enters the public repo.
+export async function writeFilmOrder(env, job) {
+  try {
+    const p = JSON.parse(job.arg || '{}');
+    const order = { id: job.id, title: p.title || job.id, language: p.language || 'en', voice: p.voice || '',
+      telegram_file_id: p.file_id, source_sha256: p.source_sha256 };
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(order, null, 1) + '\n')));
+    const r = await fetch(`${GH}/repos/${REPO}/contents/studio/orders/${job.id}.json`, {
+      method: 'PUT', headers: { ...ghHeaders(env), 'content-type': 'application/json' },
+      body: JSON.stringify({ message: `Film order ${job.id}`, content, branch: STUDIO_BRANCH }),
+    });
+    if (r.status === 201 || r.status === 200) return { ok: true, status: r.status, detail: 'order written' };
+    if (r.status === 422) return { ok: true, status: r.status, detail: 'order already exists' };
+    return { ok: false, status: r.status, detail: `GitHub HTTP ${r.status}` };
+  } catch (e) {
+    return { ok: false, status: 0, detail: 'GitHub network error' };
+  }
+}
+
 // Find the run started for a job (run-name "alan7 <job_id>") and return its state.
 export async function findRun(env, job) {
   if (!env.GITHUB_TOKEN) return null;
   try {
-    const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${workflowFor(job.kind)}/runs?event=workflow_dispatch&per_page=30`,
+    const film = job.kind === 'film';
+    const q = film ? `event=push&branch=${STUDIO_BRANCH}&per_page=30` : 'event=workflow_dispatch&per_page=30';
+    const r = await fetch(`${GH}/repos/${REPO}/actions/workflows/${workflowFor(job.kind)}/runs?${q}`,
       { headers: ghHeaders(env) });
     if (!r.ok) return { error: `GitHub HTTP ${r.status}` };
     const data = await r.json();
-    const run = (data.workflow_runs || []).find((w) => (w.display_title || w.name || '') === `alan7 ${job.id}`);
+    const title = film ? `Film order ${job.id}` : `alan7 ${job.id}`;
+    const run = (data.workflow_runs || []).find((w) => (w.display_title || w.name || '') === title);
     if (!run) return { missing: true };
     return { id: run.id, status: run.status, conclusion: run.conclusion, url: run.html_url };
   } catch (e) {
@@ -249,6 +276,8 @@ export async function handleCommand(env, text, context={}) {
     case 'script':
     case 'video':
       return premiumCommand(env,arg,context);
+    case 'film':
+      return filmCommand(env, arg, context);
     case 'motiontest':
       return premiumCommand(env,'',context,true);
     case 'premium3d':
@@ -882,4 +911,31 @@ export async function premiumCommand(env,raw,context={},test=false,focus3d=false
   }
   await env.DB.prepare('UPDATE jobs SET attempts=1,last_error=?2,next_try_at=?3,updated_at=?3 WHERE id=?1').bind(id,d.detail,now()+300).run();
   return `🕒 Travay <code>${id}</code> anrejistre; GitHub poko disponib. Bot la ap reeseye. /queue`;
+}
+
+export async function filmCommand(env, raw, context = {}) {
+  let request;
+  try { request = filmRequest(raw); } catch (e) { return esc(e.message); }
+  let id = newId();
+  if (Number.isSafeInteger(context.message_id) && context.chat_id) {
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('film:' + context.chat_id + ':' + context.message_id));
+    id = 'f' + [...new Uint8Array(h)].slice(0, 4).map((x) => x.toString(16).padStart(2, '0')).join('');
+    const prior = await env.DB.prepare('SELECT * FROM jobs WHERE id = ?1').bind(id).first();
+    if (prior) return `Fim <code>${id}</code> deja ${esc(prior.state)}. /queue pou swiv li.`;
+  }
+  let ref;
+  try { ref = await privateScriptFile(env, request); } catch (e) { return esc(e.message); }
+  const payload = { ...ref, language: request.language, voice: request.voice, title: request.title };
+  const result = await env.DB.prepare("INSERT OR IGNORE INTO jobs(id,kind,arg,state,attempts,created_at,updated_at) VALUES (?1,'film',?2,'queued',0,?3,?3)")
+    .bind(id, JSON.stringify(payload), now()).run();
+  if (result.meta?.changes === 0) return `Fim <code>${id}</code> deja anrejistre.`;
+  await logEvent(env, id, 'created', 'film');
+  const d = await dispatchJob(env, { id, kind: 'film', arg: JSON.stringify(payload) });
+  await setMeta(env, 'github_last', d.ok ? 'OK' : d.detail);
+  if (d.ok) {
+    await env.DB.prepare("UPDATE jobs SET state='running',attempts=1,updated_at=?2 WHERE id=?1").bind(id, now()).run();
+    return `🎬 Fim <code>${id}</code> lanse: «${esc(request.title)}» (${request.language}). Direktè → vwa → imaj WanGP → montaj → enspeksyon. MP4 la ap rive isit la. Pa gen piblikasyon. /queue`;
+  }
+  await env.DB.prepare('UPDATE jobs SET attempts=1,last_error=?2,next_try_at=?3,updated_at=?3 WHERE id=?1').bind(id, d.detail, now() + 300).run();
+  return `🕒 Fim <code>${id}</code> anrejistre; GitHub poko disponib. Bot la ap reeseye. /queue`;
 }

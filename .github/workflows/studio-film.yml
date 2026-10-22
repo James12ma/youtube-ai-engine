@@ -34,19 +34,8 @@ jobs:
           set -euo pipefail
           f=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'studio/orders/*.json' | tail -1)
           [[ "$f" =~ ^studio/orders/[A-Za-z0-9_.-]+\.json$ ]] || { echo "::error::no order file"; exit 1; }
-          python - "$f" >> "$GITHUB_OUTPUT" <<'PY'
-          import json, os, re, sys
-          o = json.load(open(sys.argv[1]))
-          fid = re.sub(r"[^a-z0-9_-]", "", o["id"].lower())[:60]
-          assert fid, "order id required"
-          film = o.get("film") or f"studio/films/{fid}"
-          assert re.fullmatch(r"studio/films/[A-Za-z0-9_-]+", film)
-          os.makedirs(film, exist_ok=True)
-          if o.get("script"):
-              open(f"{film}/script.txt", "w").write(o["script"].strip() + "\n")
-          print(f"id={fid}"); print(f"film={film}"); print("lang=" + re.sub(r"[^a-z]", "", o.get("language", "en")))
-          print("voice=" + re.sub(r"[^a-z_]", "", o.get("voice", ""))); print("title=" + o.get("title", fid).replace("\n", " ")[:120])
-          PY
+          python -m pip install -q pydantic
+          python -m studio.order "$f" >> "$GITHUB_OUTPUT"
       - name: Install tools
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends espeak-ng ffmpeg >/dev/null

@@ -27,3 +27,18 @@ export async function privateScriptFile(env, request) {
     return {file_id:file,source_sha256:[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join(''),profile:'premium',voice:request.voice};
   }catch{throw Error('Telegram pa t ka konsève script la. Pa gen rann ki lanse.');}
 }
+
+// /film [en|es|fr|pt] [voice=<kokoro voice>] [title=<few words>|] <script>
+// Studio films: the Director plans shots from the exact words; nothing is rewritten.
+export function filmRequest(raw) {
+  let text=String(raw||'').trim();
+  const lang=/^(en|es|fr|pt)\s+/.exec(text);let language='en';
+  if(lang){language=lang[1];text=text.slice(lang[0].length);}
+  else if(/^ht\s/.test(text))throw Error('Kreyòl: poko gen yon vwa natirèl gratis ki bon ase. Chwazi en, es, fr oswa pt.');
+  let voice='';const v=/^voice=([a-z]{2}_[a-z]+)\s+/.exec(text);if(v){voice=v[1];text=text.slice(v[0].length);}
+  let title='';const t=/^title=([^|\n]{2,80})\|\s*/.exec(text);if(t){title=t[1].trim();text=text.slice(t[0].length);}
+  const words=text.split(/\s+/).filter(Boolean).length;
+  if(text.length<40||words<15)throw Error('Voye script konplè a (omwen 15 mo): /film en title=Tit la | tèks la…');
+  if(words>450)throw Error('Script la twò long pou yon sèl fim (maks ~450 mo, ~3 minit). Separe l.');
+  return {language,voice,title:title||text.split(/\s+/).slice(0,6).join(' '),profile:'studio_film',script:text};
+}
