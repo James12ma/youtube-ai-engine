@@ -40,7 +40,8 @@ Non-negotiable rules:
 6. People, places and emotions use still_2_5d (or clip for real motion). Each still/clip needs an
    AssetRequest with a concrete photographic prompt: subject, action, setting, light, lens, mood. Never
    abstract ("success", "technology") and never text inside the image.
-7. "title" only when one short phrase or quote IS the point; dots_subtract for "many vs one / remove";
+7. "title" only when one short phrase or quote IS the point, and its kicker must be that concrete phrase
+   or quote itself (e.g. the exact sentence a character wrote), never a label like "Statement"; dots_subtract for "many vs one / remove";
    object_3d only with an existing asset.
 8. Recurring characters and stateful objects are entities. Characters get a fixed appearance and seed.
    Stateful objects get initial_state; beats chain state_before -> state_after without skipping.

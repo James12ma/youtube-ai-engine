@@ -20,7 +20,7 @@ export const Title: React.FC<ShotProps> = ({shot, duration}) => {
     <AbsoluteFill style={{background: dark ? '#0b0b0c' : undefined}}>
       {!dark ? <Paper /> : null}
       {p.kicker ? (
-        <div style={{position: 'absolute', left: 80, right: 80, top: 980, textAlign: 'center', transform: `translateY(${(1 - k) * 40 - drift * 16}px) scale(${1 + drift * 0.03})`,
+        <div style={{position: 'absolute', left: 80, right: 80, top: shot.text.position === 'top' ? 980 : shot.text.position === 'center' ? 1260 : 560, textAlign: 'center', transform: `translateY(${(1 - k) * 40 - drift * 16}px) scale(${1 + drift * 0.03})`,
           opacity: k, filter: `blur(${(1 - k) * 10}px)`}}>
           <div style={{fontFamily: 'PlayfairItalic', fontStyle: 'italic', fontWeight: 900, fontSize: 92, lineHeight: 1.08, letterSpacing: '-0.02em',
             color: dark ? '#fff' : INK, textShadow: '0 18px 30px rgba(0,0,0,0.16)'}}>{p.kicker}</div>

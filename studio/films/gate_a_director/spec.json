@@ -1,0 +1,868 @@
+{
+ "version": 1,
+ "id": "gate_a_director",
+ "title": "gate_a_director",
+ "format": {
+  "width": 1080,
+  "height": 1920,
+  "fps": 30
+ },
+ "style": "editorial_two_world",
+ "narration": {
+  "text": "At two a.m., Maya finally finds the job she wants. She fills in the application on her phone: her name, her experience, and one honest line about why. She presses Submit. Sent. In less than a second, her application crosses the city and lands in the company's hiring system. The next morning, Daniel, the recruiter, opens it and reads every word. That one honest line? It's the reason her phone rings.",
+  "language": "en",
+  "voice": ""
+ },
+ "entities": {
+  "maya": {
+   "kind": "character",
+   "name": "Maya",
+   "appearance": "Woman, early 20s, South Asian, dark wavy hair tied back loosely, wearing an oversized gray crewneck sweatshirt, illuminated by phone screen light in a dark bedroom",
+   "seed": 40291
+  },
+  "maya_phone": {
+   "kind": "prop",
+   "name": "Maya's Smartphone",
+   "appearance": "Modern slim smartphone with dark bezel, glowing screen interface",
+   "initial_state": "browsing"
+  },
+  "application_data": {
+   "kind": "data",
+   "name": "Job Application",
+   "appearance": "Digital application form containing candidate fields: Name, Experience, and Personal Statement",
+   "initial_state": "unfilled"
+  },
+  "hiring_system": {
+   "kind": "ui",
+   "name": "Recruiter Portal Dashboard",
+   "appearance": "Clean enterprise ATS interface on a desktop display showing incoming candidate cards and applicant review queue"
+  },
+  "daniel": {
+   "kind": "character",
+   "name": "Daniel",
+   "appearance": "Man, mid-30s, Caucasian, short groomed light-brown hair, wearing a navy collared shirt in a bright modern office with morning sunlight",
+   "seed": 71832
+  }
+ },
+ "assets": {
+  "asset_maya_bedroom": {
+   "kind": "image",
+   "prompt": "Cinematic 35mm photograph of Maya, early 20s South Asian woman with wavy dark hair tied loosely, lying in bed in a dark bedroom at night, holding a glowing smartphone close to her face, eyes widening with discovery and quiet excitement, cool blue screen light on her face, soft warm ambient darkness, shallow depth of field, authentic candid mood",
+   "entities": [],
+   "seconds": 5.0
+  },
+  "asset_daniel_desk": {
+   "kind": "image",
+   "prompt": "Cinematic editorial photograph of Daniel, mid-30s Caucasian man with short groomed hair in navy collared shirt, seated at clean minimalist wooden office desk in soft morning sunlight, holding a computer mouse and looking attentively at a modern desktop monitor, warm bright natural lighting, 50mm lens, professional calm focus",
+   "entities": [],
+   "seconds": 5.0
+  }
+ },
+ "shots": [
+  {
+   "id": "s01",
+   "scene": "maya_bedroom",
+   "world": "story",
+   "purpose": "Establish Maya discovering the job role late at night in bed.",
+   "words": [
+    0,
+    9
+   ],
+   "technique": "still_2_5d",
+   "params": {
+    "image": "asset_maya_bedroom",
+    "grade": "night",
+    "vignette": 0.4,
+    "light_sweep": true
+   },
+   "beats": [
+    {
+     "action": "finds the job",
+     "actor": "maya",
+     "object": "maya_phone",
+     "at_word": 5,
+     "state_before": "browsing",
+     "state_after": "found",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "maya",
+    "maya_phone"
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.08,
+    "focus": [
+     0.5,
+     0.45
+    ]
+   },
+   "transition_in": {
+    "kind": "cut",
+    "frames": 0
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     5,
+     7
+    ],
+    "mute": [
+     0,
+     6,
+     8
+    ],
+    "position": "top"
+   },
+   "sfx": []
+  },
+  {
+   "id": "s02",
+   "scene": "phone_interface",
+   "world": "explain",
+   "purpose": "Transition directly into the mobile application form on paper background.",
+   "words": [
+    10,
+    17
+   ],
+   "technique": "ui_flow",
+   "params": {
+    "device": "phone",
+    "app_name": "Studio · Apply",
+    "accent": "#2f6bff",
+    "background": "paper",
+    "hand": true,
+    "clock": "2:04",
+    "screens": [
+     {
+      "kind": "form",
+      "at_word": 10,
+      "title": "Application Form",
+      "cta": "Submit Application",
+      "fields": [
+       {
+        "label": "Full Name",
+        "value": "Maya Chen"
+       }
+      ]
+     }
+    ]
+   },
+   "beats": [
+    {
+     "action": "opens application form",
+     "actor": "maya",
+     "object": "application_data",
+     "at_word": 11,
+     "state_before": "unfilled",
+     "state_after": "filling",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "maya_phone",
+    "application_data"
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.05,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "zoom_through",
+    "frames": 6
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     11,
+     14
+    ],
+    "mute": [
+     10,
+     12,
+     13,
+     15,
+     16
+    ],
+    "position": "top"
+   },
+   "sfx": [
+    {
+     "at_word": 11,
+     "sound": "tap",
+     "gain": 0.6
+    }
+   ]
+  },
+  {
+   "id": "s03",
+   "scene": "phone_interface",
+   "world": "explain",
+   "purpose": "Show the three distinct fields typed in sync with narration, highlighting the honest line.",
+   "words": [
+    18,
+    27
+   ],
+   "technique": "ui_flow",
+   "params": {
+    "device": "phone",
+    "app_name": "Studio · Apply",
+    "accent": "#2f6bff",
+    "background": "paper",
+    "hand": true,
+    "clock": "2:05",
+    "screens": [
+     {
+      "kind": "form",
+      "at_word": 18,
+      "title": "Application Form",
+      "cta": "Submit Application",
+      "fields": [
+       {
+        "label": "Full Name",
+        "value": "Maya Chen",
+        "at_word": 19
+       },
+       {
+        "label": "Experience",
+        "value": "Lead Product Designer · 4 yrs",
+        "at_word": 21
+       },
+       {
+        "label": "Why this role?",
+        "value": "I want to build software that actually helps people.",
+        "at_word": 25,
+        "highlight": true
+       }
+      ]
+     }
+    ]
+   },
+   "beats": [
+    {
+     "action": "types name",
+     "actor": "maya",
+     "object": "application_data",
+     "at_word": 19,
+     "state_before": "filling",
+     "state_after": "filling",
+     "note": ""
+    },
+    {
+     "action": "types experience",
+     "actor": "maya",
+     "object": "application_data",
+     "at_word": 21,
+     "state_before": "filling",
+     "state_after": "filling",
+     "note": ""
+    },
+    {
+     "action": "types personal statement",
+     "actor": "maya",
+     "object": "application_data",
+     "at_word": 25,
+     "state_before": "filling",
+     "state_after": "filled",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "application_data",
+    "maya_phone"
+   ],
+   "camera": {
+    "move": "static",
+    "intensity": 0.08,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "match",
+    "frames": 0,
+    "match_entity": "maya_phone"
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     24,
+     25
+    ],
+    "mute": [
+     18,
+     20,
+     22,
+     26
+    ],
+    "position": "top"
+   },
+   "sfx": [
+    {
+     "at_word": 19,
+     "sound": "type",
+     "gain": 0.6
+    },
+    {
+     "at_word": 21,
+     "sound": "type",
+     "gain": 0.6
+    },
+    {
+     "at_word": 25,
+     "sound": "type",
+     "gain": 0.6
+    }
+   ]
+  },
+  {
+   "id": "s04",
+   "scene": "phone_interface",
+   "world": "explain",
+   "purpose": "Capture the decisive submit tap, confirmation state, and phone returning to idle.",
+   "words": [
+    28,
+    31
+   ],
+   "technique": "ui_flow",
+   "params": {
+    "device": "phone",
+    "app_name": "Studio · Apply",
+    "accent": "#2f6bff",
+    "background": "paper",
+    "hand": true,
+    "clock": "2:06",
+    "screens": [
+     {
+      "kind": "form",
+      "at_word": 28,
+      "cta": "Submit Application",
+      "tap_cta_word": 29,
+      "fields": [
+       {
+        "label": "Full Name",
+        "value": "Maya Chen"
+       },
+       {
+        "label": "Why this role?",
+        "value": "I want to build software that actually helps people.",
+        "highlight": true
+       }
+      ]
+     },
+     {
+      "kind": "confirm",
+      "at_word": 31,
+      "title": "Sent",
+      "body": "Application #MC-4029 received"
+     }
+    ]
+   },
+   "beats": [
+    {
+     "action": "presses submit",
+     "actor": "maya",
+     "object": "application_data",
+     "at_word": 29,
+     "state_before": "filled",
+     "state_after": "submitting",
+     "note": ""
+    },
+    {
+     "action": "status changes to sent",
+     "object": "application_data",
+     "at_word": 31,
+     "state_before": "submitting",
+     "state_after": "sent",
+     "note": ""
+    },
+    {
+     "action": "phone locks to idle",
+     "actor": "maya",
+     "object": "maya_phone",
+     "at_word": 31,
+     "state_before": "found",
+     "state_after": "idle",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "maya_phone",
+    "application_data"
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.05,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "match",
+    "frames": 0,
+    "match_entity": "maya_phone"
+   },
+   "text": {
+    "mode": "center_word",
+    "emphasis": [
+     30,
+     31
+    ],
+    "mute": [],
+    "position": "top",
+    "show_words": [
+     29,
+     31
+    ]
+   },
+   "sfx": [
+    {
+     "at_word": 29,
+     "sound": "tap",
+     "gain": 0.6
+    },
+    {
+     "at_word": 31,
+     "sound": "ding",
+     "gain": 0.6
+    }
+   ]
+  },
+  {
+   "id": "s05",
+   "scene": "data_network",
+   "world": "explain",
+   "purpose": "Visualize the document traveling across the city grid in less than a second.",
+   "words": [
+    32,
+    42
+   ],
+   "technique": "data_transfer",
+   "params": {
+    "packet": "document",
+    "packet_label": "Maya Chen · Application",
+    "sender_label": "Maya's Phone",
+    "receiver_label": "Studio ATS",
+    "path": "city",
+    "depart_word": 39,
+    "arrive_word": 42
+   },
+   "beats": [
+    {
+     "action": "application traverses the city",
+     "object": "application_data",
+     "at_word": 39,
+     "state_before": "sent",
+     "state_after": "in_transit",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "application_data"
+   ],
+   "camera": {
+    "move": "pan_right",
+    "intensity": 0.12,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "whip_blur",
+    "frames": 6
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     39,
+     41
+    ],
+    "mute": [
+     32,
+     33,
+     34,
+     35,
+     40,
+     42
+    ],
+    "position": "top"
+   },
+   "sfx": [
+    {
+     "at_word": 39,
+     "sound": "whoosh",
+     "gain": 0.6
+    }
+   ]
+  },
+  {
+   "id": "s06",
+   "scene": "recruiter_desktop",
+   "world": "explain",
+   "purpose": "Show the application landing directly at the top of the recruiter's inbox queue.",
+   "words": [
+    43,
+    48
+   ],
+   "technique": "ui_flow",
+   "params": {
+    "device": "laptop",
+    "app_name": "TalentFlow ATS",
+    "accent": "#2f6bff",
+    "background": "paper",
+    "clock": "2:06",
+    "screens": [
+     {
+      "kind": "inbox",
+      "at_word": 43,
+      "title": "Incoming Submissions",
+      "arrive_word": 43,
+      "rows": [
+       {
+        "name": "Maya Chen",
+        "role": "Product Designer",
+        "tag": "Just now",
+        "new": true
+       },
+       {
+        "name": "David Miller",
+        "role": "Systems Lead",
+        "tag": "Yesterday"
+       },
+       {
+        "name": "Elena Rostova",
+        "role": "UX Researcher",
+        "tag": "2d ago"
+       }
+      ]
+     }
+    ]
+   },
+   "beats": [
+    {
+     "action": "application lands in applicant queue",
+     "object": "application_data",
+     "at_word": 43,
+     "state_before": "in_transit",
+     "state_after": "delivered",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "hiring_system",
+    "application_data"
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.05,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "cut",
+    "frames": 0
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     43,
+     48
+    ],
+    "mute": [
+     44,
+     45,
+     46
+    ],
+    "position": "top"
+   },
+   "sfx": [
+    {
+     "at_word": 43,
+     "sound": "pop",
+     "gain": 0.6
+    }
+   ]
+  },
+  {
+   "id": "s07",
+   "scene": "recruiter_office",
+   "world": "story",
+   "purpose": "Time jump to next morning: introduce recruiter Daniel opening Maya's file.",
+   "words": [
+    49,
+    56
+   ],
+   "technique": "still_2_5d",
+   "params": {
+    "image": "asset_daniel_desk",
+    "grade": "morning",
+    "vignette": 0.25,
+    "light_sweep": false
+   },
+   "beats": [
+    {
+     "action": "Daniel opens application",
+     "actor": "daniel",
+     "object": "application_data",
+     "at_word": 55,
+     "state_before": "delivered",
+     "state_after": "opened",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "daniel",
+    "application_data"
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.08,
+    "focus": [
+     0.5,
+     0.45
+    ]
+   },
+   "transition_in": {
+    "kind": "dip_white",
+    "frames": 10
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     51,
+     55
+    ],
+    "mute": [
+     49,
+     50,
+     53,
+     56
+    ],
+    "position": "top"
+   },
+   "sfx": [
+    {
+     "at_word": 55,
+     "sound": "click",
+     "gain": 0.6
+    }
+   ]
+  },
+  {
+   "id": "s08",
+   "scene": "recruiter_desktop",
+   "world": "explain",
+   "purpose": "Show the detail screen with Daniel reading through Maya's application text.",
+   "words": [
+    57,
+    60
+   ],
+   "technique": "ui_flow",
+   "params": {
+    "device": "laptop",
+    "app_name": "TalentFlow ATS",
+    "accent": "#2f6bff",
+    "background": "paper",
+    "clock": "9:15",
+    "screens": [
+     {
+      "kind": "detail",
+      "at_word": 57,
+      "title": "Candidate Review · Maya Chen",
+      "highlight_word": 58,
+      "fields": [
+       {
+        "label": "Candidate",
+        "value": "Maya Chen"
+       },
+       {
+        "label": "Experience",
+        "value": "4 Years · Product Design"
+       },
+       {
+        "label": "Personal Statement",
+        "value": "I want to build software that actually helps people.",
+        "highlight": true
+       }
+      ]
+     }
+    ]
+   },
+   "beats": [
+    {
+     "action": "reads application line",
+     "actor": "daniel",
+     "object": "application_data",
+     "at_word": 58,
+     "state_before": "opened",
+     "state_after": "reviewed",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "application_data",
+    "hiring_system"
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.06,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "zoom_through",
+    "frames": 6
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     58,
+     60
+    ],
+    "mute": [
+     57,
+     59
+    ],
+    "position": "top"
+   },
+   "sfx": [
+    {
+     "at_word": 58,
+     "sound": "click",
+     "gain": 0.6
+    }
+   ]
+  },
+  {
+   "id": "s09",
+   "scene": "recruiter_desktop",
+   "world": "explain",
+   "purpose": "Highlight the key takeaway phrase with editorial headline emphasis.",
+   "words": [
+    61,
+    64
+   ],
+   "technique": "title",
+   "params": {
+    "kicker": "Candidate Statement",
+    "background": "paper"
+   },
+   "beats": [],
+   "entities": [],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.04,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "cut",
+    "frames": 0
+   },
+   "text": {
+    "mode": "headline",
+    "emphasis": [
+     63,
+     64
+    ],
+    "mute": [
+     61
+    ],
+    "position": "center"
+   },
+   "sfx": []
+  },
+  {
+   "id": "s10",
+   "scene": "maya_phone_call",
+   "world": "explain",
+   "purpose": "Deliver the payoff: Maya's phone rings with an incoming recruiter call.",
+   "words": [
+    65,
+    70
+   ],
+   "technique": "ui_flow",
+   "params": {
+    "device": "phone",
+    "app_name": "Phone",
+    "accent": "#2f6bff",
+    "background": "paper",
+    "hand": false,
+    "clock": "9:22",
+    "screens": [
+     {
+      "kind": "incoming_call",
+      "at_word": 70,
+      "caller": "Daniel · Studio Recruiting"
+     }
+    ]
+   },
+   "beats": [
+    {
+     "action": "phone rings with incoming call",
+     "object": "maya_phone",
+     "at_word": 70,
+     "state_before": "idle",
+     "state_after": "ringing",
+     "note": ""
+    }
+   ],
+   "entities": [
+    "maya_phone",
+    "daniel"
+   ],
+   "camera": {
+    "move": "push_in",
+    "intensity": 0.08,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "transition_in": {
+    "kind": "whip_blur",
+    "frames": 7
+   },
+   "text": {
+    "mode": "words",
+    "emphasis": [
+     67,
+     70
+    ],
+    "mute": [
+     65,
+     66,
+     68
+    ],
+    "position": "top"
+   },
+   "sfx": [
+    {
+     "at_word": 70,
+     "sound": "ring",
+     "gain": 0.6
+    }
+   ]
+  }
+ ],
+ "music": {
+  "gain_db": -20.0,
+  "duck_db": -8.0
+ },
+ "tail_seconds": 1.0,
+ "capability_gaps": []
+}
