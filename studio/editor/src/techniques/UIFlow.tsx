@@ -95,7 +95,7 @@ const Listing: React.FC<{s: Screen; accent: string; tapAt?: number}> = ({s, acce
           </div>
         </div>
         <div style={{marginTop: 16, fontSize: 24, color: '#6b6e78'}}>{s.meta}</div>
-        <div style={{marginTop: 24}}><Button label={s.cta ?? 'Apply'} accent={accent} pressAt={tapAt} w={500} /></div>
+        {s.cta ? <div style={{marginTop: 24}}><Button label={s.cta} accent={accent} pressAt={tapAt} w={500} /></div> : null}
       </div>
     </div>
   );
@@ -125,7 +125,7 @@ const Form: React.FC<{s: Screen; accent: string; tapAt?: number}> = ({s, accent,
         );
       })}
       <div style={{marginTop: 40, display: 'flex', justifyContent: 'center'}}>
-        <Button label={s.cta ?? 'Submit'} accent={accent} pressAt={tapAt} w={520} />
+        {s.cta ? <Button label={s.cta} accent={accent} pressAt={tapAt} w={520} /> : null}
       </div>
     </div>
   );

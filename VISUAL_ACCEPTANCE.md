@@ -10,7 +10,8 @@ MP4 files are not stored in git (`*.mp4` is ignored repo-wide); each entry lists
 | P1-gate-a-preview | 2026-10-22 | Gate A preview (not a candidate) | Sent to owner. Explain-world shots only; story shots show ASSET PENDING; no voice; estimated timing. |
 | A1-gate-a-v1 | 2026-10-22 | **Gate A candidate** | Delivered to owner's Telegram by the pipeline (run 39794737218). Superseded by A1-v2 (white flash fixed). |
 | A1-gate-a-v2 | 2026-10-22 | **Gate A candidate** | **Awaiting owner verdict.** Sent in chat. |
-| T1-tap-card-v1 | 2026-10-22 | Owner's own script (first full AI-directed film) | Delivered to owner's Telegram by the pipeline (run 39812806136). **My review: below the Gate A bar** (see below). v2 queued. |
+| T1-tap-card-v1 | 2026-10-22 | Owner's own script (first full AI-directed film) | Delivered to owner's Telegram by the pipeline (run 39812806136). **My review: below the Gate A bar** (see below). Superseded by v2. |
+| T1-tap-card-v2 | 2026-10-22 | Owner's own script | Delivered to owner's Telegram (run 39824701260) and sent in chat. **Awaiting owner verdict.** |
 
 ---
 
@@ -104,3 +105,17 @@ The owner's verdicts on them, if any, should be added here.
   - Validator: a screen with nothing to show is rejected.
   - Director: phone UI only for a person using an app; physical objects get still close-ups; filler emphasis is removed.
 - **Owner verdict:** pending.
+
+### T1 v2 (run 39824701260, 14 min end to end, $0)
+
+- **Pipeline timings:** Director 33 s (first try valid), install 1.5 min (pip cache), Kaggle 8 min, render 3 min.
+- **Inspector:** no defects. 37.2 s, −14.3 LUFS, −2.0 dBTP. SHA256 prefix `0a6d382f4fbb78eb`.
+- **What improved:**
+  - The opening is a story still (Lena's finger on the card), followed by a macro photo of the chip.
+  - The payment's path is drawn: chip → terminal → network → bank, then back to the terminal.
+  - "Approved" is a title beat, and there are no blank phones.
+- **Remaining defects (my review):**
+  1. "The bank checks three things" shows a "Verification" screen with an "Apply" button. The default label was left over from Gate A; now fixed, since the renderer draws no button without a label. The three checks (balance, amount, location) aren't shown as items.
+  2. Five data_transfer shots in a row feel repetitive. They need more variety (for example a terminal close-up still).
+  3. The chip macro looks slightly like folded paper.
+  4. The coffee still shows a different hairstyle than v1. No inconsistency within v2, because her face appears only once.
