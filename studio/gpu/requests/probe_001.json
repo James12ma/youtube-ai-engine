@@ -1,0 +1,26 @@
+{
+  "purpose": "Feasibility probe: can WanGP run on the free Kaggle GPU? 2 still models + 2 image-to-video models, one shot of the Gate A story.",
+  "wangp_commit": "9d25c60",
+  "cli_args": ["--attention", "sdpa", "--profile", "4"],
+  "max_seconds": 15000,
+  "tasks": [
+    {"id": "still_zimage", "settings": {
+      "model_type": "z_image_twinflow_turbo",
+      "prompt": "Cinematic photograph at night. A young woman sits on the edge of her bed in a small apartment, her face lit by the cool blue glow of the smartphone she holds in both hands. Warm bedside lamp behind her, rain on the window, shallow depth of field, 35mm film grain, realistic skin, moody low-key lighting, vertical composition.",
+      "resolution": "768x1344", "seed": 1997}},
+    {"id": "still_flux2", "settings": {
+      "model_type": "flux2_klein_4b",
+      "prompt": "Cinematic photograph at night. A young woman sits on the edge of her bed in a small apartment, her face lit by the cool blue glow of the smartphone she holds in both hands. Warm bedside lamp behind her, rain on the window, shallow depth of field, 35mm film grain, realistic skin, moody low-key lighting, vertical composition.",
+      "resolution": "768x1344", "seed": 1997}},
+    {"id": "i2v_wan22", "settings": {
+      "model_type": "i2v_2_2_Enhanced_Lightning_v2",
+      "prompt": "The woman lifts the phone slightly and taps the screen with her thumb, the blue light flickers on her face, she breathes in, rain streaks on the window behind her, slow cinematic push-in.",
+      "image_start": "@still_zimage", "image_prompt_type": "S",
+      "resolution": "480x832", "video_length": 81, "seed": 1997}},
+    {"id": "i2v_ltx2", "settings": {
+      "model_type": "ltx2_22B_distilled_gguf_q4_k_m",
+      "prompt": "The woman lifts the phone slightly and taps the screen with her thumb, the blue light flickers on her face, she breathes in, rain streaks on the window behind her, slow cinematic push-in. Quiet room tone and soft rain.",
+      "image_start": "@still_zimage", "image_prompt_type": "S",
+      "resolution": "512x896", "video_length": 121, "seed": 1997}}
+  ]
+}
