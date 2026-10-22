@@ -83,6 +83,14 @@ class DirectorTests(unittest.TestCase):
         spec = direct(GATE_A["narration"]["text"], llm=Scripted(ANALYSIS, plan), film_id="t", log=lambda m: None)
         self.assertEqual(spec.shots[k].text.emphasis, [])
 
+    def test_world_follows_the_technique(self):
+        # Run 39820233126: still_2_5d close-ups were left in the "explain" world and blocked the plan.
+        plan = copy.deepcopy(GATE_A)
+        k = next(i for i, sh in enumerate(plan["shots"]) if sh["technique"] == "still_2_5d")
+        plan["shots"][k]["world"] = "explain"
+        spec = direct(GATE_A["narration"]["text"], llm=Scripted(ANALYSIS, plan), film_id="t", log=lambda m: None)
+        self.assertEqual(spec.shots[k].world, "story")
+
     def test_malformed_shots_go_to_repair_not_crash(self):
         bad = copy.deepcopy(GATE_A)
         bad["shots"] = ["not a shot"] + bad["shots"]

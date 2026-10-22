@@ -19,7 +19,7 @@ from typing import Callable, Protocol
 
 from pydantic import ValidationError
 
-from .capabilities import catalog_for_director
+from .capabilities import REGISTRY, catalog_for_director
 from .spec import FilmSpec, SpecError, tokenize, validate
 
 GRAMMAR = """You are the film director of a premium short-form video studio. Your films look like the best
@@ -148,6 +148,7 @@ def direct(text: str, *, llm: LLM, film_id: str, title: str = "", language: str 
         raw["narration"]["language"] = language
         raw["format"] = {"width": width, "height": height, "fps": 30}
         _drop_filler_emphasis(raw, words)
+        _fit_worlds(raw)
         _keyed(raw, "entities")
         _keyed(raw, "assets")
         _inherit_entities(analysis, raw)
@@ -200,6 +201,16 @@ def _drop_filler_emphasis(raw: dict, words: list[str]) -> None:
         if isinstance(t, dict) and isinstance(t.get("emphasis"), list):
             t["emphasis"] = [i for i in t["emphasis"] if not (isinstance(i, int) and 0 <= i < len(words)
                              and words[i].lower().strip(".,!?;:'\"") in FILLER)]
+
+
+def _fit_worlds(raw: dict) -> None:
+    """A shot's world follows from its technique (a still close-up is always a photo); fix it here
+    instead of spending a repair round on it."""
+    for shot in raw.get("shots") or []:
+        if isinstance(shot, dict) and shot.get("technique") in REGISTRY:
+            worlds = REGISTRY[shot["technique"]].worlds
+            if shot.get("world") not in worlds:
+                shot["world"] = worlds[0]
 
 
 def _has_shots(raw: dict) -> bool:

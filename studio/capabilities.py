@@ -65,7 +65,7 @@ class UIScreenSpec(_P):
     @model_validator(mode="after")
     def _shows_something(self):
         # A screen with nothing to draw renders as a blank white phone (tap_card run 39812806136).
-        need = {"listing": self.title, "form": self.fields, "confirm": self.title or self.body, "inbox": self.rows,
+        need = {"listing": self.title or self.heading, "form": self.fields, "confirm": self.title or self.body, "inbox": self.rows,
                 "detail": self.title or self.body or self.fields, "incoming_call": True}[self.kind]
         if not need:
             raise ValueError(f"{self.kind} screen has nothing to show (see the field descriptions)")

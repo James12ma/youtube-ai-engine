@@ -90,7 +90,7 @@ const Listing: React.FC<{s: Screen; accent: string; tapAt?: number}> = ({s, acce
             {String(s.company ?? 'C')[0]}
           </div>
           <div>
-            <div style={{fontWeight: 800, fontSize: 38, color: INK, letterSpacing: '-0.03em'}}>{s.title}</div>
+            <div style={{fontWeight: 800, fontSize: 38, color: INK, letterSpacing: '-0.03em'}}>{s.title || s.heading}</div>
             <div style={{fontWeight: 500, fontSize: 26, color: '#6b6e78'}}>{s.company}</div>
           </div>
         </div>

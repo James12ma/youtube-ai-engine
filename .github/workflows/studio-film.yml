@@ -28,6 +28,11 @@ jobs:
         with: { python-version: '3.12' }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
+      - name: Cache pip downloads (torch CPU + kokoro are ~1 GB; the CDN is sometimes slow)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: studio-pip-${{ runner.os }}-v1
       - name: Read order
         id: order
         run: |
