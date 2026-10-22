@@ -17,6 +17,7 @@ import subprocess
 from pathlib import Path
 
 from .audio.sfx import write_all as write_sfx
+from .inspector import inspect, master_audio
 from .spec import FilmSpec
 from .timeline import build_plan
 
@@ -76,8 +77,15 @@ def main() -> None:
         print(out)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run([*base, "render", *common[:2], str(a.out.resolve()), *common[2:]], cwd=EDITOR, check=True)
-        print(a.out)
+        raw = a.out.with_name(a.out.stem + ".raw.mp4")
+        subprocess.run([*base, "render", *common[:2], str(raw.resolve()), *common[2:]], cwd=EDITOR, check=True)
+        if plan["voice"]:
+            master_audio(raw, a.out)  # social loudness target; video stream untouched
+            raw.unlink()
+        else:
+            raw.replace(a.out)
+        report = inspect(a.out, plan, a.out.parent / (a.out.stem + "_inspection"))
+        print(json.dumps({"out": str(a.out), "defects": report["defects"]}, indent=1))
 
 
 if __name__ == "__main__":
