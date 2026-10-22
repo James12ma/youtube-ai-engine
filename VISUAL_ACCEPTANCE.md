@@ -7,6 +7,7 @@ MP4 files are not stored in git (`*.mp4` is ignored repo-wide); each entry lists
 |---|---|---|---|
 | V0-baseline-60s | 2026-10-18 (received) | — (prior engine output) | Not recorded. Used as the failure baseline. |
 | V1-focus-13s | 2026-10-18 / 2026-10-21 | Style test before the mission | **Awaiting owner review.** Does not qualify as a Gate A candidate (see below). |
+| P1-gate-a-preview | 2026-10-22 | Gate A preview (not a candidate) | Sent to owner. Explain-world shots only; story shots show ASSET PENDING; no voice; estimated timing. |
 
 ---
 

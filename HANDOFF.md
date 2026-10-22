@@ -1,14 +1,34 @@
 # HANDOFF
 
-Last updated: 2026-10-21. Read this first when resuming.
+Last updated: 2026-10-22. Read this first when resuming.
 
 ## Where things stand
 
-- **Phase 4 (Gate A) in progress** after owner approval on 2026-10-22.
-- **Built (`studio/`):** spec + validator (`spec.py`), capability registry (`capabilities.py`), Director (`director.py`, free LLMs, repair loop, fail closed), asset planner (`assets.py`, writes WanGP GPU requests), timeline binder (`timeline.py`), Remotion editor (`editor/`), SFX synth (`audio/sfx.py`), render CLI (`render.py`), WanGP GPU runner (`gpu/wangp_job.py`). Tests: `tests/test_studio_spec.py`, `tests/test_studio_director.py` (17 pass).
-- **Gate A film:** `studio/films/gate_a/spec.json` (71 words, 11 shots). Preview: `python -m studio.render studio/films/gate_a --preview --out out.mp4`.
-- **Blocked:** `.github/workflows/studio-gpu.yml` (WanGP on Kaggle T4, encrypted results to `studio-assets/<run>`) is written but **not pushed**. Auto-mode refused to push a workflow that uses the owner's Kaggle token without explicit owner permission. Until then: no generated stills/clips, no real voice (HF is blocked in this sandbox).
-- **Known defect:** the phone status bar always shows 2:07 (it contradicts the 8:14 lock screen in s11).
+- **Phase 4 (Gate A) in progress.** The owner approved the reconstruction on 2026-10-22 and gave full access. WanGP is the generation engine.
+- **Pipeline (`studio/`):**
+  - `director.py`: free LLMs (Gemini 3.8 flash → 3.1 flash-lite → Groq gpt-oss → OpenRouter), with retries, repair from the best attempt, and fail-closed behaviour.
+  - `spec.py`: validator. Words covered contiguously, ≤ 14 words per shot, beats inside their words, state chains, every asset has an AssetRequest, typed UI screens.
+  - `capabilities.py`: technique registry.
+  - `voice.py`: Kokoro word timings, aligned.
+  - `assets.py`: WanGP GPU requests, with identity text and seed per character.
+  - `gpu/wangp_job.py` + `gpu/kaggle_run.sh`: WanGP API on the Kaggle T4.
+  - `timeline.py` + `editor/`: Remotion; one composition for every spec.
+  - `inspector.py`: delivery, loudness, black/freeze and coverage checks, plus a beat sheet; it never approves.
+  - `render.py`: stage → render → master (−14 LUFS) → inspect.
+  - `deliver.py`: private Telegram.
+  - `order.py`: hash-verified private scripts.
+- **Workflows:**
+  - `studio-gpu.yml`: request files.
+  - `studio-cpu.yml`: voice/director jobs.
+  - `studio-film.yml`: a full order → MP4 → Telegram.
+  - All results are encrypted to `studio/keys/*.pub.pem` and pushed to `studio-assets/<run>`. Decrypt with `studio/gpu/decrypt_assets.sh <run> <key> review_session <dir>` (the session private key lives only in the scratchpad).
+- **Telegram:** `/film` is in `alan7_bot` (41/41 bot tests). It is **not deployed yet**; deploy after the first end-to-end film succeeds.
+- **Verified live:**
+  - The Kokoro voice job ran: 29.6 s, 71 words aligned.
+  - The Director produced a valid 10-shot spec after 2 repairs (`studio/films/gate_a_director/`).
+  - The Kaggle dispatch, fetch and encryption loop works end to end.
+- **Pending:** the WanGP probe on Kaggle (run 39728562414, still running at handoff time). Gate A stills and clips depend on it.
+- **Tests:** full suite 498 passed / 5 skipped after merging main, plus later studio tests (25 + 4 + 9). Bot: 41/41.
 - **Branch:** `ccr-ff883983-8z1psm`, based on `feature/tiktok-motion-engine` (PR #3 head). Nothing merged, published or deployed. No money spent.
 - **Reports:** `docs/studio/GATE1_REFERENCE_ANALYSIS.md` and `docs/studio/GATE2_REPOSITORY_AUDIT.md`.
 - **Visual record:** `VISUAL_ACCEPTANCE.md`.
