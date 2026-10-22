@@ -1,0 +1,115 @@
+name: Studio GPU job (WanGP on Kaggle free GPU, encrypted result)
+# Runs when a request file under studio/gpu/requests/ is added or changed on the studio branch.
+# $0: public-repo runner + the owner's free Kaggle GPU quota. Output is encrypted to every public key
+# in studio/keys/ and pushed to studio-assets/<run id>; nothing readable is published.
+on:
+  push:
+    branches: [ccr-ff883983-8z1psm]
+    paths: ['studio/gpu/requests/*.json']
+  workflow_dispatch:
+    inputs:
+      request:
+        description: Request file path (studio/gpu/requests/<name>.json)
+        required: true
+permissions:
+  contents: write
+concurrency:
+  group: studio-gpu
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_USERNAME }}  # the repo stores the Kaggle access token under this name
+      KUSER: goldgoat
+      KERNEL: goldgoat/studio-gpu-job
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q 'kaggle>=1.8'
+      - name: Pick request
+        id: req
+        env: { INPUT_REQ: '${{ inputs.request }}' }
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_REQ:-}" ]; then f="$INPUT_REQ"; else
+            f=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'studio/gpu/requests/*.json' | tail -1); fi
+          [[ "$f" =~ ^studio/gpu/requests/[A-Za-z0-9_.-]+\.json$ ]] || { echo "::error::no valid request file ($f)"; exit 1; }
+          python -c "import json,sys; r=json.load(open('$f')); assert r['tasks']"
+          echo "file=$f" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$f" .json)" >> "$GITHUB_OUTPUT"
+      - name: Push Kaggle script kernel (GPU T4, internet)
+        env: { REQ: '${{ steps.req.outputs.file }}' }
+        run: |
+          set -euo pipefail
+          d=$RUNNER_TEMP/k; mkdir -p "$d"
+          python - "$REQ" "$d/script.py" <<'PY'
+          import json, sys
+          req = json.load(open(sys.argv[1]))
+          code = open('studio/gpu/wangp_job.py').read()
+          open(sys.argv[2], 'w').write('REQUEST_JSON = ' + repr(json.dumps(req)) + '\n' + code)
+          PY
+          cat > "$d/kernel-metadata.json" <<JSON
+          {"id": "$KERNEL", "title": "studio-gpu-job", "code_file": "script.py", "language": "python",
+           "kernel_type": "script", "is_private": true, "enable_gpu": true, "enable_internet": true,
+           "machine_shape": "NvidiaTeslaT4",
+           "dataset_sources": [], "competition_sources": [], "kernel_sources": []}
+          JSON
+          kaggle kernels push -p "$d" 2>&1 | sed 's/[A-Za-z0-9_-]\{30,\}/***/g'
+      - name: Wait for Kaggle (hard limit ~5 h)
+        run: |
+          sleep 60
+          for i in $(seq 1 300); do
+            s=$(kaggle kernels status "$KERNEL" 2>&1 | tail -1)
+            case "$s" in *complete*|*COMPLETE*) echo "::notice title=kaggle::$s"; break;;
+              *error*|*ERROR*|*cancel*) echo "::warning title=kaggle::$s"; break;; esac
+            [ $((i % 10)) -eq 0 ] && echo "$i min: $s"
+            sleep 60
+          done
+      - name: Fetch output and log
+        run: |
+          mkdir -p out
+          kaggle kernels output "$KERNEL" -p out >/dev/null 2>&1 || true
+          find out -maxdepth 3 -type f -printf '%s %p\n' | sort -k2
+          r=$(find out -name report.json | head -1)
+          if [ -n "$r" ]; then python - "$r" <<'PY'
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          print("::notice title=env::" + json.dumps(r.get("env"))[:900])
+          for t in r.get("tasks", []):
+              print(f"::notice title={t['id']}::ok={t.get('success')} s={t.get('seconds')} vram={t.get('peak_vram_gb')} files={t.get('files')} err={str(t.get('errors'))[:300]}")
+          if r.get("error"): print("::warning title=job::" + r["error"][-900:])
+          PY
+          fi
+      - name: Encrypt and push to studio-assets/${{ github.run_id }}
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ steps.req.outputs.name }}
+        run: |
+          set -euo pipefail
+          umask 077
+          find out -type f | grep -q . || { echo "::warning::nothing to deliver"; exit 0; }
+          tar -C out -cf "$RUNNER_TEMP/pack.tar" .
+          o=$RUNNER_TEMP/enc; mkdir -p "$o"
+          openssl rand -hex 32 > "$RUNNER_TEMP/kk"
+          for pub in studio/keys/*.pub.pem; do
+            openssl pkeyutl -encrypt -pubin -inkey "$pub" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+              -in "$RUNNER_TEMP/kk" -out "$o/$(basename "$pub" .pub.pem).key.enc"
+          done
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$RUNNER_TEMP/kk" -in "$RUNNER_TEMP/pack.tar" -out "$RUNNER_TEMP/pack.enc"
+          split -b 90m -d "$RUNNER_TEMP/pack.enc" "$o/pack.enc.part"
+          shred -u "$RUNNER_TEMP/kk" "$RUNNER_TEMP/pack.tar" "$RUNNER_TEMP/pack.enc"
+          printf '{"request":"%s","run_id":"%s","sha":"%s"}\n' "$NAME" "${{ github.run_id }}" "${{ github.sha }}" > "$o/meta.json"
+          (cd "$o" && sha256sum * > SHA256SUMS)
+          cd "$o"; git init -q -b "studio-assets/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Encrypted studio GPU output $NAME (${{ github.run_id }})"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "studio-assets/${{ github.run_id }}"
+          echo "::notice title=assets::studio-assets/${{ github.run_id }}"
