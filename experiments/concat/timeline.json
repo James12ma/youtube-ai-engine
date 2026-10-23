@@ -1,0 +1,22 @@
+{
+ "id": "concat_feasibility_15s",
+ "width": 1080, "height": 1920, "fps": 30, "duration_s": 15.0,
+ "clips": [
+  {"id": "c1", "source": "media/clip1.mp4", "start_s": 0.0, "duration_s": 3.4, "transition_in": null,
+   "title": {"text": "Every tap starts a journey", "at_s": 0.3, "until_s": 3.0, "position": "top"},
+   "narration": "Every tap starts a journey."},
+  {"id": "c2", "source": "media/clip2.mp4", "start_s": 3.0, "duration_s": 3.4, "transition_in": {"kind": "fade", "duration_s": 0.4},
+   "title": {"text": "Encrypted in milliseconds", "at_s": 3.3, "until_s": 6.0, "position": "top"},
+   "narration": "The chip encrypts the request."},
+  {"id": "c3", "source": "media/clip3.mp4", "start_s": 6.0, "duration_s": 3.4, "transition_in": {"kind": "slide", "duration_s": 0.4},
+   "title": {"text": "Across the network", "at_s": 6.3, "until_s": 9.0, "position": "center"},
+   "narration": "It races across the network."},
+  {"id": "c4", "source": "media/clip4.mp4", "start_s": 9.0, "duration_s": 3.4, "transition_in": {"kind": "wipe", "duration_s": 0.4},
+   "title": {"text": "The bank says yes", "at_s": 9.3, "until_s": 12.0, "position": "top"},
+   "narration": "The bank checks and approves."},
+  {"id": "c5", "source": "media/clip5.mp4", "start_s": 12.0, "duration_s": 3.0, "transition_in": {"kind": "fade", "duration_s": 0.4},
+   "title": {"text": "Approved", "at_s": 12.3, "until_s": 15.0, "position": "center"},
+   "narration": "Approved, in seconds."}
+ ],
+ "music": {"source": "media/music.wav", "gain_db": -18}
+}
