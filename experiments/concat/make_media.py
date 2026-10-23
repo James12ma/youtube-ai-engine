@@ -12,10 +12,10 @@ media.mkdir(exist_ok=True)
 W, H, FPS = tl["width"], tl["height"], tl["fps"]
 SOURCES = [  # lavfi generators with real motion and texture, each a different look
     f"mandelbrot=s={W//2}x{H//2}:rate={FPS}:start_scale=3:end_scale=0.3,scale={W}:{H}",
-    f"gradients=s={W}x{H}:rate={FPS}:c0=0x0b1d3a:c1=0x1f6feb:c2=0x7ee0ff:speed=0.02:type=radial",
+    f"gradients=s={W}x{H}:rate={FPS}:c0=0x0b1d3a:c1=0x1f6feb:c2=0x7ee0ff:speed=0.02:type=radial:seed=11",
     f"zoneplate=s={W}x{H}:rate={FPS}:kt2=2:kx2=60:ky2=60:kt=6,colorchannelmixer=rr=0.2:gg=0.9:bb=0.6",
-    f"sierpinski=s={W}x{H}:rate={FPS}:type=carpet:jump=1,colorchannelmixer=rr=1:gg=0.75:bb=0.3",
-    f"gradients=s={W}x{H}:rate={FPS}:c0=0x0b3d2e:c1=0x12b76a:c2=0xe8fff4:speed=0.03:type=spiral",
+    f"sierpinski=s={W}x{H}:rate={FPS}:type=carpet:jump=1:seed=14,colorchannelmixer=rr=1:gg=0.75:bb=0.3",
+    f"gradients=s={W}x{H}:rate={FPS}:c0=0x0b3d2e:c1=0x12b76a:c2=0xe8fff4:speed=0.03:type=spiral:seed=15",
 ]
 
 

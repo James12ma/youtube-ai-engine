@@ -50,40 +50,32 @@ def black(path):
     return re.findall(r"black_start:([\d.]+) black_end:([\d.]+)", e)
 
 
-def window(path, t0, dur, w=216):
-    h = w * 16 // 9
-    p = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t0:.3f}", "-t", f"{dur:.3f}", "-i", str(path), "-f", "rawvideo",
-                        "-pix_fmt", "gray", "-vf", f"scale={w}:{h}", "-"], capture_output=True)
-    return np.frombuffer(p.stdout, np.uint8).reshape(-1, h, w).astype(np.float32)
-
-
-def band(frames):
-    h = frames.shape[1]
-    return frames[:, int(h * 0.70):int(h * 0.95)]  # below every title position
+def band(img):
+    h = img.shape[0]
+    return img[int(h * 0.70):int(h * 0.95)]  # below every title position
 
 
 def transitions(path):
     """Classify every frame within 0.6 s of each cut against the true source frames at that instant:
     'A' (outgoing shot), 'B' (incoming shot) or 'mixed' (a blend/wipe/slide in progress). Motion-proof,
-    because the reference is the source itself. `mixed_frames` ~ 0 means a hard cut."""
+    because the reference is the source itself; each frame is seeked exactly (a windowed decode drifted
+    by a frame on one file). `mixed_frames` ~ 0 means a hard cut."""
     res = []
+    fps = tl["fps"]
     for k, cut in enumerate(CUTS):
         a_clip, b_clip = tl["clips"][k], tl["clips"][k + 1]
-        t0, dur = cut - 0.6, 1.2
-        out_f = band(window(path, t0, dur))
-        n = len(out_f)
-        a_f = band(window(here / a_clip["source"], t0 - a_clip["start_s"], dur))[:n]
-        b_start = t0 - b_clip["start_s"]
-        b_f = band(window(here / b_clip["source"], max(0.0, b_start), dur + min(0.0, b_start)))
-        pad = n - len(b_f)
-        b_f = np.concatenate([np.repeat(b_f[:1], pad, axis=0), b_f]) if pad > 0 else b_f[:n]
-        labels = []
-        for i in range(min(n, len(a_f), len(b_f))):
-            da, db = np.abs(out_f[i] - a_f[i]).mean(), np.abs(out_f[i] - b_f[i]).mean()
-            labels.append("A" if da < 6 and da <= db else "B" if db < 6 else "mixed")
-        mixed = [round(t0 + i / tl["fps"], 3) for i, l in enumerate(labels) if l == "mixed"]
+        labels, mixed = [], []
+        for i in range(int(1.2 * fps)):
+            t = cut - 0.6 + i / fps
+            o = band(grab(path, t))
+            da = np.abs(o - band(grab(here / a_clip["source"], t - a_clip["start_s"]))).mean()
+            db = np.abs(o - band(grab(here / b_clip["source"], max(0.0, t - b_clip["start_s"])))).mean()
+            lab = "A" if da < 6 and da <= db else "B" if db < 6 else "m"
+            labels.append(lab)
+            if lab == "m":
+                mixed.append(round(t, 3))
         res.append({"cut_s": cut, "mixed_frames": len(mixed), "mixed_from_s": mixed[0] if mixed else None,
-                    "mixed_to_s": mixed[-1] if mixed else None, "sequence": "".join(l[0] for l in labels)})
+                    "mixed_to_s": mixed[-1] if mixed else None, "sequence": "".join(labels)})
     return res
 
 

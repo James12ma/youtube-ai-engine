@@ -28,6 +28,7 @@ def timed(tag, cmd):
 
 timed("media", [sys.executable, "make_media.py"])
 timed("concat", [sys.executable, "concat_path.py", str(out / "concat")])
+timed("title_probe", [sys.executable, "title_probe.py", str(out / "title_probe")])
 timed("baseline", [sys.executable, "baseline_path.py", str(out / "baseline")])
 timed("compare", [sys.executable, "compare.py", str(out / "compare"), str(out / "concat/concat_15s.mp4"),
                   str(out / "baseline/baseline_15s.mp4")])
