@@ -1,0 +1,39 @@
+{
+ "media": {
+  "exit": 0,
+  "wall_s": 21.39,
+  "peak_rss_mb": 423.8,
+  "cpu_pct": 357
+ },
+ "concat": {
+  "exit": 1,
+  "wall_s": 0.5,
+  "peak_rss_mb": 88.7,
+  "cpu_pct": 99
+ },
+ "baseline": {
+  "exit": 0,
+  "wall_s": 28.47,
+  "peak_rss_mb": 881.1,
+  "cpu_pct": 313,
+  "result": {
+   "ok": true,
+   "total_s": 27.43,
+   "compose": {
+    "duration_s": 15.0,
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "scene_count": 5,
+    "video_codec": "h264",
+    "audio_codec": "aac"
+   }
+  }
+ },
+ "compare": {
+  "exit": 0,
+  "wall_s": 13.27,
+  "peak_rss_mb": 165.7,
+  "cpu_pct": 250
+ }
+}

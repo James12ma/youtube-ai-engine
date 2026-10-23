@@ -1,0 +1,10 @@
+{
+  "concat": "0.2.8",
+  "name": "concat_film",
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "rateNum": 30,
+    "rateDen": 1
+  }
+}

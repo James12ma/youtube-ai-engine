@@ -1,0 +1,1521 @@
+{
+ "steps": [
+  {
+   "tool": "project_create",
+   "args": {
+    "location": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat",
+    "name": "concat_film",
+    "video": {
+     "width": 1080,
+     "height": 1920,
+     "rateNum": 30,
+     "rateDen": 1,
+     "colorSpace": "sdr"
+    }
+   },
+   "s": 0.189,
+   "result": {
+    "canRedo": false,
+    "canUndo": false,
+    "media": [],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4"
+   },
+   "s": 0.019,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m1",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4"
+   },
+   "s": 0.006,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m2",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4"
+   },
+   "s": 0.037,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m3",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4"
+   },
+   "s": 0.108,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m4",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4"
+   },
+   "s": 0.006,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m5",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+   },
+   "s": 0.006,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m6",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+   },
+   "s": 0.007,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m7",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     },
+     {
+      "duration": 2.252,
+      "hasAudio": true,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+   },
+   "s": 0.006,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m8",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     },
+     {
+      "duration": 2.252,
+      "hasAudio": true,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+     },
+     {
+      "duration": 2.018,
+      "hasAudio": true,
+      "id": "m8",
+      "kind": "audio",
+      "name": "voice3.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav"
+   },
+   "s": 0.006,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m9",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     },
+     {
+      "duration": 2.252,
+      "hasAudio": true,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+     },
+     {
+      "duration": 2.018,
+      "hasAudio": true,
+      "id": "m8",
+      "kind": "audio",
+      "name": "voice3.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+     },
+     {
+      "duration": 2.28,
+      "hasAudio": true,
+      "id": "m9",
+      "kind": "audio",
+      "name": "voice4.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice5.wav"
+   },
+   "s": 0.006,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m10",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     },
+     {
+      "duration": 2.252,
+      "hasAudio": true,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+     },
+     {
+      "duration": 2.018,
+      "hasAudio": true,
+      "id": "m8",
+      "kind": "audio",
+      "name": "voice3.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+     },
+     {
+      "duration": 2.28,
+      "hasAudio": true,
+      "id": "m9",
+      "kind": "audio",
+      "name": "voice4.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav"
+     },
+     {
+      "duration": 1.938,
+      "hasAudio": true,
+      "id": "m10",
+      "kind": "audio",
+      "name": "voice5.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice5.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "media_import",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "file": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/music.wav"
+   },
+   "s": 0.026,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "m11",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     },
+     {
+      "duration": 2.252,
+      "hasAudio": true,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+     },
+     {
+      "duration": 2.018,
+      "hasAudio": true,
+      "id": "m8",
+      "kind": "audio",
+      "name": "voice3.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+     },
+     {
+      "duration": 2.28,
+      "hasAudio": true,
+      "id": "m9",
+      "kind": "audio",
+      "name": "voice4.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav"
+     },
+     {
+      "duration": 1.938,
+      "hasAudio": true,
+      "id": "m10",
+      "kind": "audio",
+      "name": "voice5.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice5.wav"
+     },
+     {
+      "duration": 15.0,
+      "hasAudio": true,
+      "id": "m11",
+      "kind": "audio",
+      "name": "music.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/music.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [],
+     "duration": 0.0,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "clips_add_sequence",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "mediaIds": [
+     "m1",
+     "m2",
+     "m3",
+     "m4",
+     "m5"
+    ],
+    "start": 0
+   },
+   "s": 0.001,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "createdId": "c12",
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     },
+     {
+      "duration": 2.252,
+      "hasAudio": true,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+     },
+     {
+      "duration": 2.018,
+      "hasAudio": true,
+      "id": "m8",
+      "kind": "audio",
+      "name": "voice3.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+     },
+     {
+      "duration": 2.28,
+      "hasAudio": true,
+      "id": "m9",
+      "kind": "audio",
+      "name": "voice4.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav"
+     },
+     {
+      "duration": 1.938,
+      "hasAudio": true,
+      "id": "m10",
+      "kind": "audio",
+      "name": "voice5.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice5.wav"
+     },
+     {
+      "duration": 15.0,
+      "hasAudio": true,
+      "id": "m11",
+      "kind": "audio",
+      "name": "music.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/music.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [
+      {
+       "duration": 4.0,
+       "end": 4.0,
+       "id": "c12",
+       "kind": "video",
+       "media": "m1",
+       "name": "clip1.mp4",
+       "sourceStart": 0.0,
+       "start": 0.0,
+       "track": "T1"
+      },
+      {
+       "duration": 4.0,
+       "end": 8.0,
+       "id": "c13",
+       "kind": "video",
+       "media": "m2",
+       "name": "clip2.mp4",
+       "sourceStart": 0.0,
+       "start": 4.0,
+       "track": "T1"
+      },
+      {
+       "duration": 4.0,
+       "end": 12.0,
+       "id": "c14",
+       "kind": "video",
+       "media": "m3",
+       "name": "clip3.mp4",
+       "sourceStart": 0.0,
+       "start": 8.0,
+       "track": "T1"
+      },
+      {
+       "duration": 4.0,
+       "end": 16.0,
+       "id": "c15",
+       "kind": "video",
+       "media": "m4",
+       "name": "clip4.mp4",
+       "sourceStart": 0.0,
+       "start": 12.0,
+       "track": "T1"
+      },
+      {
+       "duration": 3.6,
+       "end": 19.6,
+       "id": "c16",
+       "kind": "video",
+       "media": "m5",
+       "name": "clip5.mp4",
+       "sourceStart": 0.0,
+       "start": 16.0,
+       "track": "T1"
+      }
+     ],
+     "duration": 19.6,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  },
+  {
+   "tool": "timeline_read",
+   "args": {
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film"
+   },
+   "s": 0.0,
+   "result": {
+    "canRedo": false,
+    "canUndo": true,
+    "media": [
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 4.0,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 3.6,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "width": 1080
+     },
+     {
+      "duration": 2.092,
+      "hasAudio": true,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+     },
+     {
+      "duration": 2.252,
+      "hasAudio": true,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+     },
+     {
+      "duration": 2.018,
+      "hasAudio": true,
+      "id": "m8",
+      "kind": "audio",
+      "name": "voice3.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+     },
+     {
+      "duration": 2.28,
+      "hasAudio": true,
+      "id": "m9",
+      "kind": "audio",
+      "name": "voice4.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav"
+     },
+     {
+      "duration": 1.938,
+      "hasAudio": true,
+      "id": "m10",
+      "kind": "audio",
+      "name": "voice5.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice5.wav"
+     },
+     {
+      "duration": 15.0,
+      "hasAudio": true,
+      "id": "m11",
+      "kind": "audio",
+      "name": "music.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/music.wav"
+     }
+    ],
+    "project": {
+     "fps": 30.0,
+     "height": 1920,
+     "name": "concat_film",
+     "width": 1080
+    },
+    "timeline": {
+     "clips": [
+      {
+       "duration": 4.0,
+       "end": 4.0,
+       "id": "c12",
+       "kind": "video",
+       "media": "m1",
+       "name": "clip1.mp4",
+       "sourceStart": 0.0,
+       "start": 0.0,
+       "track": "T1"
+      },
+      {
+       "duration": 4.0,
+       "end": 8.0,
+       "id": "c13",
+       "kind": "video",
+       "media": "m2",
+       "name": "clip2.mp4",
+       "sourceStart": 0.0,
+       "start": 4.0,
+       "track": "T1"
+      },
+      {
+       "duration": 4.0,
+       "end": 12.0,
+       "id": "c14",
+       "kind": "video",
+       "media": "m3",
+       "name": "clip3.mp4",
+       "sourceStart": 0.0,
+       "start": 8.0,
+       "track": "T1"
+      },
+      {
+       "duration": 4.0,
+       "end": 16.0,
+       "id": "c15",
+       "kind": "video",
+       "media": "m4",
+       "name": "clip4.mp4",
+       "sourceStart": 0.0,
+       "start": 12.0,
+       "track": "T1"
+      },
+      {
+       "duration": 3.6,
+       "end": 19.6,
+       "id": "c16",
+       "kind": "video",
+       "media": "m5",
+       "name": "clip5.mp4",
+       "sourceStart": 0.0,
+       "start": 16.0,
+       "track": "T1"
+      }
+     ],
+     "duration": 19.6,
+     "id": "TL1",
+     "name": "Timeline 1",
+     "tracks": [
+      {
+       "id": "T1",
+       "index": 0
+      },
+      {
+       "id": "T2",
+       "index": 1
+      },
+      {
+       "id": "T3",
+       "index": 2
+      },
+      {
+       "id": "T4",
+       "index": 3
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "stderr": [
+  "2026-10-23 02:34:16.896Z INFO  [main] concat_host::logs: Concat 0.2.8 \u00b7 linux-x86_64 \u00b7 commit 79116bd0f9a1 \u00b7 log level INFO",
+  "2026-10-23 02:34:16.896Z INFO  [main] concat_host::logs: system: Ubuntu 24.04.5 LTS \u00b7 kernel 6.17.0-1022-azure",
+  "2026-10-23 02:34:16.896Z INFO  [main] concat_host::logs: cpu: AMD EPYC 7763 64-Core Processor \u00b7 4 threads \u00b7 has sse4.2 avx avx2 fma bmi2 f16c \u00b7 lacks avx512f",
+  "concat mcp: serving through {\"mode\":\"headless\",\"writesUnder\":[\"/home/runner/work/youtube-ai-engine/youtube-ai-engine\"]}"
+ ]
+}
