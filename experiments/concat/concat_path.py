@@ -75,7 +75,9 @@ try:
         t = clip["title"]
         dur = t["until_s"] - t["at_s"]
         y = POS_Y[t["position"]]
-        tid = created(step(c, "title_add", {"path": P, "start": t["at_s"], "duration": dur, "offsetY": y, "above": True,
+        # offsetY is keyed below, so the clip's own offset stays 0: Concat 0.2.8 adds a keyed offset to the clip's
+        # base offset (a -0.30 title keyed to -0.30 drew at -0.60, off the frame; see title_probe.py).
+        tid = created(step(c, "title_add", {"path": P, "start": t["at_s"], "duration": dur, "offsetY": 0.0, "above": True,
                                             "style": {"content": t["text"], "fontSize": 0.052, "fontWeight": 800,
                                                       "color": "#ffffff", "background": "#0b0b0c99", "shadow": True}}))
         ease = [0.2, 0.8, 0.2, 1.0]
