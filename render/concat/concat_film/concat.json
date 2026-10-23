@@ -1,0 +1,2153 @@
+{
+  "activeTimelineId": "TL1",
+  "clips": [
+    {
+      "duration": 3.0,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c12",
+      "kind": "video",
+      "mediaId": "m1",
+      "name": "clip1.mp4",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 0.0,
+      "trackId": "T1",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 3.0,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c13",
+      "kind": "video",
+      "mediaId": "m2",
+      "name": "clip2.mp4",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 3.0,
+      "trackId": "T1",
+      "transitionIn": {
+        "duration": 0.4,
+        "id": "concat.dissolve"
+      },
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 3.0,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c14",
+      "kind": "video",
+      "mediaId": "m3",
+      "name": "clip3.mp4",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 6.0,
+      "trackId": "T1",
+      "transitionIn": {
+        "duration": 0.4,
+        "id": "concat.slide"
+      },
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 3.0,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c15",
+      "kind": "video",
+      "mediaId": "m4",
+      "name": "clip4.mp4",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 9.0,
+      "trackId": "T1",
+      "transitionIn": {
+        "duration": 0.4,
+        "id": "concat.linear-wipe"
+      },
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 3.0,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c16",
+      "kind": "video",
+      "mediaId": "m5",
+      "name": "clip5.mp4",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 12.0,
+      "trackId": "T1",
+      "transitionIn": {
+        "duration": 0.4,
+        "id": "concat.dissolve"
+      },
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.091701,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c18",
+      "kind": "audio",
+      "mediaId": "m6",
+      "name": "voice1.wav",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 0.2,
+      "trackId": "t17",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.251837,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c19",
+      "kind": "audio",
+      "mediaId": "m7",
+      "name": "voice2.wav",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 3.2,
+      "trackId": "t17",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.017687,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c20",
+      "kind": "audio",
+      "mediaId": "m8",
+      "name": "voice3.wav",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 6.2,
+      "trackId": "t17",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.280408,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c21",
+      "kind": "audio",
+      "mediaId": "m9",
+      "name": "voice4.wav",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 9.2,
+      "trackId": "t17",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 1.937732,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c22",
+      "kind": "audio",
+      "mediaId": "m10",
+      "name": "voice5.wav",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 12.2,
+      "trackId": "t17",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 15.0,
+      "fadeIn": 0.0,
+      "fadeOut": 1.5,
+      "filters": [],
+      "id": "c24",
+      "kind": "audio",
+      "mediaId": "m11",
+      "name": "music.wav",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 0.0,
+      "trackId": "t23",
+      "videoEffects": [],
+      "volume": 0.12589254117941673
+    },
+    {
+      "duration": 2.7,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c26",
+      "keys": [
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 0.86
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 1.0
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": -0.27499999999999997
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": -0.3
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        },
+        {
+          "at": 0.12962962962962962,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 0.8703703703703703,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 1.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        }
+      ],
+      "kind": "text",
+      "mediaId": "",
+      "name": "Every tap starts a journey",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 0.3,
+      "text": {
+        "align": "center",
+        "background": "#0b0b0c99",
+        "backgroundPaddingX": 0.0315,
+        "backgroundPaddingY": 0.018,
+        "backgroundRadius": 0.0135,
+        "color": "#ffffff",
+        "content": "Every tap starts a journey",
+        "fontFamily": "\"Cabinet Grotesk\"",
+        "fontSize": 0.052,
+        "fontWeight": 800.0,
+        "italic": false,
+        "lineHeight": 1.2,
+        "maxHeight": 0.0,
+        "maxWidth": 0.0,
+        "opacity": 1.0,
+        "shadow": true,
+        "strokeColor": "#000000",
+        "strokeWidth": 0.0,
+        "tracking": 0.0
+      },
+      "trackId": "t25",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.7,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c27",
+      "keys": [
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 0.86
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 1.0
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": -0.27499999999999997
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": -0.3
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        },
+        {
+          "at": 0.12962962962962962,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 0.8703703703703703,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 1.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        }
+      ],
+      "kind": "text",
+      "mediaId": "",
+      "name": "Encrypted in milliseconds",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 3.3,
+      "text": {
+        "align": "center",
+        "background": "#0b0b0c99",
+        "backgroundPaddingX": 0.0315,
+        "backgroundPaddingY": 0.018,
+        "backgroundRadius": 0.0135,
+        "color": "#ffffff",
+        "content": "Encrypted in milliseconds",
+        "fontFamily": "\"Cabinet Grotesk\"",
+        "fontSize": 0.052,
+        "fontWeight": 800.0,
+        "italic": false,
+        "lineHeight": 1.2,
+        "maxHeight": 0.0,
+        "maxWidth": 0.0,
+        "opacity": 1.0,
+        "shadow": true,
+        "strokeColor": "#000000",
+        "strokeWidth": 0.0,
+        "tracking": 0.0
+      },
+      "trackId": "t25",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.7,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c28",
+      "keys": [
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 0.86
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 1.0
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": 0.025
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": 0.0
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        },
+        {
+          "at": 0.12962962962962962,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 0.8703703703703703,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 1.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        }
+      ],
+      "kind": "text",
+      "mediaId": "",
+      "name": "Across the network",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 6.3,
+      "text": {
+        "align": "center",
+        "background": "#0b0b0c99",
+        "backgroundPaddingX": 0.0315,
+        "backgroundPaddingY": 0.018,
+        "backgroundRadius": 0.0135,
+        "color": "#ffffff",
+        "content": "Across the network",
+        "fontFamily": "\"Cabinet Grotesk\"",
+        "fontSize": 0.052,
+        "fontWeight": 800.0,
+        "italic": false,
+        "lineHeight": 1.2,
+        "maxHeight": 0.0,
+        "maxWidth": 0.0,
+        "opacity": 1.0,
+        "shadow": true,
+        "strokeColor": "#000000",
+        "strokeWidth": 0.0,
+        "tracking": 0.0
+      },
+      "trackId": "t25",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.6999999999999993,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c29",
+      "keys": [
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 0.86
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 1.0
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": -0.27499999999999997
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": -0.3
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        },
+        {
+          "at": 0.12962962962962965,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 0.8703703703703703,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 1.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        }
+      ],
+      "kind": "text",
+      "mediaId": "",
+      "name": "The bank says yes",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 9.3,
+      "text": {
+        "align": "center",
+        "background": "#0b0b0c99",
+        "backgroundPaddingX": 0.0315,
+        "backgroundPaddingY": 0.018,
+        "backgroundRadius": 0.0135,
+        "color": "#ffffff",
+        "content": "The bank says yes",
+        "fontFamily": "\"Cabinet Grotesk\"",
+        "fontSize": 0.052,
+        "fontWeight": 800.0,
+        "italic": false,
+        "lineHeight": 1.2,
+        "maxHeight": 0.0,
+        "maxWidth": 0.0,
+        "opacity": 1.0,
+        "shadow": true,
+        "strokeColor": "#000000",
+        "strokeWidth": 0.0,
+        "tracking": 0.0
+      },
+      "trackId": "t25",
+      "videoEffects": [],
+      "volume": 1.0
+    },
+    {
+      "duration": 2.6999999999999993,
+      "fadeIn": 0.0,
+      "fadeOut": 0.0,
+      "filters": [],
+      "id": "c30",
+      "keys": [
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 0.86
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "scale",
+          "value": 1.0
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": 0.025
+        },
+        {
+          "at": 0.1814814814814815,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "offsetY",
+          "value": 0.0
+        },
+        {
+          "at": 0.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        },
+        {
+          "at": 0.12962962962962965,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 0.8703703703703703,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 1.0
+        },
+        {
+          "at": 1.0,
+          "ease": [
+            0.2,
+            0.8,
+            0.2,
+            1.0
+          ],
+          "property": "opacity",
+          "value": 0.0
+        }
+      ],
+      "kind": "text",
+      "mediaId": "",
+      "name": "Approved",
+      "offsetX": 0.0,
+      "offsetY": 0.0,
+      "opacity": 1.0,
+      "preservePitch": true,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "sourceStart": 0.0,
+      "speed": 1.0,
+      "start": 12.3,
+      "text": {
+        "align": "center",
+        "background": "#0b0b0c99",
+        "backgroundPaddingX": 0.0315,
+        "backgroundPaddingY": 0.018,
+        "backgroundRadius": 0.0135,
+        "color": "#ffffff",
+        "content": "Approved",
+        "fontFamily": "\"Cabinet Grotesk\"",
+        "fontSize": 0.052,
+        "fontWeight": 800.0,
+        "italic": false,
+        "lineHeight": 1.2,
+        "maxHeight": 0.0,
+        "maxWidth": 0.0,
+        "opacity": 1.0,
+        "shadow": true,
+        "strokeColor": "#000000",
+        "strokeWidth": 0.0,
+        "tracking": 0.0
+      },
+      "trackId": "t25",
+      "videoEffects": [],
+      "volume": 1.0
+    }
+  ],
+  "concat": "0.1.0",
+  "fonts": [],
+  "media": [
+    {
+      "audioCodec": null,
+      "duration": 4.0,
+      "frameRate": 30.0,
+      "frameRateFraction": "30/1",
+      "hasAudio": false,
+      "height": 1920,
+      "id": "m1",
+      "kind": "video",
+      "name": "clip1.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+      "videoCodec": "h264",
+      "width": 1080
+    },
+    {
+      "audioCodec": null,
+      "duration": 4.0,
+      "frameRate": 30.0,
+      "frameRateFraction": "30/1",
+      "hasAudio": false,
+      "height": 1920,
+      "id": "m2",
+      "kind": "video",
+      "name": "clip2.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+      "videoCodec": "h264",
+      "width": 1080
+    },
+    {
+      "audioCodec": null,
+      "duration": 4.0,
+      "frameRate": 30.0,
+      "frameRateFraction": "30/1",
+      "hasAudio": false,
+      "height": 1920,
+      "id": "m3",
+      "kind": "video",
+      "name": "clip3.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+      "videoCodec": "h264",
+      "width": 1080
+    },
+    {
+      "audioCodec": null,
+      "duration": 4.0,
+      "frameRate": 30.0,
+      "frameRateFraction": "30/1",
+      "hasAudio": false,
+      "height": 1920,
+      "id": "m4",
+      "kind": "video",
+      "name": "clip4.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+      "videoCodec": "h264",
+      "width": 1080
+    },
+    {
+      "audioCodec": null,
+      "duration": 3.6,
+      "frameRate": 30.0,
+      "frameRateFraction": "30/1",
+      "hasAudio": false,
+      "height": 1920,
+      "id": "m5",
+      "kind": "video",
+      "name": "clip5.mp4",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+      "videoCodec": "h264",
+      "width": 1080
+    },
+    {
+      "audioCodec": "pcm_s16le",
+      "audioTracks": [
+        {
+          "channels": 1,
+          "codec": "pcm_s16le",
+          "index": 0,
+          "sampleRate": 22050
+        }
+      ],
+      "duration": 2.091701,
+      "frameRate": null,
+      "frameRateFraction": null,
+      "hasAudio": true,
+      "height": null,
+      "id": "m6",
+      "kind": "audio",
+      "name": "voice1.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav",
+      "videoCodec": null,
+      "width": null
+    },
+    {
+      "audioCodec": "pcm_s16le",
+      "audioTracks": [
+        {
+          "channels": 1,
+          "codec": "pcm_s16le",
+          "index": 0,
+          "sampleRate": 22050
+        }
+      ],
+      "duration": 2.251837,
+      "frameRate": null,
+      "frameRateFraction": null,
+      "hasAudio": true,
+      "height": null,
+      "id": "m7",
+      "kind": "audio",
+      "name": "voice2.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav",
+      "videoCodec": null,
+      "width": null
+    },
+    {
+      "audioCodec": "pcm_s16le",
+      "audioTracks": [
+        {
+          "channels": 1,
+          "codec": "pcm_s16le",
+          "index": 0,
+          "sampleRate": 22050
+        }
+      ],
+      "duration": 2.017687,
+      "frameRate": null,
+      "frameRateFraction": null,
+      "hasAudio": true,
+      "height": null,
+      "id": "m8",
+      "kind": "audio",
+      "name": "voice3.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav",
+      "videoCodec": null,
+      "width": null
+    },
+    {
+      "audioCodec": "pcm_s16le",
+      "audioTracks": [
+        {
+          "channels": 1,
+          "codec": "pcm_s16le",
+          "index": 0,
+          "sampleRate": 22050
+        }
+      ],
+      "duration": 2.280408,
+      "frameRate": null,
+      "frameRateFraction": null,
+      "hasAudio": true,
+      "height": null,
+      "id": "m9",
+      "kind": "audio",
+      "name": "voice4.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav",
+      "videoCodec": null,
+      "width": null
+    },
+    {
+      "audioCodec": "pcm_s16le",
+      "audioTracks": [
+        {
+          "channels": 1,
+          "codec": "pcm_s16le",
+          "index": 0,
+          "sampleRate": 22050
+        }
+      ],
+      "duration": 1.937732,
+      "frameRate": null,
+      "frameRateFraction": null,
+      "hasAudio": true,
+      "height": null,
+      "id": "m10",
+      "kind": "audio",
+      "name": "voice5.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice5.wav",
+      "videoCodec": null,
+      "width": null
+    },
+    {
+      "audioCodec": "pcm_s16le",
+      "audioTracks": [
+        {
+          "channels": 2,
+          "codec": "pcm_s16le",
+          "index": 0,
+          "sampleRate": 48000
+        }
+      ],
+      "duration": 15.0,
+      "frameRate": null,
+      "frameRateFraction": null,
+      "hasAudio": true,
+      "height": null,
+      "id": "m11",
+      "kind": "audio",
+      "name": "music.wav",
+      "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/music.wav",
+      "videoCodec": null,
+      "width": null
+    }
+  ],
+  "name": "concat_film",
+  "timelines": [
+    {
+      "clips": [
+        {
+          "duration": 3.0,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c12",
+          "kind": "video",
+          "mediaId": "m1",
+          "name": "clip1.mp4",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 0.0,
+          "trackId": "T1",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 3.0,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c13",
+          "kind": "video",
+          "mediaId": "m2",
+          "name": "clip2.mp4",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 3.0,
+          "trackId": "T1",
+          "transitionIn": {
+            "duration": 0.4,
+            "id": "concat.dissolve"
+          },
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 3.0,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c14",
+          "kind": "video",
+          "mediaId": "m3",
+          "name": "clip3.mp4",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 6.0,
+          "trackId": "T1",
+          "transitionIn": {
+            "duration": 0.4,
+            "id": "concat.slide"
+          },
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 3.0,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c15",
+          "kind": "video",
+          "mediaId": "m4",
+          "name": "clip4.mp4",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 9.0,
+          "trackId": "T1",
+          "transitionIn": {
+            "duration": 0.4,
+            "id": "concat.linear-wipe"
+          },
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 3.0,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c16",
+          "kind": "video",
+          "mediaId": "m5",
+          "name": "clip5.mp4",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 12.0,
+          "trackId": "T1",
+          "transitionIn": {
+            "duration": 0.4,
+            "id": "concat.dissolve"
+          },
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.091701,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c18",
+          "kind": "audio",
+          "mediaId": "m6",
+          "name": "voice1.wav",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 0.2,
+          "trackId": "t17",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.251837,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c19",
+          "kind": "audio",
+          "mediaId": "m7",
+          "name": "voice2.wav",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 3.2,
+          "trackId": "t17",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.017687,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c20",
+          "kind": "audio",
+          "mediaId": "m8",
+          "name": "voice3.wav",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 6.2,
+          "trackId": "t17",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.280408,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c21",
+          "kind": "audio",
+          "mediaId": "m9",
+          "name": "voice4.wav",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 9.2,
+          "trackId": "t17",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 1.937732,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c22",
+          "kind": "audio",
+          "mediaId": "m10",
+          "name": "voice5.wav",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 12.2,
+          "trackId": "t17",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 15.0,
+          "fadeIn": 0.0,
+          "fadeOut": 1.5,
+          "filters": [],
+          "id": "c24",
+          "kind": "audio",
+          "mediaId": "m11",
+          "name": "music.wav",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 0.0,
+          "trackId": "t23",
+          "videoEffects": [],
+          "volume": 0.12589254117941673
+        },
+        {
+          "duration": 2.7,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c26",
+          "keys": [
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 0.86
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 1.0
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": -0.27499999999999997
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": -0.3
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            },
+            {
+              "at": 0.12962962962962962,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 0.8703703703703703,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 1.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            }
+          ],
+          "kind": "text",
+          "mediaId": "",
+          "name": "Every tap starts a journey",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 0.3,
+          "text": {
+            "align": "center",
+            "background": "#0b0b0c99",
+            "backgroundPaddingX": 0.0315,
+            "backgroundPaddingY": 0.018,
+            "backgroundRadius": 0.0135,
+            "color": "#ffffff",
+            "content": "Every tap starts a journey",
+            "fontFamily": "\"Cabinet Grotesk\"",
+            "fontSize": 0.052,
+            "fontWeight": 800.0,
+            "italic": false,
+            "lineHeight": 1.2,
+            "maxHeight": 0.0,
+            "maxWidth": 0.0,
+            "opacity": 1.0,
+            "shadow": true,
+            "strokeColor": "#000000",
+            "strokeWidth": 0.0,
+            "tracking": 0.0
+          },
+          "trackId": "t25",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.7,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c27",
+          "keys": [
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 0.86
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 1.0
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": -0.27499999999999997
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": -0.3
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            },
+            {
+              "at": 0.12962962962962962,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 0.8703703703703703,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 1.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            }
+          ],
+          "kind": "text",
+          "mediaId": "",
+          "name": "Encrypted in milliseconds",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 3.3,
+          "text": {
+            "align": "center",
+            "background": "#0b0b0c99",
+            "backgroundPaddingX": 0.0315,
+            "backgroundPaddingY": 0.018,
+            "backgroundRadius": 0.0135,
+            "color": "#ffffff",
+            "content": "Encrypted in milliseconds",
+            "fontFamily": "\"Cabinet Grotesk\"",
+            "fontSize": 0.052,
+            "fontWeight": 800.0,
+            "italic": false,
+            "lineHeight": 1.2,
+            "maxHeight": 0.0,
+            "maxWidth": 0.0,
+            "opacity": 1.0,
+            "shadow": true,
+            "strokeColor": "#000000",
+            "strokeWidth": 0.0,
+            "tracking": 0.0
+          },
+          "trackId": "t25",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.7,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c28",
+          "keys": [
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 0.86
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 1.0
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": 0.025
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": 0.0
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            },
+            {
+              "at": 0.12962962962962962,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 0.8703703703703703,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 1.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            }
+          ],
+          "kind": "text",
+          "mediaId": "",
+          "name": "Across the network",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 6.3,
+          "text": {
+            "align": "center",
+            "background": "#0b0b0c99",
+            "backgroundPaddingX": 0.0315,
+            "backgroundPaddingY": 0.018,
+            "backgroundRadius": 0.0135,
+            "color": "#ffffff",
+            "content": "Across the network",
+            "fontFamily": "\"Cabinet Grotesk\"",
+            "fontSize": 0.052,
+            "fontWeight": 800.0,
+            "italic": false,
+            "lineHeight": 1.2,
+            "maxHeight": 0.0,
+            "maxWidth": 0.0,
+            "opacity": 1.0,
+            "shadow": true,
+            "strokeColor": "#000000",
+            "strokeWidth": 0.0,
+            "tracking": 0.0
+          },
+          "trackId": "t25",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.6999999999999993,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c29",
+          "keys": [
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 0.86
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 1.0
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": -0.27499999999999997
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": -0.3
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            },
+            {
+              "at": 0.12962962962962965,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 0.8703703703703703,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 1.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            }
+          ],
+          "kind": "text",
+          "mediaId": "",
+          "name": "The bank says yes",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 9.3,
+          "text": {
+            "align": "center",
+            "background": "#0b0b0c99",
+            "backgroundPaddingX": 0.0315,
+            "backgroundPaddingY": 0.018,
+            "backgroundRadius": 0.0135,
+            "color": "#ffffff",
+            "content": "The bank says yes",
+            "fontFamily": "\"Cabinet Grotesk\"",
+            "fontSize": 0.052,
+            "fontWeight": 800.0,
+            "italic": false,
+            "lineHeight": 1.2,
+            "maxHeight": 0.0,
+            "maxWidth": 0.0,
+            "opacity": 1.0,
+            "shadow": true,
+            "strokeColor": "#000000",
+            "strokeWidth": 0.0,
+            "tracking": 0.0
+          },
+          "trackId": "t25",
+          "videoEffects": [],
+          "volume": 1.0
+        },
+        {
+          "duration": 2.6999999999999993,
+          "fadeIn": 0.0,
+          "fadeOut": 0.0,
+          "filters": [],
+          "id": "c30",
+          "keys": [
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 0.86
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "scale",
+              "value": 1.0
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": 0.025
+            },
+            {
+              "at": 0.1814814814814815,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "offsetY",
+              "value": 0.0
+            },
+            {
+              "at": 0.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            },
+            {
+              "at": 0.12962962962962965,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 0.8703703703703703,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 1.0
+            },
+            {
+              "at": 1.0,
+              "ease": [
+                0.2,
+                0.8,
+                0.2,
+                1.0
+              ],
+              "property": "opacity",
+              "value": 0.0
+            }
+          ],
+          "kind": "text",
+          "mediaId": "",
+          "name": "Approved",
+          "offsetX": 0.0,
+          "offsetY": 0.0,
+          "opacity": 1.0,
+          "preservePitch": true,
+          "rotation": 0.0,
+          "scale": 1.0,
+          "sourceStart": 0.0,
+          "speed": 1.0,
+          "start": 12.3,
+          "text": {
+            "align": "center",
+            "background": "#0b0b0c99",
+            "backgroundPaddingX": 0.0315,
+            "backgroundPaddingY": 0.018,
+            "backgroundRadius": 0.0135,
+            "color": "#ffffff",
+            "content": "Approved",
+            "fontFamily": "\"Cabinet Grotesk\"",
+            "fontSize": 0.052,
+            "fontWeight": 800.0,
+            "italic": false,
+            "lineHeight": 1.2,
+            "maxHeight": 0.0,
+            "maxWidth": 0.0,
+            "opacity": 1.0,
+            "shadow": true,
+            "strokeColor": "#000000",
+            "strokeWidth": 0.0,
+            "tracking": 0.0
+          },
+          "trackId": "t25",
+          "videoEffects": [],
+          "volume": 1.0
+        }
+      ],
+      "id": "TL1",
+      "name": "Timeline 1",
+      "tracks": [
+        {
+          "id": "T1",
+          "muted": false,
+          "visible": true
+        },
+        {
+          "id": "T2",
+          "muted": false,
+          "visible": true
+        },
+        {
+          "id": "T3",
+          "muted": false,
+          "visible": true
+        },
+        {
+          "id": "T4",
+          "muted": false,
+          "visible": true
+        },
+        {
+          "id": "t17",
+          "muted": false,
+          "visible": true
+        },
+        {
+          "id": "t23",
+          "muted": false,
+          "visible": true
+        },
+        {
+          "id": "t25",
+          "muted": false,
+          "visible": true
+        }
+      ],
+      "video": {
+        "height": 1920,
+        "rateDen": 1,
+        "rateNum": 30,
+        "width": 1080
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "id": "T1",
+      "muted": false,
+      "visible": true
+    },
+    {
+      "id": "T2",
+      "muted": false,
+      "visible": true
+    },
+    {
+      "id": "T3",
+      "muted": false,
+      "visible": true
+    },
+    {
+      "id": "T4",
+      "muted": false,
+      "visible": true
+    },
+    {
+      "id": "t17",
+      "muted": false,
+      "visible": true
+    },
+    {
+      "id": "t23",
+      "muted": false,
+      "visible": true
+    },
+    {
+      "id": "t25",
+      "muted": false,
+      "visible": true
+    }
+  ],
+  "version": 1,
+  "video": {
+    "height": 1920,
+    "rateDen": 1,
+    "rateNum": 30,
+    "width": 1080
+  }
+}

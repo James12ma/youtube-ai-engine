@@ -1,0 +1,174 @@
+{
+ "concat": {
+  "probe": {
+   "duration_s": 15.0,
+   "size_mb": 14.86,
+   "video": {
+    "codec_name": "h264",
+    "width": 1080,
+    "height": 1920,
+    "r_frame_rate": "30/1",
+    "pix_fmt": "yuv420p",
+    "color_range": "tv",
+    "color_primaries": "bt709",
+    "color_transfer": "bt709",
+    "nb_frames": "450",
+    "bit_rate": "7755404"
+   },
+   "audio": {
+    "codec_name": "aac",
+    "sample_rate": "48000",
+    "channels": 2,
+    "duration": "15.000000"
+   }
+  },
+  "loudness": {
+   "integrated_lufs": -22.0,
+   "true_peak_dbtp": -5.9
+  },
+  "black_segments": [],
+  "transitions": [
+   {
+    "cut_s": 3.0,
+    "mixed_frames": 10,
+    "mixed_from_s": 3.033,
+    "mixed_to_s": 3.333,
+    "sequence": "AAAAAAAAAAAAAAAAAAAmmmmmmmmmmBBBBBBB"
+   },
+   {
+    "cut_s": 6.0,
+    "mixed_frames": 9,
+    "mixed_from_s": 6.067,
+    "mixed_to_s": 6.333,
+    "sequence": "AAAAAAAAAAAAAAAAAAAAmmmmmmmmmBBBBBBB"
+   },
+   {
+    "cut_s": 9.0,
+    "mixed_frames": 9,
+    "mixed_from_s": 9.067,
+    "mixed_to_s": 9.333,
+    "sequence": "AAAAAAAAAAAAAAAAAAAAmmmmmmmmmBBBBBBB"
+   },
+   {
+    "cut_s": 12.0,
+    "mixed_frames": 10,
+    "mixed_from_s": 12.033,
+    "mixed_to_s": 12.333,
+    "sequence": "AAAAAAAAAAAAAAAAAAAmmmmmmmmmmBBBBBBB"
+   }
+  ],
+  "titles": [
+   {
+    "title": "Every tap starts a journey",
+    "t": 1.65,
+    "ocr_match": 0.96
+   },
+   {
+    "title": "Encrypted in milliseconds",
+    "t": 4.65,
+    "ocr_match": 1.0
+   },
+   {
+    "title": "Across the network",
+    "t": 7.65,
+    "ocr_match": 1.0
+   },
+   {
+    "title": "The bank says yes",
+    "t": 10.65,
+    "ocr_match": 0.21
+   },
+   {
+    "title": "Approved",
+    "t": 13.65,
+    "ocr_match": 1.0
+   }
+  ]
+ },
+ "baseline": {
+  "probe": {
+   "duration_s": 15.0,
+   "size_mb": 8.94,
+   "video": {
+    "codec_name": "h264",
+    "width": 1080,
+    "height": 1920,
+    "r_frame_rate": "30/1",
+    "pix_fmt": "yuv420p",
+    "color_range": null,
+    "color_primaries": null,
+    "color_transfer": null,
+    "nb_frames": "450",
+    "bit_rate": "4566563"
+   },
+   "audio": {
+    "codec_name": "aac",
+    "sample_rate": "48000",
+    "channels": 2,
+    "duration": "15.000000"
+   }
+  },
+  "loudness": {
+   "integrated_lufs": -15.1,
+   "true_peak_dbtp": -1.3
+  },
+  "black_segments": [],
+  "transitions": [
+   {
+    "cut_s": 3.0,
+    "mixed_frames": 10,
+    "mixed_from_s": 3.033,
+    "mixed_to_s": 3.333,
+    "sequence": "AAAAAAAAAAAAAAAAAAAmmmmmmmmmmBBBBBBB"
+   },
+   {
+    "cut_s": 6.0,
+    "mixed_frames": 6,
+    "mixed_from_s": 6.133,
+    "mixed_to_s": 6.3,
+    "sequence": "AAAAAAAAAAAAAAAAAAAAAAmmmmmmBBBBBBBB"
+   },
+   {
+    "cut_s": 9.0,
+    "mixed_frames": 10,
+    "mixed_from_s": 9.033,
+    "mixed_to_s": 9.333,
+    "sequence": "AAAAAAAAAAAAAAAAAAAmmmmmmmmmmBBBBBBB"
+   },
+   {
+    "cut_s": 12.0,
+    "mixed_frames": 10,
+    "mixed_from_s": 12.033,
+    "mixed_to_s": 12.333,
+    "sequence": "AAAAAAAAAAAAAAAAAAAmmmmmmmmmmBBBBBBB"
+   }
+  ],
+  "titles": [
+   {
+    "title": "Every tap starts a journey",
+    "t": 1.65,
+    "ocr_match": 0.96
+   },
+   {
+    "title": "Encrypted in milliseconds",
+    "t": 4.65,
+    "ocr_match": 1.0
+   },
+   {
+    "title": "Across the network",
+    "t": 7.65,
+    "ocr_match": 0.0
+   },
+   {
+    "title": "The bank says yes",
+    "t": 10.65,
+    "ocr_match": 1.0
+   },
+   {
+    "title": "Approved",
+    "t": 13.65,
+    "ocr_match": 1.0
+   }
+  ]
+ }
+}

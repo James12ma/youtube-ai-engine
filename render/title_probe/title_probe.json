@@ -1,0 +1,161 @@
+[
+ {
+  "case": "top_no_keys",
+  "offsetY": -0.3,
+  "keys": {},
+  "png": "0_top_no_keys.png"
+ },
+ {
+  "case": "top_opacity_keys",
+  "offsetY": -0.3,
+  "keys": {
+   "opacity": [
+    [
+     0,
+     0.0
+    ],
+    [
+     0.2,
+     1.0
+    ],
+    [
+     1,
+     1.0
+    ]
+   ]
+  },
+  "png": "1_top_opacity_keys.png"
+ },
+ {
+  "case": "top_scale_keys",
+  "offsetY": -0.3,
+  "keys": {
+   "scale": [
+    [
+     0,
+     0.86
+    ],
+    [
+     0.3,
+     1.0
+    ]
+   ]
+  },
+  "png": "2_top_scale_keys.png"
+ },
+ {
+  "case": "top_offsetY_keys",
+  "offsetY": -0.3,
+  "keys": {
+   "offsetY": [
+    [
+     0,
+     -0.275
+    ],
+    [
+     0.3,
+     -0.3
+    ]
+   ]
+  },
+  "png": "3_top_offsetY_keys.png"
+ },
+ {
+  "case": "center_offsetY_keys",
+  "offsetY": 0.0,
+  "keys": {
+   "offsetY": [
+    [
+     0,
+     0.025
+    ],
+    [
+     0.3,
+     0.0
+    ]
+   ]
+  },
+  "png": "4_center_offsetY_keys.png"
+ },
+ {
+  "timeline": [
+   {
+    "duration": 4.0,
+    "end": 4.0,
+    "id": "c2",
+    "kind": "video",
+    "media": "m1",
+    "name": "clip2.mp4",
+    "sourceStart": 0.0,
+    "start": 0.0,
+    "track": "T1"
+   },
+   {
+    "duration": 1.0,
+    "end": 1.0,
+    "id": "c3",
+    "kind": "text",
+    "name": "top_no_keys",
+    "offsetY": -0.3,
+    "start": 0.0,
+    "text": "top_no_keys",
+    "track": "T2"
+   },
+   {
+    "duration": 1.0,
+    "end": 2.0,
+    "id": "c4",
+    "keyframed": [
+     "opacity"
+    ],
+    "kind": "text",
+    "name": "top_opacity_keys",
+    "offsetY": -0.3,
+    "start": 1.0,
+    "text": "top_opacity_keys",
+    "track": "T2"
+   },
+   {
+    "duration": 1.0,
+    "end": 3.0,
+    "id": "c5",
+    "keyframed": [
+     "scale"
+    ],
+    "kind": "text",
+    "name": "top_scale_keys",
+    "offsetY": -0.3,
+    "start": 2.0,
+    "text": "top_scale_keys",
+    "track": "T2"
+   },
+   {
+    "duration": 1.0,
+    "end": 4.0,
+    "id": "c6",
+    "keyframed": [
+     "offsetY"
+    ],
+    "kind": "text",
+    "name": "top_offsetY_keys",
+    "offsetY": -0.3,
+    "start": 3.0,
+    "text": "top_offsetY_keys",
+    "track": "T2"
+   },
+   {
+    "duration": 1.0,
+    "end": 5.0,
+    "id": "c7",
+    "keyframed": [
+     "offsetY"
+    ],
+    "kind": "text",
+    "name": "center_offsetY_keys",
+    "start": 4.0,
+    "text": "center_offsetY_keys",
+    "track": "T1"
+   }
+  ]
+ }
+]

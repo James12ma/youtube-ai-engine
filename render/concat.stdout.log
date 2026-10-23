@@ -1,0 +1,7 @@
+[concat] 2026-10-23 03:00:04.192Z INFO  [main] concat_host::logs: Concat 0.2.8 · linux-x86_64 · commit 79116bd0f9a1 · log level INFO
+[concat] 2026-10-23 03:00:04.192Z INFO  [main] concat_host::logs: system: Ubuntu 24.04.5 LTS · kernel 6.17.0-1022-azure
+[concat] 2026-10-23 03:00:04.192Z INFO  [main] concat_host::logs: cpu: AMD EPYC 9V45 96-Core Processor · 4 threads · has sse4.2 avx avx2 fma bmi2 f16c avx512f
+[concat] concat mcp: serving through {"mode":"headless","writesUnder":["/home/runner/work/youtube-ai-engine/youtube-ai-engine"]}
+[concat] 2026-10-23 03:00:06.152Z INFO  [main] concat_export: previews draw on llvmpipe (LLVM 20.1.2, 256 bits) (Cpu, Vulkan)
+[concat] 2026-10-23 03:00:08.050Z INFO  [export j1] concat_export: export: drawing on llvmpipe (LLVM 20.1.2, 256 bits) (Cpu, Vulkan)
+{"ok": true, "edit_s": 3.83, "export_s": 37.57, "total_s": 41.4, "export_status": {"fraction": 1.0, "frame": 450, "height": 1920, "job": "j1", "output": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_15s.mp4", "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film", "stage": "muxing", "state": "done", "total": 450, "width": 1080}}

@@ -1,0 +1,85 @@
+[concat] 2026-10-23 03:00:45.741Z INFO  [main] concat_host::logs: Concat 0.2.8 · linux-x86_64 · commit 79116bd0f9a1 · log level INFO
+[concat] 2026-10-23 03:00:45.741Z INFO  [main] concat_host::logs: system: Ubuntu 24.04.5 LTS · kernel 6.17.0-1022-azure
+[concat] 2026-10-23 03:00:45.741Z INFO  [main] concat_host::logs: cpu: AMD EPYC 9V45 96-Core Processor · 4 threads · has sse4.2 avx avx2 fma bmi2 f16c avx512f
+[concat] concat mcp: serving through {"mode":"headless","writesUnder":["/home/runner/work/youtube-ai-engine/youtube-ai-engine"]}
+[concat] 2026-10-23 03:00:46.102Z INFO  [main] concat_export: previews draw on llvmpipe (LLVM 20.1.2, 256 bits) (Cpu, Vulkan)
+[
+ {
+  "case": "top_no_keys",
+  "offsetY": -0.3,
+  "keys": {},
+  "png": "0_top_no_keys.png"
+ },
+ {
+  "case": "top_opacity_keys",
+  "offsetY": -0.3,
+  "keys": {
+   "opacity": [
+    [
+     0,
+     0.0
+    ],
+    [
+     0.2,
+     1.0
+    ],
+    [
+     1,
+     1.0
+    ]
+   ]
+  },
+  "png": "1_top_opacity_keys.png"
+ },
+ {
+  "case": "top_scale_keys",
+  "offsetY": -0.3,
+  "keys": {
+   "scale": [
+    [
+     0,
+     0.86
+    ],
+    [
+     0.3,
+     1.0
+    ]
+   ]
+  },
+  "png": "2_top_scale_keys.png"
+ },
+ {
+  "case": "top_offsetY_keys",
+  "offsetY": -0.3,
+  "keys": {
+   "offsetY": [
+    [
+     0,
+     -0.275
+    ],
+    [
+     0.3,
+     -0.3
+    ]
+   ]
+  },
+  "png": "3_top_offsetY_keys.png"
+ },
+ {
+  "case": "center_offsetY_keys",
+  "offsetY": 0.0,
+  "keys": {
+   "offsetY": [
+    [
+     0,
+     0.025
+    ],
+    [
+     0.3,
+     0.0
+    ]
+   ]
+  },
+  "png": "4_center_offsetY_keys.png"
+ }
+]
