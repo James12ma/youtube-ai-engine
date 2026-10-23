@@ -1,0 +1,18 @@
+{
+ "ok": true,
+ "edit_s": 3.85,
+ "export_s": 53.33,
+ "total_s": 57.18,
+ "export_status": {
+  "fraction": 1.0,
+  "frame": 450,
+  "height": 1920,
+  "job": "j1",
+  "output": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_15s.mp4",
+  "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+  "stage": "muxing",
+  "state": "done",
+  "total": 450,
+  "width": 1080
+ }
+}

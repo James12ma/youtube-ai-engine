@@ -1,0 +1,359 @@
+{
+ "canRedo": false,
+ "canUndo": true,
+ "media": [
+  {
+   "duration": 4.0,
+   "height": 1920,
+   "id": "m1",
+   "kind": "video",
+   "name": "clip1.mp4",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip1.mp4",
+   "width": 1080
+  },
+  {
+   "duration": 4.0,
+   "height": 1920,
+   "id": "m2",
+   "kind": "video",
+   "name": "clip2.mp4",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip2.mp4",
+   "width": 1080
+  },
+  {
+   "duration": 4.0,
+   "height": 1920,
+   "id": "m3",
+   "kind": "video",
+   "name": "clip3.mp4",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip3.mp4",
+   "width": 1080
+  },
+  {
+   "duration": 4.0,
+   "height": 1920,
+   "id": "m4",
+   "kind": "video",
+   "name": "clip4.mp4",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip4.mp4",
+   "width": 1080
+  },
+  {
+   "duration": 3.6,
+   "height": 1920,
+   "id": "m5",
+   "kind": "video",
+   "name": "clip5.mp4",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/clip5.mp4",
+   "width": 1080
+  },
+  {
+   "duration": 2.092,
+   "hasAudio": true,
+   "id": "m6",
+   "kind": "audio",
+   "name": "voice1.wav",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice1.wav"
+  },
+  {
+   "duration": 2.252,
+   "hasAudio": true,
+   "id": "m7",
+   "kind": "audio",
+   "name": "voice2.wav",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice2.wav"
+  },
+  {
+   "duration": 2.018,
+   "hasAudio": true,
+   "id": "m8",
+   "kind": "audio",
+   "name": "voice3.wav",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice3.wav"
+  },
+  {
+   "duration": 2.28,
+   "hasAudio": true,
+   "id": "m9",
+   "kind": "audio",
+   "name": "voice4.wav",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice4.wav"
+  },
+  {
+   "duration": 1.938,
+   "hasAudio": true,
+   "id": "m10",
+   "kind": "audio",
+   "name": "voice5.wav",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/voice5.wav"
+  },
+  {
+   "duration": 15.0,
+   "hasAudio": true,
+   "id": "m11",
+   "kind": "audio",
+   "name": "music.wav",
+   "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/experiments/concat/media/music.wav"
+  }
+ ],
+ "project": {
+  "fps": 30.0,
+  "height": 1920,
+  "name": "concat_film",
+  "width": 1080
+ },
+ "timeline": {
+  "clips": [
+   {
+    "duration": 3.0,
+    "end": 3.0,
+    "id": "c12",
+    "kind": "video",
+    "media": "m1",
+    "name": "clip1.mp4",
+    "sourceStart": 0.0,
+    "start": 0.0,
+    "track": "T1"
+   },
+   {
+    "duration": 15.0,
+    "end": 15.0,
+    "fadeOut": 1.5,
+    "id": "c24",
+    "kind": "audio",
+    "media": "m11",
+    "name": "music.wav",
+    "sourceStart": 0.0,
+    "start": 0.0,
+    "track": "t23",
+    "volume": 0.1259
+   },
+   {
+    "duration": 2.0917,
+    "end": 2.2917,
+    "id": "c18",
+    "kind": "audio",
+    "media": "m6",
+    "name": "voice1.wav",
+    "sourceStart": 0.0,
+    "start": 0.2,
+    "track": "t17"
+   },
+   {
+    "duration": 2.7,
+    "end": 3.0,
+    "id": "c26",
+    "keyframed": [
+     "scale",
+     "offsetY",
+     "opacity"
+    ],
+    "kind": "text",
+    "name": "Every tap starts a journey",
+    "offsetY": -0.3,
+    "start": 0.3,
+    "text": "Every tap starts a journey",
+    "track": "t25"
+   },
+   {
+    "duration": 3.0,
+    "end": 6.0,
+    "id": "c13",
+    "kind": "video",
+    "media": "m2",
+    "name": "clip2.mp4",
+    "sourceStart": 0.0,
+    "start": 3.0,
+    "track": "T1",
+    "transitionIn": {
+     "duration": 0.4,
+     "id": "concat.dissolve"
+    }
+   },
+   {
+    "duration": 2.2518,
+    "end": 5.4518,
+    "id": "c19",
+    "kind": "audio",
+    "media": "m7",
+    "name": "voice2.wav",
+    "sourceStart": 0.0,
+    "start": 3.2,
+    "track": "t17"
+   },
+   {
+    "duration": 2.7,
+    "end": 6.0,
+    "id": "c27",
+    "keyframed": [
+     "scale",
+     "offsetY",
+     "opacity"
+    ],
+    "kind": "text",
+    "name": "Encrypted in milliseconds",
+    "offsetY": -0.3,
+    "start": 3.3,
+    "text": "Encrypted in milliseconds",
+    "track": "t25"
+   },
+   {
+    "duration": 3.0,
+    "end": 9.0,
+    "id": "c14",
+    "kind": "video",
+    "media": "m3",
+    "name": "clip3.mp4",
+    "sourceStart": 0.0,
+    "start": 6.0,
+    "track": "T1",
+    "transitionIn": {
+     "duration": 0.4,
+     "id": "concat.slide"
+    }
+   },
+   {
+    "duration": 2.0177,
+    "end": 8.2177,
+    "id": "c20",
+    "kind": "audio",
+    "media": "m8",
+    "name": "voice3.wav",
+    "sourceStart": 0.0,
+    "start": 6.2,
+    "track": "t17"
+   },
+   {
+    "duration": 2.7,
+    "end": 9.0,
+    "id": "c28",
+    "keyframed": [
+     "scale",
+     "offsetY",
+     "opacity"
+    ],
+    "kind": "text",
+    "name": "Across the network",
+    "start": 6.3,
+    "text": "Across the network",
+    "track": "t25"
+   },
+   {
+    "duration": 3.0,
+    "end": 12.0,
+    "id": "c15",
+    "kind": "video",
+    "media": "m4",
+    "name": "clip4.mp4",
+    "sourceStart": 0.0,
+    "start": 9.0,
+    "track": "T1",
+    "transitionIn": {
+     "duration": 0.4,
+     "id": "concat.linear-wipe"
+    }
+   },
+   {
+    "duration": 2.2804,
+    "end": 11.4804,
+    "id": "c21",
+    "kind": "audio",
+    "media": "m9",
+    "name": "voice4.wav",
+    "sourceStart": 0.0,
+    "start": 9.2,
+    "track": "t17"
+   },
+   {
+    "duration": 2.7,
+    "end": 12.0,
+    "id": "c29",
+    "keyframed": [
+     "scale",
+     "offsetY",
+     "opacity"
+    ],
+    "kind": "text",
+    "name": "The bank says yes",
+    "offsetY": -0.3,
+    "start": 9.3,
+    "text": "The bank says yes",
+    "track": "t25"
+   },
+   {
+    "duration": 3.0,
+    "end": 15.0,
+    "id": "c16",
+    "kind": "video",
+    "media": "m5",
+    "name": "clip5.mp4",
+    "sourceStart": 0.0,
+    "start": 12.0,
+    "track": "T1",
+    "transitionIn": {
+     "duration": 0.4,
+     "id": "concat.dissolve"
+    }
+   },
+   {
+    "duration": 1.9377,
+    "end": 14.1377,
+    "id": "c22",
+    "kind": "audio",
+    "media": "m10",
+    "name": "voice5.wav",
+    "sourceStart": 0.0,
+    "start": 12.2,
+    "track": "t17"
+   },
+   {
+    "duration": 2.7,
+    "end": 15.0,
+    "id": "c30",
+    "keyframed": [
+     "scale",
+     "offsetY",
+     "opacity"
+    ],
+    "kind": "text",
+    "name": "Approved",
+    "start": 12.3,
+    "text": "Approved",
+    "track": "t25"
+   }
+  ],
+  "duration": 15.0,
+  "id": "TL1",
+  "name": "Timeline 1",
+  "tracks": [
+   {
+    "id": "T1",
+    "index": 0
+   },
+   {
+    "id": "T2",
+    "index": 1
+   },
+   {
+    "id": "T3",
+    "index": 2
+   },
+   {
+    "id": "T4",
+    "index": 3
+   },
+   {
+    "id": "t17",
+    "index": 4
+   },
+   {
+    "id": "t23",
+    "index": 5
+   },
+   {
+    "id": "t25",
+    "index": 6
+   }
+  ]
+ }
+}

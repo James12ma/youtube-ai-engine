@@ -1,0 +1,57 @@
+{
+ "media": {
+  "exit": 0,
+  "wall_s": 20.84,
+  "peak_rss_mb": 427.8,
+  "cpu_pct": 354
+ },
+ "concat": {
+  "exit": 0,
+  "wall_s": 57.36,
+  "peak_rss_mb": 2226.2,
+  "cpu_pct": 334,
+  "result": {
+   "ok": true,
+   "edit_s": 3.85,
+   "export_s": 53.33,
+   "total_s": 57.18,
+   "export_status": {
+    "fraction": 1.0,
+    "frame": 450,
+    "height": 1920,
+    "job": "j1",
+    "output": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_15s.mp4",
+    "path": "/home/runner/work/youtube-ai-engine/youtube-ai-engine/concat_out/render/concat/concat_film",
+    "stage": "muxing",
+    "state": "done",
+    "total": 450,
+    "width": 1080
+   }
+  }
+ },
+ "baseline": {
+  "exit": 0,
+  "wall_s": 27.16,
+  "peak_rss_mb": 880.1,
+  "cpu_pct": 318,
+  "result": {
+   "ok": true,
+   "total_s": 26.65,
+   "compose": {
+    "duration_s": 15.0,
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "scene_count": 5,
+    "video_codec": "h264",
+    "audio_codec": "aac"
+   }
+  }
+ },
+ "compare": {
+  "exit": 0,
+  "wall_s": 29.95,
+  "peak_rss_mb": 166.7,
+  "cpu_pct": 257
+ }
+}
