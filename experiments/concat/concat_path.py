@@ -52,7 +52,7 @@ try:
     # Picture: end to end, each cut to its slot (start of the next clip), transition on the cut into it.
     step(c, "clips_add_sequence", {"path": P, "mediaIds": [ids[x["id"]] for x in tl["clips"]], "start": 0})
     read = step(c, "timeline_read", {"path": P})
-    vclips = [x for x in read["clips"] if x.get("kind") not in ("title", "audio")]
+    vclips = [x for x in read["timeline"]["clips"] if x.get("kind") == "video"]
     vclips.sort(key=lambda x: x["start"])
     for k, (vc, clip) in enumerate(zip(vclips, tl["clips"])):
         nxt = tl["clips"][k + 1]["start_s"] if k + 1 < len(tl["clips"]) else tl["duration_s"]
@@ -90,10 +90,13 @@ try:
     (out / "concat_timeline.json").write_text(json.dumps(final, indent=1))
     step(c, "project_save", {"path": P})
     for ts in (1.5, 3.0, 6.0, 9.0, 13.5):
-        step(c, "preview_frame", {"path": P, "time": ts, "output": str(out / f"concat_preview_{ts:05.2f}.png")})
+        try:  # the engine's own compositor, independent of the export
+            step(c, "preview_frame", {"path": P, "time": ts, "output": str(out / f"concat_preview_{ts:05.2f}.png")})
+        except Exception as e:  # noqa: BLE001
+            log.append({"tool": "preview_frame", "error": str(e)})
     t_edit = time.time() - t0
     job = step(c, "export_start", {"path": P, "output": str(out / "concat_15s.mp4"), "crf": 18, "preset": "medium"})
-    jid = job.get("job") if isinstance(job, dict) else job
+    jid = (job.get("job") or created(job) or job.get("id")) if isinstance(job, dict) else job
     te = time.time()
     status = None
     for _ in range(12):
