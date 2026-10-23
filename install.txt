@@ -1,0 +1,8 @@
+deb=Concat-0.2.8-linux-x86_64.deb
+fc570d9b2a49c1a01ef99a7a903e85ba7040e419182c2a7267db84b45686da79  /tmp/concat/Concat-0.2.8-linux-x86_64.deb
+install_s=40
+concat 0.2.8
+Installed-Size: 369660
+Version: 0.2.8
+Depends: libc6, libgtk-3-0, libfontconfig1, libfreetype6, libxkbcommon0, libxkbcommon-x11-0, libgl1, libasound2 | libasound2t64
+ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers

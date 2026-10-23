@@ -1,0 +1,40 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  libxcb-xkb1 libxkbcommon-x11-0
+The following NEW packages will be installed:
+  concat libxcb-xkb1 libxkbcommon-x11-0
+0 upgraded, 3 newly installed, 0 to remove and 96 not upgraded.
+Need to get 46.8 kB/155 MB of archives.
+After this operation, 379 MB of additional disk space will be used.
+Get:1 /tmp/concat/Concat-0.2.8-linux-x86_64.deb concat amd64 0.2.8 [155 MB]
+Get:2 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+Get:3 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 libxcb-xkb1 amd64 1.15-1ubuntu2 [32.3 kB]
+Get:4 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 libxkbcommon-x11-0 amd64 1.6.0-1build1 [14.5 kB]
+Fetched 46.8 kB in 1s (63.5 kB/s)
+Selecting previously unselected package libxcb-xkb1:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 204194 files and directories currently installed.)
+Preparing to unpack .../libxcb-xkb1_1.15-1ubuntu2_amd64.deb ...
+Unpacking libxcb-xkb1:amd64 (1.15-1ubuntu2) ...
+Selecting previously unselected package libxkbcommon-x11-0:amd64.
+Preparing to unpack .../libxkbcommon-x11-0_1.6.0-1build1_amd64.deb ...
+Unpacking libxkbcommon-x11-0:amd64 (1.6.0-1build1) ...
+Selecting previously unselected package concat.
+Preparing to unpack .../Concat-0.2.8-linux-x86_64.deb ...
+Unpacking concat (0.2.8) ...
+Setting up libxcb-xkb1:amd64 (1.15-1ubuntu2) ...
+Setting up libxkbcommon-x11-0:amd64 (1.6.0-1build1) ...
+Setting up concat (0.2.8) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
