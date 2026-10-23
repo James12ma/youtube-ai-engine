@@ -1,0 +1,66 @@
+name: Concat headless feasibility (experiment)
+# Isolated experiment: does Concat's headless MCP editor run on a standard free Linux runner (no GPU),
+# and does it add anything to our renders? Never deploys or publishes. Results are pushed to concat-probe/<run>.
+on:
+  push:
+    branches: [experiment/concat-headless]
+    paths: ['experiments/concat/**', '.github/workflows/concat-headless.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: concat-headless
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CONCAT_GPU: software
+      CONCAT_MCP_ROOTS: ${{ github.workspace }}
+      OUT: ${{ github.workspace }}/concat_out
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Runner facts
+        run: |
+          mkdir -p "$OUT"
+          { nproc; free -g; df -h /; lscpu | grep -E 'Model name|Flags' | cut -c1-200; } | tee "$OUT/runner.txt"
+      - name: Install Concat (latest Linux release) + software Vulkan (lavapipe) + ffmpeg
+        run: |
+          set -euo pipefail
+          t0=$(date +%s)
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends mesa-vulkan-drivers libvulkan1 vulkan-tools xvfb ffmpeg >/dev/null
+          gh release view -R jub0t/Concat --json tagName,publishedAt,assets \
+            --jq '{tag: .tagName, published: .publishedAt, assets: [.assets[] | {name, size}]}' | tee "$OUT/release.json"
+          deb=$(jq -r '.assets[].name' "$OUT/release.json" | grep -E '\.deb$' | grep -E 'x86_64|amd64' | head -1)
+          echo "deb=$deb" | tee -a "$OUT/install.txt"
+          gh release download -R jub0t/Concat --pattern "$deb" -D /tmp/concat
+          sha256sum /tmp/concat/*.deb | tee -a "$OUT/install.txt"
+          sudo apt-get install -y -q /tmp/concat/*.deb > "$OUT/apt_concat.log" 2>&1 || { tail -40 "$OUT/apt_concat.log"; exit 1; }
+          echo "install_s=$(( $(date +%s) - t0 ))" | tee -a "$OUT/install.txt"
+          which concat; concat --version | tee -a "$OUT/install.txt"
+          dpkg -s "$(dpkg-deb -f /tmp/concat/*.deb Package)" | grep -E 'Version|Depends|Installed-Size' | tee -a "$OUT/install.txt"
+          vulkaninfo --summary 2>&1 | grep -E 'deviceName|driverName|apiVersion' | tee "$OUT/vulkan.txt" || true
+          ffmpeg -version | head -1 | tee -a "$OUT/install.txt"
+      - name: Probe the MCP server (headless, software GPU)
+        working-directory: experiments/concat
+        run: /usr/bin/time -v python probe.py "$OUT/probe" 2> >(tee "$OUT/probe_time.txt" >&2)
+      - name: Render prototype (when present)
+        if: hashFiles('experiments/concat/render.py') != ''
+        working-directory: experiments/concat
+        run: /usr/bin/time -v python render.py "$OUT/render" 2> >(tee "$OUT/render_time.txt" >&2)
+      - name: Push results to concat-probe/${{ github.run_id }}
+        if: always()
+        env: { PUSH_TOKEN: '${{ github.token }}' }
+        run: |
+          set -euo pipefail
+          cd "$OUT"; find . -size +95M -print -delete
+          git init -q -b "concat-probe/${{ github.run_id }}"
+          git config user.name 'youtube-ai-engine'; git config user.email 'youtube-ai-engine@users.noreply.github.com'
+          git add -A && git commit -q -m "Concat feasibility results (run ${{ github.run_id }}, ${{ github.sha }})"
+          git push -q "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git" "concat-probe/${{ github.run_id }}"
