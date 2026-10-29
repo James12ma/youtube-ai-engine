@@ -74,7 +74,7 @@ def commons_image(query, used, exact_file=None):
         meta = ii.get("extmetadata", {})
         lic = meta.get("LicenseShortName", {}).get("value", "")
         desc = re.sub("<[^>]+>", "", meta.get("ImageDescription", {}).get("value", ""))
-        if not url or url in used or not OK_LICENSES.search(lic):
+        if not url or (url in used and not exact_file) or not OK_LICENSES.search(lic):
             continue
         if UNSAFE.search(p.get("title", "") + " " + desc):
             continue
@@ -127,16 +127,21 @@ PlayResY: {H}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,DejaVu Sans,78,&H00FFFFFF,&H0000D7FF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,6,2,2,60,60,520,1
+Style: Cap,DejaVu Sans,78,&H00FFFFFF,&H0000D7FF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,6,2,2,60,60,250,1
 Style: Hook,DejaVu Sans,62,&H0000D7FF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,5,2,8,60,60,150,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     ev = [f"Dialogue: 1,{ass_time(0)},{ass_time(3.5)},Hook,,0,0,0,,{title.upper()}"]
-    for i in range(0, len(words), 3):
-        grp = words[i:i + 3]
-        end = words[i + 3][0] if i + 3 < len(words) else grp[-1][1] + 0.3
+    groups, cur = [], []
+    for w in words:  # coupe aux pauses (fin de phrase) ou toutes les 3 mots
+        if cur and (len(cur) == 3 or w[0] - cur[-1][1] > 0.18):
+            groups.append(cur); cur = []
+        cur.append(w)
+    if cur: groups.append(cur)
+    for gi, grp in enumerate(groups):
+        end = min(groups[gi + 1][0][0], grp[-1][1] + 0.6) if gi + 1 < len(groups) else grp[-1][1] + 0.4
         txt = " ".join(w[2] for w in grp).replace("{", "").replace("}", "")
         ev.append(f"Dialogue: 0,{ass_time(grp[0][0])},{ass_time(end)},Cap,,0,0,0,,{txt}")
     Path(path).write_text(head + "\n".join(ev) + "\n", encoding="utf-8")

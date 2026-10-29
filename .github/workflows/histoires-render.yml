@@ -31,7 +31,7 @@ jobs:
           for f in episodes/*.json; do
             id=$(python3 -c "import json;d=json.load(open('$f'));print(d['id'] if d.get('status')=='ready' else '')")
             [ -z "$id" ] && continue
-            gh release view histoires-videos --json assets -q '.assets[].name' 2>/dev/null | grep -qx "$id.mp4" && continue
+            [ -f "output/$id.credits.txt" ] && continue  # supprimer ce fichier pour forcer un nouveau rendu
             python3 render.py "$f" --out output 2>&1 | tee -a output/render.log || echo "ECHEC $f" | tee -a output/render.log
           done
       - name: Publier les MP4 en release publique
