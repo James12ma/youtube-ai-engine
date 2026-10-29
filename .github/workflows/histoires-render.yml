@@ -1,0 +1,42 @@
+name: Histoires - rendu des videos
+
+on:
+  push:
+    paths: ["histoires-engine/episodes/**", "histoires-engine/render.py"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: histoires-render
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: histoires-engine
+    steps:
+      - uses: actions/checkout@v4
+      - name: Outils
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          pip install -q edge-tts pillow requests
+      - name: Rendre les episodes prets
+        run: |
+          mkdir -p output
+          for f in episodes/*.json; do
+            id=$(python3 -c "import json;d=json.load(open('$f'));print(d['id'] if d.get('status')=='ready' else '')")
+            [ -z "$id" ] && continue
+            [ -f "output/$id.mp4" ] && continue
+            python3 render.py "$f" --out output 2>&1 | tee -a output/render.log || echo "ECHEC $f" | tee -a output/render.log
+          done
+      - name: Enregistrer les videos dans le depot
+        run: |
+          git config user.name "render-bot"
+          git config user.email "render-bot@users.noreply.github.com"
+          git add output
+          git diff --cached --quiet || git commit -m "Rendu automatique $(date -u +%F)"
+          git pull --rebase origin main && git push origin HEAD:main

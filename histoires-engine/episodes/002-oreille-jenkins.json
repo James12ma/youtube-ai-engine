@@ -1,0 +1,25 @@
+{
+  "id": "002-oreille-jenkins",
+  "status": "draft",
+  "title": "La guerre déclenchée par une OREILLE coupée",
+  "voice": "fr-FR-HenriNeural",
+  "rate": "+4%",
+  "caption": "Une oreille dans un bocal… et deux empires partent en guerre. La vraie histoire de la guerre de l'oreille de Jenkins. 📜 #histoire #histoirevraie #angleterre #espagne #pirates #lesaviezvous #apprendresurtiktok",
+  "sources": [
+    "https://fr.wikipedia.org/wiki/Guerre_de_l%27oreille_de_Jenkins",
+    "https://www.britannica.com/event/War-of-Jenkins-Ear"
+  ],
+  "scenes": [
+    {"text": "En 1739, l'Angleterre a déclaré la guerre à l'Espagne. Et l'une des étincelles… c'était une oreille.", "query": "War of Jenkins Ear 1739", "label": "1739"},
+    {"text": "Pas une métaphore. Une vraie oreille humaine, coupée huit ans plus tôt, en pleine mer des Caraïbes.", "query": "Caribbean sea 18th century ship painting"},
+    {"text": "En 1731, le capitaine anglais Robert Jenkins navigue sur son navire, le Rebecca. Des garde-côtes espagnols l'arrêtent et fouillent le bateau. Ils le soupçonnent de contrebande.", "query": "Spanish ship 18th century painting"},
+    {"text": "Leur commandant lui tranche l'oreille avec son sabre. Et selon le récit de Jenkins, il lui lance : va dire à ton roi qu'il lui arrivera la même chose s'il ose venir ici.", "query": "sabre 18th century"},
+    {"text": "Sur le moment, presque personne ne s'en soucie. Mais les années passent, et les tensions commerciales entre Londres et Madrid explosent.", "query": "London 18th century painting Canaletto"},
+    {"text": "En 1738, Jenkins est convoqué au Parlement britannique. Selon la légende, il y aurait brandi son oreille, conservée dans un bocal.", "query": "House of Commons 18th century"},
+    {"text": "Les historiens doutent de cette scène. Mais l'histoire enflamme l'opinion publique, et le Premier ministre Robert Walpole, qui voulait la paix, cède sous la pression.", "query": "Robert Walpole portrait"},
+    {"text": "En octobre 1739, la guerre est déclarée. Elle va durer des années, jusqu'aux côtes de l'Amérique du Sud.", "query": "Battle of Porto Bello 1739"},
+    {"text": "En 1741, les Anglais attaquent Carthagène des Indes avec une flotte immense. C'est un désastre : des milliers de soldats meurent, surtout de maladies.", "query": "Cartagena de Indias siege 1741"},
+    {"text": "Et le nom de guerre de l'oreille de Jenkins ? Il a été inventé plus d'un siècle plus tard, par l'écrivain Thomas Carlyle.", "query": "Thomas Carlyle portrait"},
+    {"text": "Abonne-toi : chaque jour, une histoire vraie qu'on ne t'a jamais racontée à l'école.", "query": "old history books library"}
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "001-yamaguchi",
+  "status": "ready",
+  "title": "L'homme qui a survécu aux DEUX bombes atomiques",
+  "voice": "fr-FR-HenriNeural",
+  "rate": "+4%",
+  "caption": "Hiroshima… puis Nagasaki. Trois jours d'écart. L'histoire vraie de Tsutomu Yamaguchi. 📜 #histoire #histoirevraie #japon #hiroshima #nagasaki #lesaviezvous #apprendresurtiktok",
+  "sources": [
+    "https://fr.wikipedia.org/wiki/Tsutomu_Yamaguchi",
+    "https://www.britannica.com/biography/Yamaguchi-Tsutomu"
+  ],
+  "scenes": [
+    {"text": "Le 6 août 1945, un ingénieur japonais est à Hiroshima pour le travail. Trois jours plus tard, il est rentré chez lui… à Nagasaki.", "query": "Hiroshima atomic bomb cloud 1945"},
+    {"text": "Voici l'histoire de Tsutomu Yamaguchi, l'homme qui a survécu aux deux bombes atomiques.", "query": "Nagasaki atomic bomb mushroom cloud"},
+    {"text": "Yamaguchi a vingt-neuf ans. Il conçoit des navires pour Mitsubishi. Sa mission à Hiroshima dure trois mois, et ce matin-là, c'est son dernier jour.", "query": "Hiroshima city 1930s"},
+    {"text": "Il marche vers le chantier quand il entend un avion. Il lève les yeux. Un éclair aveuglant. Il est à environ trois kilomètres de l'explosion.", "query": "Enola Gay B-29"},
+    {"text": "Le souffle le projette au sol. Ses tympans éclatent. Son visage et ses bras sont gravement brûlés.", "query": "Hiroshima after atomic bombing ruins"},
+    {"text": "Il passe la nuit dans un abri. Le lendemain, malgré ses blessures, il prend un train pour rentrer chez lui, à Nagasaki.", "query": "Hiroshima ruins 1945 street"},
+    {"text": "Le 9 août, couvert de bandages, il retourne quand même au bureau. Il raconte à son chef qu'une seule bombe a rasé une ville entière.", "query": "Nagasaki 1945 before bombing"},
+    {"text": "Son chef ne le croit pas. Et à cet instant précis… une lumière blanche envahit la pièce. Encore une fois. Encore à trois kilomètres.", "query": "Nagasaki atomic bombing 1945"},
+    {"text": "Yamaguchi survit. Encore. Il vivra jusqu'à quatre-vingt-treize ans et militera toute sa vie contre les armes nucléaires.", "query": "Nagasaki ruins after atomic bomb"},
+    {"text": "En 2009, le Japon le reconnaît officiellement comme survivant des deux bombardements. Il est le seul à avoir obtenu cette reconnaissance.", "query": "Nagasaki Peace Park statue"},
+    {"text": "Abonne-toi : chaque jour, une histoire vraie qu'on ne t'a jamais racontée à l'école.", "query": "old history books library"}
+  ]
+}

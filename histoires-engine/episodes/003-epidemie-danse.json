@@ -1,0 +1,25 @@
+{
+  "id": "003-epidemie-danse",
+  "status": "draft",
+  "title": "Strasbourg, 1518 : la ville qui ne pouvait plus s'arrêter de danser",
+  "voice": "fr-FR-HenriNeural",
+  "rate": "+4%",
+  "caption": "Été 1518. Des dizaines d'habitants de Strasbourg dansent pendant des jours sans pouvoir s'arrêter. Personne ne sait vraiment pourquoi. 📜 #histoire #histoirevraie #strasbourg #alsace #mystere #lesaviezvous #apprendresurtiktok",
+  "sources": [
+    "https://fr.wikipedia.org/wiki/%C3%89pid%C3%A9mie_de_danse_de_1518",
+    "https://www.britannica.com/event/dancing-plague-of-1518"
+  ],
+  "scenes": [
+    {"text": "Juillet 1518. Dans une rue de Strasbourg, une femme se met à danser. Seule. Sans musique. Et elle ne s'arrête plus.", "query": "Strasbourg 16th century engraving", "label": "1518"},
+    {"text": "Les chroniques l'appellent Frau Troffea. Elle danse pendant des jours, jusqu'à l'épuisement, puis recommence.", "query": "dancing mania Hondius Brueghel"},
+    {"text": "Une semaine plus tard, plus de trente personnes l'ont rejointe. Un mois plus tard, certaines sources parlent de centaines de danseurs.", "query": "dancing mania Brueghel pilgrims Molenbeek"},
+    {"text": "Ils ne font pas la fête. Leurs pieds saignent, ils pleurent, ils supplient qu'on les aide. Mais leurs corps continuent.", "query": "Pieter Brueghel dancers"},
+    {"text": "Les autorités consultent les médecins. Leur diagnostic : un sang trop chaud. Et leur remède est incroyable.", "query": "medieval physicians woodcut"},
+    {"text": "Il faut les laisser danser encore plus. La ville installe une scène, engage des musiciens et paie des danseurs robustes pour les soutenir.", "query": "Renaissance musicians woodcut"},
+    {"text": "Évidemment, ça empire. La ville change alors de méthode : elle interdit la musique en public et envoie les malades dans un sanctuaire de saint Guy, à Saverne.", "query": "Saint Vitus medieval painting"},
+    {"text": "Et peu à peu, l'épidémie s'éteint. Certaines chroniques parlent de morts. Les historiens, eux, en débattent encore.", "query": "Strasbourg cathedral engraving"},
+    {"text": "Alors, pourquoi ? Certains ont accusé l'ergot, un champignon du seigle. Mais il provoque des convulsions, pas des heures de danse.", "query": "ergot rye"},
+    {"text": "L'hypothèse la plus sérieuse aujourd'hui : une maladie psychogène de masse. Famine, épidémies, peur d'une malédiction… la panique aurait pris le contrôle des corps.", "query": "16th century famine woodcut"},
+    {"text": "Abonne-toi : chaque jour, une histoire vraie qu'on ne t'a jamais racontée à l'école.", "query": "old history books library"}
+  ]
+}
