@@ -16,7 +16,8 @@ FONT_BOLD = next((p for p in [
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
 ] if os.path.exists(p)), None)
 UA = "HistoiresVraiesBot/1.0 (contact: goatgold393@gmail.com)"
-OK_LICENSES = re.compile(r"(public domain|^pd|cc0|cc by(-sa)? [0-9.]+|cc-by)", re.I)
+OK_LICENSES = re.compile(r"(public domain|^pd|cc0)", re.I)  # sans obligation d'attribution
+UNSAFE = re.compile(r"(nude|naked|nu |victim|corpse|dead|body|bodies|burn|wound|injur|blood|execution|skeleton|keloid|casualt)", re.I)
 
 
 def run(cmd):
@@ -55,21 +56,27 @@ def fake_tts(text, out_mp3):
 
 
 # ---------- Images ----------
-def commons_image(query, used):
-    """Cherche une image Wikimedia Commons sous licence libre. Retourne (PIL.Image, crédit) ou None."""
+def commons_image(query, used, exact_file=None):
+    """Image Wikimedia Commons libre (domaine public/CC0), sans contenu choquant. (PIL.Image, crédit) ou None."""
     import requests
     s = requests.Session(); s.headers["User-Agent"] = UA
-    r = s.get("https://commons.wikimedia.org/w/api.php", params={
-        "action": "query", "format": "json", "generator": "search", "gsrsearch": f"filetype:bitmap {query}",
-        "gsrnamespace": 6, "gsrlimit": 12, "prop": "imageinfo",
-        "iiprop": "url|extmetadata|size", "iiurlwidth": 1600}, timeout=30).json()
+    base = {"action": "query", "format": "json", "prop": "imageinfo",
+            "iiprop": "url|extmetadata|size", "iiurlwidth": 1600}
+    if exact_file:
+        base.update(titles="File:" + exact_file.removeprefix("File:"))
+    else:
+        base.update(generator="search", gsrsearch=f"filetype:bitmap {query}", gsrnamespace=6, gsrlimit=15)
+    r = s.get("https://commons.wikimedia.org/w/api.php", params=base, timeout=30).json()
     pages = sorted(r.get("query", {}).get("pages", {}).values(), key=lambda p: p.get("index", 99))
     for p in pages:
         ii = (p.get("imageinfo") or [{}])[0]
         url = ii.get("thumburl") or ii.get("url")
         meta = ii.get("extmetadata", {})
         lic = meta.get("LicenseShortName", {}).get("value", "")
+        desc = re.sub("<[^>]+>", "", meta.get("ImageDescription", {}).get("value", ""))
         if not url or url in used or not OK_LICENSES.search(lic):
+            continue
+        if UNSAFE.search(p.get("title", "") + " " + desc):
             continue
         if ii.get("width", 0) < 500:
             continue
@@ -152,7 +159,7 @@ def main():
             tts(sc["text"], ep.get("voice", "fr-FR-HenriNeural"), ep.get("rate", "+0%"), mp3))
         d = duration(mp3) + 0.25
         all_words += [(s + t0, e + t0, w) for s, e, w in words]
-        found = None if a.offline else commons_image(sc["query"], used)
+        found = None if a.offline else (commons_image(sc["query"], used, sc.get("file")) or commons_image(sc["query"], used))
         frame = compose(found[0]) if found else fallback_card(sc.get("label", ""))
         if found: credits.append(found[1])
         png = tmp / f"s{i:02d}.png"; frame.save(png)

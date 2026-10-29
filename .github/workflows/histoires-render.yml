@@ -27,13 +27,20 @@ jobs:
       - name: Rendre les episodes prets
         run: |
           mkdir -p output
+          export GH_TOKEN=${{ github.token }}
           for f in episodes/*.json; do
             id=$(python3 -c "import json;d=json.load(open('$f'));print(d['id'] if d.get('status')=='ready' else '')")
             [ -z "$id" ] && continue
-            [ -f "output/$id.mp4" ] && continue
+            gh release view histoires-videos --json assets -q '.assets[].name' 2>/dev/null | grep -qx "$id.mp4" && continue
             python3 render.py "$f" --out output 2>&1 | tee -a output/render.log || echo "ECHEC $f" | tee -a output/render.log
           done
-      - name: Enregistrer les videos dans le depot
+      - name: Publier les MP4 en release publique
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view histoires-videos >/dev/null 2>&1 || gh release create histoires-videos --title "Histoires Vraies - videos" --notes "Videos rendues automatiquement."
+          for v in output/*.mp4; do [ -f "$v" ] && gh release upload histoires-videos "$v" --clobber; done
+      - name: Enregistrer credits et journal
         run: |
           git config user.name "render-bot"
           git config user.email "render-bot@users.noreply.github.com"
