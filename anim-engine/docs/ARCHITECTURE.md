@@ -64,7 +64,8 @@ animations de référence), Mantaflow réservé aux plans spéciaux.
 | Construction de la scène + solveur de contact | ~0,5 s |
 | Rendu Cycles 540×960, 10 échantillons + débruitage | **~12 s / image** |
 | Vidéo 5 s (120 images) | **~24 min** sur 2 vCPU |
-| Estimation GitHub Actions (4 vCPU) | ~12 min / 5 s (à confirmer) |
-| Vidéo 15 s, même réglage, 4 vCPU | ~35 min (estimation) |
+| GitHub Actions (mesuré, run 40990714425) | **12,0 s / image → 24 min / 5 s** (pas plus rapide qu'ici) |
+| Vidéo 15 s, même réglage | ~72 min (extrapolé, linéaire) |
+| Installation de Blender sur GitHub | 34 s (mesuré) |
 | Mantaflow (liquide réaliste) | +30 min à plusieurs heures (non mesuré) |
 Limite GitHub Actions : 6 h par job → suffisant pour des vidéos de 15–30 s à ce niveau de qualité.
