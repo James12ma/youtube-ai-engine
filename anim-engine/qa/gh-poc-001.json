@@ -1,0 +1,177 @@
+{
+  "job": "gh-poc-001",
+  "pass": true,
+  "results": [
+    {
+      "test": "mp4 existe et non vide",
+      "pass": true,
+      "value": 451639,
+      "critical": true
+    },
+    {
+      "test": "codec h264",
+      "pass": true,
+      "value": "h264",
+      "critical": true
+    },
+    {
+      "test": "résolution 1080x1920 (9:16)",
+      "pass": true,
+      "value": "1080x1920",
+      "critical": true
+    },
+    {
+      "test": "durée 5,0 s ±0,05",
+      "pass": true,
+      "value": 5.0,
+      "critical": true
+    },
+    {
+      "test": "120 images",
+      "pass": true,
+      "value": "120",
+      "critical": true
+    },
+    {
+      "test": "décodage complet sans erreur",
+      "pass": true,
+      "value": "ok",
+      "critical": true
+    },
+    {
+      "test": "aucune interpénétration main/tasse (écart min ≥ -2 mm)",
+      "pass": true,
+      "value": "-0.0 mm",
+      "critical": true
+    },
+    {
+      "test": "contact réel main/tasse (≥ 10 images)",
+      "pass": true,
+      "value": "28 images ([50]…[77])",
+      "critical": true
+    },
+    {
+      "test": "tasse immobile avant le contact",
+      "pass": true,
+      "value": "premier contact image 50",
+      "critical": true
+    },
+    {
+      "test": "la tasse ne bouge que pendant un contact",
+      "pass": true,
+      "value": "ok",
+      "critical": true
+    },
+    {
+      "test": "tasse déplacée ≥ 0,20 m",
+      "pass": true,
+      "value": "0.300 m",
+      "critical": true
+    },
+    {
+      "test": "tasse posée sur le plan (z constant)",
+      "pass": true,
+      "value": "0.9600–0.9600",
+      "critical": true
+    },
+    {
+      "test": "tasse reste sur le plan de travail",
+      "pass": true,
+      "value": "x final -0.150",
+      "critical": true
+    },
+    {
+      "test": "tasse immobile après retrait de la main",
+      "pass": true,
+      "value": "0.000000",
+      "critical": true
+    },
+    {
+      "test": "main de A jamais dans son propre torse",
+      "pass": true,
+      "value": "0 image",
+      "critical": true
+    },
+    {
+      "test": "cafetière statique",
+      "pass": true,
+      "value": 1,
+      "critical": true
+    },
+    {
+      "test": "pas de collision tasse/cafetière",
+      "pass": true,
+      "value": "0.030 m",
+      "critical": true
+    },
+    {
+      "test": "main atteint sa cible IK pendant la poussée (≤ 3 cm)",
+      "pass": true,
+      "value": "0.0 cm",
+      "critical": false
+    },
+    {
+      "test": "tête de B tourne ≥ 30° vers la tasse (+X)",
+      "pass": true,
+      "value": "0.0° → 35.0°",
+      "critical": true
+    },
+    {
+      "test": "bouche de B ouverte (O ≥ 0,95) au pic",
+      "pass": true,
+      "value": 1.0,
+      "critical": true
+    },
+    {
+      "test": "sourcils de B levés au pic (≥ 2 cm)",
+      "pass": true,
+      "value": 0.02199999988079071,
+      "critical": true
+    },
+    {
+      "test": "réaction de B après la poussée",
+      "pass": true,
+      "value": "réaction 82 ≥ contact 50",
+      "critical": true
+    },
+    {
+      "test": "images échantillons présentes",
+      "pass": true,
+      "value": [
+        1,
+        50,
+        75,
+        92,
+        120
+      ],
+      "critical": true
+    },
+    {
+      "test": "images ni noires ni vides (moyenne 20–235, écart-type > 15)",
+      "pass": true,
+      "value": {
+        "1": [
+          191.9,
+          39.6
+        ],
+        "50": [
+          190.4,
+          42.3
+        ],
+        "75": [
+          188.4,
+          44.5
+        ],
+        "92": [
+          192.9,
+          39.0
+        ],
+        "120": [
+          192.6,
+          38.7
+        ]
+      },
+      "critical": true
+    }
+  ]
+}
