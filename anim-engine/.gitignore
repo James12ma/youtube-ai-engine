@@ -1,0 +1,4 @@
+bvenv/
+__pycache__/
+output/*/frames/
+*.blend1
